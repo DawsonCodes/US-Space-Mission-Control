@@ -5,9 +5,10 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta
       name="description"
-      content="A polished SpaceX mission tracker with live countdowns, launch filters, favorites, and a cinematic space UI."
+      content="A polished SpaceX mission tracker with live countdowns, launch filters, saved missions, a local weather outlook, and a cinematic space UI."
     />
     <title>SpaceX Mission Control</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="styles/base.css" />
     <link rel="stylesheet" href="styles/layout.css" />
     <link rel="stylesheet" href="styles/components.css" />
@@ -22,27 +23,27 @@
           <span class="eyebrow">Live mission tracker</span>
           <h1>SpaceX Mission Control</h1>
           <p class="hero-text">
-            Track the next launch, scan the upcoming manifest, filter by mission type,
-            and save your favorite missions in a way that actually feels premium.
+            Track the next SpaceX launch, scan the upcoming manifest, and save the
+            missions you care about — with a local weather outlook when it's available.
           </p>
 
-          <div class="hero-actions">
-            <button id="btnLoadLatest" class="btn btn-primary">Load latest launches</button>
-            <button id="btnRefresh" class="btn">Refresh data</button>
-            <button id="btnUseDemo" class="btn btn-ghost">Use demo data</button>
-            <button id="btnShowNext" class="btn btn-ghost">Jump to next launch</button>
+          <div class="hero-meta">
+            <span class="pill-indicator" id="dataSource">Not loaded</span>
+            <span class="pill-indicator" id="lastUpdated">Awaiting data</span>
           </div>
 
-          <div class="hero-stats" id="heroStats" aria-label="Mission tracker quick stats"></div>
+          <div class="hero-actions">
+            <button id="btnRefresh" class="btn btn-primary" type="button">Refresh data</button>
+            <button id="btnUseDemo" class="btn btn-ghost" type="button">Use demo data</button>
+          </div>
         </div>
 
-        <section class="next-launch-card" id="nextLaunchCard" aria-live="polite">
-          <div class="placeholder-card">
+        <section class="next-launch-card" id="nextLaunchCard" aria-live="polite" aria-label="Next launch spotlight">
+          <div class="placeholder-card" aria-hidden="true">
             <div class="placeholder-line placeholder-line-lg"></div>
             <div class="placeholder-line"></div>
             <div class="placeholder-line"></div>
             <div class="placeholder-pills">
-              <span class="placeholder-pill"></span>
               <span class="placeholder-pill"></span>
               <span class="placeholder-pill"></span>
             </div>
@@ -50,24 +51,16 @@
         </section>
       </header>
 
-      <section class="controls panel" aria-labelledby="controlsTitle">
-        <div class="panel-head">
-          <div>
-            <span class="eyebrow">Filters</span>
-            <h2 id="controlsTitle">Mission control panel</h2>
-          </div>
-          <button id="btnFavoritesOnly" class="btn btn-toggle" type="button" aria-pressed="false">
-            Favorites only
-          </button>
-        </div>
+      <section class="stats-strip" id="statsGrid" aria-label="Launch statistics"></section>
 
-        <div class="controls-grid">
+      <section class="toolbar panel" aria-label="Schedule controls">
+        <div class="toolbar-row">
           <label class="field field-search">
-            <span class="field-label">Search</span>
+            <span class="sr-only">Search launches</span>
             <input
               id="keyword"
               type="search"
-              placeholder="Try Starlink, Dragon, transporter, Florida..."
+              placeholder="Search Starlink, Dragon, Florida…"
               autocomplete="off"
             />
           </label>
@@ -93,74 +86,95 @@
               <option value="soonest">Soonest first</option>
               <option value="latest">Latest first</option>
               <option value="name">Mission name</option>
-              <option value="probability">Weather / probability</option>
+              <option value="probability">Launch probability</option>
             </select>
           </label>
 
           <label class="field">
-            <span class="field-label">Results</span>
-            <select id="limit">
-              <option value="6">6 results</option>
-              <option value="12" selected>12 results</option>
-              <option value="24">24 results</option>
-              <option value="48">48 results</option>
-            </select>
-          </label>
-
-          <label class="field">
-            <span class="field-label">Time mode</span>
+            <span class="field-label">Time</span>
             <select id="dateMode">
               <option value="local" selected>Local time</option>
               <option value="utc">UTC</option>
             </select>
           </label>
 
-          <div class="control-actions">
-            <button id="btnClearFilters" class="btn" type="button">Reset filters</button>
-            <button id="btnSurprise" class="btn btn-ghost" type="button">Surprise me</button>
+          <div class="toolbar-actions">
+            <button id="btnSaved" class="btn btn-toggle" type="button">
+              Saved <span class="count-badge" id="savedCount">0</span>
+            </button>
+            <button id="btnClearFilters" class="btn" type="button" disabled>Reset</button>
+            <button id="btnRandom" class="btn btn-ghost" type="button">Random mission</button>
           </div>
         </div>
 
         <div id="status" class="status" role="status" aria-live="polite">
-          Ready. Load the latest launches or use demo data.
+          Ready. Refresh to load launches, or use demo data.
         </div>
       </section>
 
-      <section class="stats-grid" id="statsGrid" aria-live="polite"></section>
-
-      <main class="content-grid">
-        <section class="panel" aria-labelledby="resultsTitle">
-          <div class="panel-head">
-            <div>
-              <span class="eyebrow">Launches</span>
-              <h2 id="resultsTitle">Upcoming schedule</h2>
-            </div>
-            <div id="resultsMeta" class="panel-meta">No results loaded yet.</div>
+      <main class="schedule panel" aria-labelledby="resultsTitle">
+        <div class="panel-head">
+          <div>
+            <span class="eyebrow">Launches</span>
+            <h2 id="resultsTitle">Upcoming schedule</h2>
           </div>
+          <div id="resultsMeta" class="panel-meta">No results loaded yet.</div>
+        </div>
 
-          <div id="results" class="launch-grid"></div>
-        </section>
+        <div id="results" class="launch-grid"></div>
 
-        <aside class="panel favorites-panel" aria-labelledby="favoritesTitle">
-          <div class="panel-head">
-            <div>
-              <span class="eyebrow">Saved</span>
-              <h2 id="favoritesTitle">Favorites</h2>
-            </div>
-            <div class="favorites-actions">
-              <button id="btnRefreshFavorites" class="btn btn-small" type="button">Refresh</button>
-              <button id="btnClearFavorites" class="btn btn-small btn-ghost" type="button">Clear all</button>
-            </div>
-          </div>
-
-          <div id="favorites" class="favorites-list"></div>
-        </aside>
+        <div class="reveal-actions">
+          <button id="btnLoadMore" class="btn" type="button" hidden>Load 12 more</button>
+          <button id="btnShowAll" class="btn btn-ghost" type="button" hidden>Show all</button>
+        </div>
       </main>
 
       <footer class="footer">
-        <span>Built with Launch Library 2 data.</span>
+        <span>
+          Launch data from
+          <a href="https://thespacedevs.com/llapi" target="_blank" rel="noopener">Launch Library 2</a>.
+          Weather from
+          <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>.
+        </span>
         <span id="footerMeta">Awaiting live data.</span>
       </footer>
+    </div>
+
+    <!-- Saved-missions drawer -->
+    <div
+      id="savedDrawer"
+      class="overlay drawer-overlay"
+      aria-hidden="true"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="drawerTitle"
+    >
+      <div class="overlay-backdrop" data-overlay-backdrop></div>
+      <aside class="overlay-panel drawer-panel" data-overlay-panel tabindex="-1">
+        <div class="overlay-head">
+          <h2 id="drawerTitle">Saved missions <span class="count-badge" id="drawerCount">0</span></h2>
+          <button class="icon-btn" data-overlay-close type="button" aria-label="Close saved missions">✕</button>
+        </div>
+        <div id="drawerList" class="drawer-list"></div>
+        <div class="overlay-foot">
+          <button id="btnClearFavorites" class="btn btn-ghost" type="button">Clear all</button>
+        </div>
+      </aside>
+    </div>
+
+    <!-- Mission-details modal -->
+    <div
+      id="detailsModal"
+      class="overlay modal-overlay"
+      aria-hidden="true"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div class="overlay-backdrop" data-overlay-backdrop></div>
+      <div class="overlay-panel modal-panel" data-overlay-panel tabindex="-1">
+        <button class="icon-btn modal-close" data-overlay-close type="button" aria-label="Close mission details">✕</button>
+        <div id="detailsContent" class="details-content"></div>
+      </div>
     </div>
 
     <script type="module" src="js/main.js"></script>

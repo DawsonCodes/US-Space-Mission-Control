@@ -15,9 +15,7 @@ export function loadPreferences() {
     state.dateMode = parsed.dateMode || state.dateMode;
     state.missionType = parsed.missionType || state.missionType;
     state.sortMode = parsed.sortMode || state.sortMode;
-    state.limit = Number(parsed.limit) || state.limit;
     state.keyword = typeof parsed.keyword === "string" ? parsed.keyword : state.keyword;
-    state.favoritesOnly = Boolean(parsed.favoritesOnly);
   } catch {
     // ignore bad local storage
   }
@@ -28,9 +26,7 @@ export function savePreferences() {
     dateMode: state.dateMode,
     missionType: state.missionType,
     sortMode: state.sortMode,
-    limit: state.limit,
-    keyword: state.keyword,
-    favoritesOnly: state.favoritesOnly
+    keyword: state.keyword
   };
 
   localStorage.setItem(STORAGE_KEYS.prefs, JSON.stringify(prefs));

@@ -1,9 +1,11 @@
-/* Structural containers and grids: the page shell, panels, hero/content/controls
-   layouts, and the result/favorites/stats grid skeletons. */
+/* Structural, mobile-first layout. Larger breakpoints live in responsive.css. */
 
 .shell {
   width: min(calc(100% - 32px), var(--max-width));
   margin: 24px auto 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .panel {
@@ -27,30 +29,73 @@
   mask-image: linear-gradient(#fff, transparent 85%);
 }
 
+/* Hero ------------------------------------------------------------------- */
 .hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(340px, 0.95fr);
-  gap: 22px;
+  grid-template-columns: 1fr;
+  gap: 20px;
   padding: 24px;
   overflow: hidden;
 }
 
 .hero-copy {
-  padding: 8px 6px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.meta-grid,
-.stats-grid {
+.hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+/* Stats strip ------------------------------------------------------------ */
+.stats-strip {
   display: grid;
-  gap: 14px;
-}
-
-.meta-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
 }
 
-.controls {
-  margin-top: 20px;
+/* Toolbar ---------------------------------------------------------------- */
+.toolbar {
+  padding: 16px;
+}
+
+.toolbar-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: end;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  flex: 1 1 160px;
+}
+
+.field-search {
+  flex: 2 1 240px;
+}
+
+.toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  flex: 1 1 100%;
+}
+
+/* Schedule --------------------------------------------------------------- */
+.schedule {
   padding: 22px;
 }
 
@@ -62,61 +107,17 @@
   margin-bottom: 18px;
 }
 
-.panel-head h2 {
-  font-size: clamp(1.2rem, 2.3vw, 1.7rem);
-  margin-top: 2px;
-}
-
-.controls-grid {
+.launch-grid {
   display: grid;
-  grid-template-columns: 2fr repeat(4, minmax(150px, 1fr)) auto;
-  gap: 14px;
-  align-items: end;
-}
-
-.field {
-  display: grid;
-  gap: 8px;
-}
-
-.field-search {
-  min-width: 0;
-}
-
-.field-label {
-  font-size: 0.84rem;
-  color: var(--muted);
-}
-
-.stats-grid {
-  margin-top: 20px;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-}
-
-.content-grid {
-  margin-top: 20px;
-  display: grid;
-  grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.9fr);
-  gap: 20px;
-  align-items: start;
-}
-
-.content-grid > .panel {
-  padding: 22px;
-}
-
-.launch-grid,
-.favorites-list {
-  display: grid;
+  grid-template-columns: 1fr;
   gap: 16px;
 }
 
-.launch-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.favorites-list {
-  grid-template-columns: 1fr;
+.reveal-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 22px;
 }
 
 .footer {
@@ -124,7 +125,16 @@
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
-  padding: 14px 4px 0;
+  padding: 4px 4px 0;
   color: var(--muted);
-  font-size: 0.92rem;
+  font-size: 0.9rem;
+}
+
+.footer a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.footer a:hover {
+  text-decoration: underline;
 }

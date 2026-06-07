@@ -77,9 +77,34 @@ button {
   border: 0;
 }
 
+/* Lock background scroll while a modal/drawer overlay is open. */
+body.overlay-open {
+  overflow: hidden;
+}
+
 @keyframes shimmer {
   from { background-position: 200% 0; }
   to { background-position: -20% 0; }
+}
+
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes overlayFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modalPop {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes drawerSlide {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
 }
 
 @media (prefers-reduced-motion: reduce) {
