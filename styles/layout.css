@@ -1,0 +1,130 @@
+/* Structural containers and grids: the page shell, panels, hero/content/controls
+   layouts, and the result/favorites/stats grid skeletons. */
+
+.shell {
+  width: min(calc(100% - 32px), var(--max-width));
+  margin: 24px auto 40px;
+}
+
+.panel {
+  position: relative;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 28%),
+    var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(16px);
+}
+
+.panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), transparent 28%, transparent 72%, rgba(115, 182, 255, 0.08));
+  mask-image: linear-gradient(#fff, transparent 85%);
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(340px, 0.95fr);
+  gap: 22px;
+  padding: 24px;
+  overflow: hidden;
+}
+
+.hero-copy {
+  padding: 8px 6px 6px;
+}
+
+.meta-grid,
+.stats-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.meta-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.controls {
+  margin-top: 20px;
+  padding: 22px;
+}
+
+.panel-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: start;
+  margin-bottom: 18px;
+}
+
+.panel-head h2 {
+  font-size: clamp(1.2rem, 2.3vw, 1.7rem);
+  margin-top: 2px;
+}
+
+.controls-grid {
+  display: grid;
+  grid-template-columns: 2fr repeat(4, minmax(150px, 1fr)) auto;
+  gap: 14px;
+  align-items: end;
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+}
+
+.field-search {
+  min-width: 0;
+}
+
+.field-label {
+  font-size: 0.84rem;
+  color: var(--muted);
+}
+
+.stats-grid {
+  margin-top: 20px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.content-grid {
+  margin-top: 20px;
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.9fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.content-grid > .panel {
+  padding: 22px;
+}
+
+.launch-grid,
+.favorites-list {
+  display: grid;
+  gap: 16px;
+}
+
+.launch-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.favorites-list {
+  grid-template-columns: 1fr;
+}
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 14px 4px 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}

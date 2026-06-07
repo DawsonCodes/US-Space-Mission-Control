@@ -1,0 +1,19 @@
+# Environment & secrets
+.env
+.env.*
+
+# Logs
+*.log
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Editor / IDE
+.vscode/
+.idea/
+*.tmp
+*.swp
+
+# Dependencies (this project intentionally has none)
+node_modules/
