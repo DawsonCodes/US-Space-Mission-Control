@@ -1,0 +1,64 @@
+/* Responsive overrides. Loaded last so these breakpoints win over the base,
+   layout, and component rules. */
+
+@media (max-width: 1180px) {
+  .controls-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .field-search,
+  .control-actions {
+    grid-column: 1 / -1;
+  }
+
+  .content-grid,
+  .hero {
+    grid-template-columns: 1fr;
+  }
+
+  .launch-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .shell {
+    width: min(calc(100% - 20px), var(--max-width));
+    margin-top: 12px;
+  }
+
+  .hero,
+  .controls,
+  .content-grid > .panel {
+    padding: 18px;
+  }
+
+  .meta-grid,
+  .stats-grid,
+  .card-detail-grid,
+  .controls-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-actions,
+  .control-actions,
+  .favorites-actions,
+  .card-actions {
+    width: 100%;
+  }
+
+  .hero-actions > *,
+  .control-actions > *,
+  .favorites-actions > *,
+  .card-actions > * {
+    flex: 1 1 100%;
+  }
+
+  .next-launch-top {
+    flex-direction: column;
+  }
+
+  .countdown-ring {
+    width: 100%;
+  }
+}
