@@ -2,6 +2,7 @@
 // classification. These are used by the filters and rendering layers.
 
 import { state } from "./state.js";
+import { API_URL_HOSTS } from "./config.js";
 
 export function escapeHtml(value) {
   return String(value ?? "")
@@ -19,6 +20,30 @@ export function safeUrl(value) {
   if (!url) return "";
   if (url.startsWith("http://") || url.startsWith("https://")) return url;
   return "";
+}
+
+// Returns a validated, public-facing URL suitable for an "Official page" action,
+// or "" if the value is missing or actually points at an API endpoint (e.g. a
+// Launch Library REST/object URL). This stops API links from being shown to
+// users as if they were mission pages.
+export function isPublicMissionUrl(value) {
+  const url = safeUrl(value);
+  if (!url) return "";
+
+  let parsed;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return "";
+  }
+
+  const host = parsed.hostname.toLowerCase();
+  if (API_URL_HOSTS.includes(host)) return "";
+  if (host.endsWith("thespacedevs.com")) return "";
+  if (/^\/\d+\.\d+/.test(parsed.pathname)) return ""; // versioned API path
+  if (parsed.pathname.toLowerCase().includes("/api/")) return "";
+
+  return url;
 }
 
 export function formatDate(dateString) {

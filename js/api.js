@@ -5,6 +5,23 @@
 import { API_UPCOMING } from "./config.js";
 import { state } from "./state.js";
 import { getLaunchCache, saveLaunchCache } from "./storage.js";
+import { isPublicMissionUrl } from "./utils.js";
+
+// Coerce a Launch Library latitude/longitude (often a numeric string) into a
+// finite number, or null when missing/invalid.
+function toCoord(value) {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+}
+
+// Pick the first candidate that validates as a genuine public mission page.
+function firstPublicUrl(candidates) {
+  for (const candidate of candidates) {
+    const valid = isPublicMissionUrl(candidate);
+    if (valid) return valid;
+  }
+  return "";
+}
 
 export function simplifyLaunch(raw) {
   const imageUrl =
@@ -30,19 +47,22 @@ export function simplifyLaunch(raw) {
     rocket: raw?.rocket?.configuration?.full_name || raw?.rocket?.configuration?.name || "",
     padName: raw?.pad?.name || "",
     location: raw?.pad?.location?.name || "",
+    padLat: toCoord(raw?.pad?.latitude),
+    padLon: toCoord(raw?.pad?.longitude),
     image: imageUrl,
     imageCredit: raw?.image?.credit || "",
     webcast:
+      raw?.vid_urls?.[0]?.url ||
       raw?.video_url ||
-      raw?.vid_urls?.[0] ||
       raw?.links?.webcast ||
       "",
-    article:
-      raw?.url ||
-      raw?.info_url ||
-      raw?.info_urls?.[0] ||
-      raw?.links?.article ||
-      "",
+    // Validated public-facing mission page only — never the LL2 API self URL.
+    official: firstPublicUrl([
+      raw?.info_urls?.[0]?.url,
+      raw?.mission?.info_urls?.[0]?.url,
+      raw?.info_url,
+      raw?.links?.article
+    ]),
     wikipedia:
       raw?.pad?.wiki_url ||
       raw?.wiki_url ||

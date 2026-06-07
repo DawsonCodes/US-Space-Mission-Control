@@ -1,30 +1,42 @@
 # SpaceX Mission Control
 
 A polished, cinematic SpaceX launch tracker built with plain HTML, CSS, and
-JavaScript — live mission data, real-time countdowns, filtering, sorting, and a
-persistent favorites list, all wrapped in an animated space-themed UI.
+JavaScript — live mission data, real-time countdowns, an in-app mission-details
+view, a saved-missions drawer, and a local weather outlook, all wrapped in an
+animated space-themed UI.
 
 **🚀 Live demo:** <https://dawsoncodes.github.io/SpaceX-Mission-Control/>
 
 ## Features
 
+- **Mission dashboard hero** — next-launch spotlight with a live countdown,
+  rocket, pad/location, a compact data-source + last-updated indicator, and a
+  refresh action.
 - **Live launch data** — pulls upcoming SpaceX launches from the Launch
   Library 2 API.
-- **Next-launch hero card** with a live, ticking countdown.
+- **Local weather outlook** — a keyless Open-Meteo forecast for the launch pad,
+  shown on the hero and in mission details (never an official go/no-go forecast).
+- **Mission-details modal** — full details for every mission (local + UTC times,
+  rocket, pad, description, weather, launch probability when available, and
+  validated Webcast / Official page / Wiki links).
+- **Saved-missions drawer** — save launches to a slide-over shortlist that
+  survives refreshes; remove individually or clear all.
 - **Search** across mission name, rocket, location, and status.
 - **Mission-type filters** (Starlink, Crew, Cargo, Starship, Transporter,
   Rideshare, Science, and more).
-- **Sorting** by soonest, latest, mission name, or weather/probability.
-- **Adjustable result limits** (6 / 12 / 24 / 48).
-- **Favorites** saved to your browser, with a favorites-only view that survives
-  refreshes.
+- **Sorting** by soonest, latest, mission name, or launch probability.
+- **Progressive results** — a clear "Showing X of Y" count with **Load 12 more**
+  and **Show all** instead of a confusing fixed limit.
 - **Local time / UTC toggle** for every date and countdown.
 - **Demo mode** so the full UI works even when the API is unavailable.
-- **Smart caching** of API responses (sessionStorage) with request
-  cancellation for snappy refreshes.
+- **Smart caching** of launch and weather responses (sessionStorage) with
+  request cancellation for snappy refreshes.
 - **Cinematic starfield** background with parallax glow and shooting stars,
-  plus full `prefers-reduced-motion` support.
-- **Responsive** layout that reflows cleanly from mobile to widescreen.
+  polished hover/entrance animations, and full `prefers-reduced-motion` support.
+- **Accessible overlays** — focus trap, Escape/backdrop close, focus
+  restoration, and background scroll lock.
+- **Responsive** layout: three cards per row on wide desktop, two on tablet,
+  one on mobile.
 
 ## Tech stack
 
@@ -34,25 +46,29 @@ persistent favorites list, all wrapped in an animated space-themed UI.
 - **Canvas API** for the animated starfield.
 - **localStorage / sessionStorage** for preferences, favorites, and caching.
 - **Launch Library 2** REST API for live launch data.
+- **Open-Meteo** free, keyless forecast API for the local weather outlook.
 
 ## Project structure
 
 ```
 index.html            # App shell (entry point, stays at repo root)
+favicon.svg           # Lightweight inline SVG favicon
 styles/
-  base.css            # Design tokens, reset, typography, starfield, a11y
+  base.css            # Design tokens, reset, typography, starfield, a11y, keyframes
   layout.css          # Page shell, panels, grids, structural layout
-  components.css      # Buttons, cards, badges, status, placeholders
-  responsive.css      # Media-query overrides
+  components.css      # Buttons, selects, cards, badges, overlays, weather, status
+  responsive.css      # Breakpoints (1/2/3 columns, sticky toolbar, mobile sheets)
 js/
-  config.js           # Constants (API URL, storage keys, cache TTL)
+  config.js           # Constants (API URLs, storage keys, TTLs, reveal sizes)
   state.js            # Shared application state
   demo-data.js        # Offline/demo missions (always future-dated)
   storage.js          # Preferences, favorites, and API cache persistence
-  utils.js            # Escaping, URL safety, date/countdown formatting
-  api.js              # Live fetch (with caching + cancellation) + normalization
+  utils.js            # Escaping, URL safety/validation, date/countdown formatting
+  api.js              # Live fetch (caching + cancellation) + payload normalization
   filters.js          # Keyword matching, sorting, filter pipeline
-  render.js           # DOM references and all rendering
+  weather.js          # Open-Meteo fetch, nearest-hour, caching, formatting
+  modal.js            # Accessible overlay mechanics (focus trap, ESC, scroll lock)
+  render.js           # DOM references and all rendering (incl. overlay content)
   starfield.js        # Animated canvas background
   main.js             # Composition root: wires events and boots the app
 ```
@@ -75,10 +91,15 @@ npx serve .
 
 No installation or build step is required — what you see is what ships.
 
-## Data source
+## Data sources
 
-Upcoming launch data is provided by the
-[Launch Library 2](https://thespacedevs.com/llapi) API by The Space Devs.
+- Upcoming launch data is provided by the
+  [Launch Library 2](https://thespacedevs.com/llapi) API by The Space Devs.
+- The local weather outlook is provided by the free, keyless
+  [Open-Meteo](https://open-meteo.com/) forecast API. Weather is fetched only for
+  the next-launch hero card and the open mission-details view (never for every
+  card), cached briefly in `sessionStorage`, and is **not** an official launch
+  go/no-go forecast.
 
 ## Project background
 
