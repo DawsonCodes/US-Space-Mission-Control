@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      name="description"
+      content="A polished SpaceX mission tracker with live countdowns, launch filters, favorites, and a cinematic space UI."
+    />
+    <title>SpaceX Mission Control</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <canvas id="starfield" aria-hidden="true"></canvas>
+
+    <div class="shell">
+      <header class="hero panel">
+        <div class="hero-copy">
+          <span class="eyebrow">Live mission tracker</span>
+          <h1>SpaceX Mission Control</h1>
+          <p class="hero-text">
+            Track the next launch, scan the upcoming manifest, filter by mission type,
+            and save your favorite missions in a way that actually feels premium.
+          </p>
+
+          <div class="hero-actions">
+            <button id="btnLoadLatest" class="btn btn-primary">Load latest launches</button>
+            <button id="btnRefresh" class="btn">Refresh data</button>
+            <button id="btnUseDemo" class="btn btn-ghost">Use demo data</button>
+            <button id="btnShowNext" class="btn btn-ghost">Jump to next launch</button>
+          </div>
+
+          <div class="hero-stats" id="heroStats" aria-label="Mission tracker quick stats"></div>
+        </div>
+
+        <section class="next-launch-card" id="nextLaunchCard" aria-live="polite">
+          <div class="placeholder-card">
+            <div class="placeholder-line placeholder-line-lg"></div>
+            <div class="placeholder-line"></div>
+            <div class="placeholder-line"></div>
+            <div class="placeholder-pills">
+              <span class="placeholder-pill"></span>
+              <span class="placeholder-pill"></span>
+              <span class="placeholder-pill"></span>
+            </div>
+          </div>
+        </section>
+      </header>
+
+      <section class="controls panel" aria-labelledby="controlsTitle">
+        <div class="panel-head">
+          <div>
+            <span class="eyebrow">Filters</span>
+            <h2 id="controlsTitle">Mission control panel</h2>
+          </div>
+          <button id="btnFavoritesOnly" class="btn btn-toggle" type="button" aria-pressed="false">
+            Favorites only
+          </button>
+        </div>
+
+        <div class="controls-grid">
+          <label class="field field-search">
+            <span class="field-label">Search</span>
+            <input
+              id="keyword"
+              type="search"
+              placeholder="Try Starlink, Dragon, transporter, Florida..."
+              autocomplete="off"
+            />
+          </label>
+
+          <label class="field">
+            <span class="field-label">Mission type</span>
+            <select id="missionType">
+              <option value="all">All missions</option>
+              <option value="starlink">Starlink</option>
+              <option value="crew">Crew</option>
+              <option value="cargo">Cargo</option>
+              <option value="starship">Starship</option>
+              <option value="transporter">Transporter</option>
+              <option value="rideshare">Rideshare</option>
+              <option value="science">Science</option>
+              <option value="other">Other</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span class="field-label">Sort by</span>
+            <select id="sortMode">
+              <option value="soonest">Soonest first</option>
+              <option value="latest">Latest first</option>
+              <option value="name">Mission name</option>
+              <option value="probability">Weather / probability</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span class="field-label">Results</span>
+            <select id="limit">
+              <option value="6">6 results</option>
+              <option value="12" selected>12 results</option>
+              <option value="24">24 results</option>
+              <option value="48">48 results</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span class="field-label">Time mode</span>
+            <select id="dateMode">
+              <option value="local" selected>Local time</option>
+              <option value="utc">UTC</option>
+            </select>
+          </label>
+
+          <div class="control-actions">
+            <button id="btnClearFilters" class="btn" type="button">Reset filters</button>
+            <button id="btnSurprise" class="btn btn-ghost" type="button">Surprise me</button>
+          </div>
+        </div>
+
+        <div id="status" class="status" role="status" aria-live="polite">
+          Ready. Load the latest launches or use demo data.
+        </div>
+      </section>
+
+      <section class="stats-grid" id="statsGrid" aria-live="polite"></section>
+
+      <main class="content-grid">
+        <section class="panel" aria-labelledby="resultsTitle">
+          <div class="panel-head">
+            <div>
+              <span class="eyebrow">Launches</span>
+              <h2 id="resultsTitle">Upcoming schedule</h2>
+            </div>
+            <div id="resultsMeta" class="panel-meta">No results loaded yet.</div>
+          </div>
+
+          <div id="results" class="launch-grid"></div>
+        </section>
+
+        <aside class="panel favorites-panel" aria-labelledby="favoritesTitle">
+          <div class="panel-head">
+            <div>
+              <span class="eyebrow">Saved</span>
+              <h2 id="favoritesTitle">Favorites</h2>
+            </div>
+            <div class="favorites-actions">
+              <button id="btnRefreshFavorites" class="btn btn-small" type="button">Refresh</button>
+              <button id="btnClearFavorites" class="btn btn-small btn-ghost" type="button">Clear all</button>
+            </div>
+          </div>
+
+          <div id="favorites" class="favorites-list"></div>
+        </aside>
+      </main>
+
+      <footer class="footer">
+        <span>Built with Launch Library 2 data.</span>
+        <span id="footerMeta">Awaiting live data.</span>
+      </footer>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
