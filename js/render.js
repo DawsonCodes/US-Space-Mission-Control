@@ -50,31 +50,66 @@ export const els = {
 
 // ----- Status banner lifecycle -------------------------------------------
 // Temporary, dismissible status messages. Success/info/warning auto-dismiss
-// after ~7s (timer pauses on hover/focus); danger and loading messages persist
-// until replaced or dismissed so failures and in-flight work stay visible.
+// after ~7s and show a per-second countdown plus a shrinking progress line;
+// danger and loading messages persist (no countdown) until replaced or
+// dismissed so failures and in-flight work stay visible. A single 1s interval
+// drives both the countdown text and the dismissal, so pausing on hover/focus
+// keeps them perfectly in sync.
 
 const STATUS_AUTODISMISS_MS = 7000;
 const PERSISTENT_TONES = new Set(["danger", "loading"]);
-let statusTimer = null;
+let statusInterval = null;
+let statusRemainingMs = 0;
+let statusPaused = false;
 
 function prefersReducedMotion() {
   return Boolean(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 }
 
-function clearStatusTimer() {
-  if (statusTimer) {
-    window.clearTimeout(statusTimer);
-    statusTimer = null;
+function clearStatusInterval() {
+  if (statusInterval) {
+    window.clearInterval(statusInterval);
+    statusInterval = null;
   }
 }
 
-function scheduleStatusDismiss() {
-  clearStatusTimer();
-  statusTimer = window.setTimeout(() => dismissStatus(), STATUS_AUTODISMISS_MS);
+// True only for the auto-dismissing tones (i.e. those that get a countdown).
+function statusHasCountdown(tone) {
+  return !PERSISTENT_TONES.has(tone);
+}
+
+function paintStatusCountdown() {
+  const el = els.status;
+  if (!el) return;
+  const secs = Math.max(0, Math.ceil(statusRemainingMs / 1000));
+  const count = el.querySelector("[data-status-count]");
+  if (count) count.textContent = `${secs}s`;
+  const bar = el.querySelector("[data-status-progress]");
+  if (bar) bar.style.width = `${Math.max(0, (statusRemainingMs / STATUS_AUTODISMISS_MS) * 100)}%`;
+}
+
+function tickStatus() {
+  statusRemainingMs -= 1000;
+  if (statusRemainingMs <= 0) {
+    dismissStatus();
+    return;
+  }
+  paintStatusCountdown();
+}
+
+// Start (or resume) the countdown ticker. reset=true restarts from the full
+// duration (a fresh message); reset=false continues from the remaining time
+// (resuming after a hover/focus pause).
+function runStatusCountdown(reset) {
+  clearStatusInterval();
+  if (reset) statusRemainingMs = STATUS_AUTODISMISS_MS;
+  paintStatusCountdown();
+  if (statusPaused) return; // stay frozen until the pointer/focus leaves
+  statusInterval = window.setInterval(tickStatus, 1000);
 }
 
 export function dismissStatus() {
-  clearStatusTimer();
+  clearStatusInterval();
   const el = els.status;
   if (!el || el.hidden) return;
 
@@ -96,26 +131,43 @@ export function dismissStatus() {
 export function setStatus(message, tone = "info") {
   const el = els.status;
   if (!el) return;
-  clearStatusTimer();
+  clearStatusInterval();
   el.classList.remove("is-leaving");
   el.hidden = false;
   el.dataset.tone = tone;
+
+  const withCountdown = statusHasCountdown(tone);
+  // The countdown + progress line are decorative; hide them from assistive tech
+  // so screen readers don't announce every tick.
+  const countdown = withCountdown
+    ? `<span class="status-count" data-status-count aria-hidden="true">${Math.round(STATUS_AUTODISMISS_MS / 1000)}s</span>`
+    : "";
+  const progress = withCountdown
+    ? `<span class="status-progress" data-status-progress aria-hidden="true"></span>`
+    : "";
+
   el.innerHTML =
     `<span class="status-text">${escapeHtml(message)}</span>` +
-    `<button type="button" class="status-close" data-status-close aria-label="Dismiss message">&times;</button>`;
-  if (!PERSISTENT_TONES.has(tone)) scheduleStatusDismiss();
+    countdown +
+    `<button type="button" class="status-close" data-status-close aria-label="Dismiss message">&times;</button>` +
+    progress;
+
+  if (withCountdown) runStatusCountdown(true);
 }
 
-// Pause the auto-dismiss timer while the banner is hovered or keyboard-focused,
-// then resume it once the pointer/focus leaves. Wired once during boot.
+// Pause the countdown + dismissal while the banner is hovered or keyboard-
+// focused, then resume from where it left off. Wired once during boot.
 export function setupStatusBanner() {
   const el = els.status;
   if (!el) return;
-  const pause = () => clearStatusTimer();
+  const pause = () => {
+    statusPaused = true;
+    clearStatusInterval();
+  };
   const resume = () => {
+    statusPaused = false;
     if (el.hidden) return;
-    const tone = el.dataset.tone || "info";
-    if (!PERSISTENT_TONES.has(tone)) scheduleStatusDismiss();
+    if (statusHasCountdown(el.dataset.tone || "info")) runStatusCountdown(false);
   };
   el.addEventListener("mouseenter", pause);
   el.addEventListener("mouseleave", resume);

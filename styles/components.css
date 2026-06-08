@@ -375,6 +375,8 @@ select optgroup {
 
 /* Status banner ---------------------------------------------------------- */
 .status {
+  position: relative;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -386,6 +388,31 @@ select optgroup {
   background-color: rgba(255, 255, 255, 0.035);
   color: var(--muted);
   font-size: 0.92rem;
+}
+
+/* Per-second countdown for auto-dismissing messages (decorative; aria-hidden). */
+.status-count {
+  flex: none;
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  opacity: 0.8;
+  min-width: 2.4ch;
+  text-align: right;
+}
+
+/* Shrinking progress line along the bottom edge; width is stepped once per
+   second in JS and the 1s linear transition smooths it. Reduced-motion users
+   keep the per-second steps without the smoothing (global rule zeroes it). */
+.status-progress {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  width: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  transition: width 1s linear;
+  pointer-events: none;
 }
 
 /* Collapse fully when dismissed so no empty gap is left in the toolbar. */
