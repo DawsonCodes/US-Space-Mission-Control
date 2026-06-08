@@ -63,39 +63,52 @@
               placeholder="Search Starlink, Dragon, Florida…"
               autocomplete="off"
             />
+            <button
+              id="btnClearSearch"
+              class="search-clear"
+              type="button"
+              aria-label="Clear search"
+              hidden
+            >&times;</button>
           </label>
 
           <label class="field">
             <span class="field-label">Mission type</span>
-            <select id="missionType">
-              <option value="all">All missions</option>
-              <option value="starlink">Starlink</option>
-              <option value="crew">Crew</option>
-              <option value="cargo">Cargo</option>
-              <option value="starship">Starship</option>
-              <option value="transporter">Transporter</option>
-              <option value="rideshare">Rideshare</option>
-              <option value="science">Science</option>
-              <option value="other">Other</option>
-            </select>
+            <span class="select-wrap">
+              <select id="missionType">
+                <option value="all">All missions</option>
+                <option value="starlink">Starlink</option>
+                <option value="crew">Crew</option>
+                <option value="cargo">Cargo</option>
+                <option value="starship">Starship</option>
+                <option value="transporter">Transporter</option>
+                <option value="rideshare">Rideshare</option>
+                <option value="science">Science</option>
+                <option value="other">Other</option>
+              </select>
+            </span>
           </label>
 
           <label class="field">
             <span class="field-label">Sort by</span>
-            <select id="sortMode">
-              <option value="soonest">Soonest first</option>
-              <option value="latest">Latest first</option>
-              <option value="name">Mission name</option>
-              <option value="probability">Launch probability</option>
-            </select>
+            <span class="select-wrap">
+              <select id="sortMode">
+                <option value="soonest">Soonest first</option>
+                <option value="latest">Latest first</option>
+                <option value="name">Mission name</option>
+                <option value="probability">Launch probability</option>
+              </select>
+            </span>
           </label>
 
           <label class="field">
             <span class="field-label">Time</span>
-            <select id="dateMode">
-              <option value="local" selected>Local time</option>
-              <option value="utc">UTC</option>
-            </select>
+            <span class="select-wrap">
+              <select id="dateMode">
+                <option value="local" selected>Local time</option>
+                <option value="utc">UTC</option>
+              </select>
+            </span>
           </label>
 
           <div class="toolbar-actions">
@@ -108,7 +121,7 @@
         </div>
 
         <div id="status" class="status" role="status" aria-live="polite">
-          Ready. Refresh to load launches, or use demo data.
+          <span class="status-text">Ready. Refresh to load launches, or use demo data.</span>
         </div>
       </section>
 

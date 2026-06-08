@@ -20,8 +20,11 @@ import { getWeatherForLaunch } from "./weather.js";
 import {
   els,
   setStatus,
+  dismissStatus,
+  setupStatusBanner,
   updateInputsFromState,
   updateResetState,
+  syncSearchClear,
   syncGridFavorite,
   setLoadingState,
   renderHero,
@@ -136,7 +139,7 @@ function renderLoadError() {
 
 async function loadLaunches(forceRefresh = false) {
   setLoadingState();
-  setStatus(forceRefresh ? "Refreshing live launch data..." : "Loading latest SpaceX schedule...");
+  setStatus(forceRefresh ? "Refreshing live launch data..." : "Loading latest SpaceX schedule...", "loading");
 
   try {
     const rawResults = await fetchLiveLaunches(forceRefresh);
@@ -178,6 +181,7 @@ function onFilterChange() {
   state.visibleCount = DEFAULT_VISIBLE; // reset reveal whenever the result set changes
   applyFilters();
   renderResults();
+  renderStats(); // keep the "Showing" tile and category counts in sync
   updateResetState(); // don't rewrite inputs (keeps the search caret in place)
 }
 
@@ -188,6 +192,7 @@ function resetFilters() {
   state.visibleCount = DEFAULT_VISIBLE;
   applyFilters();
   renderResults();
+  renderStats();
   updateInputsFromState();
   setStatus("Filters reset.", "success");
 }
@@ -202,6 +207,7 @@ function randomMission() {
   state.visibleCount = DEFAULT_VISIBLE;
   applyFilters();
   renderResults();
+  renderStats();
   updateInputsFromState();
   document.querySelector(`[data-launch-id=${JSON.stringify(pick.id)}]`)?.scrollIntoView({
     behavior: "smooth",
@@ -297,6 +303,31 @@ function setupImageFallback() {
   );
 }
 
+// Toggle an `.is-open` class on each native <select>'s wrapper so the custom
+// arrow can rotate while the dropdown is open. Native selects keep keyboard
+// accessibility; the CSS also falls back to :focus-within when JS is absent.
+// See the report note: browsers don't expose a reliable "popup open" event, so
+// this is a best-effort approximation driven by pointer/keyboard/blur signals.
+function setupSelectArrows() {
+  document.querySelectorAll(".select-wrap").forEach((wrap) => {
+    const select = wrap.querySelector("select");
+    if (!select) return;
+    const close = () => wrap.classList.remove("is-open");
+    select.addEventListener("pointerdown", () => {
+      // A pointerdown toggles the native popup open/closed.
+      wrap.classList.toggle("is-open");
+    });
+    select.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" || event.key === "Tab") close();
+      else if ([" ", "Enter", "ArrowDown", "ArrowUp"].includes(event.key)) {
+        wrap.classList.add("is-open");
+      }
+    });
+    select.addEventListener("change", close); // a choice closes the popup
+    select.addEventListener("blur", close);
+  });
+}
+
 function attachEventListeners() {
   els.btnRefresh.addEventListener("click", () => loadLaunches(true));
   els.btnUseDemo.addEventListener("click", useDemoData);
@@ -307,16 +338,30 @@ function attachEventListeners() {
   els.btnLoadMore.addEventListener("click", () => {
     state.visibleCount += LOAD_MORE_STEP;
     renderResults();
+    renderStats(); // update the visible numerator immediately
   });
   els.btnShowAll.addEventListener("click", () => {
     state.visibleCount = state.filteredLaunches.length;
     renderResults();
+    renderStats();
   });
 
   els.keyword.addEventListener("input", (e) => {
     state.keyword = e.target.value;
+    syncSearchClear();
     onFilterChange();
   });
+  if (els.btnClearSearch) {
+    els.btnClearSearch.addEventListener("click", () => {
+      state.keyword = "";
+      state.visibleCount = DEFAULT_VISIBLE; // back to the initial batch
+      applyFilters();
+      renderResults();
+      renderStats();
+      updateInputsFromState(); // clears the field, hides the × and refreshes Reset
+      els.keyword.focus();
+    });
+  }
   els.missionType.addEventListener("change", (e) => {
     state.missionType = e.target.value;
     onFilterChange();
@@ -342,6 +387,12 @@ function attachEventListeners() {
 
   // Delegated clicks for dynamically rendered controls.
   document.addEventListener("click", (event) => {
+    const statusClose = event.target.closest("[data-status-close]");
+    if (statusClose) {
+      dismissStatus();
+      return;
+    }
+
     const overlayClose = event.target.closest("[data-overlay-close]");
     if (overlayClose) {
       closeOverlay();
@@ -381,6 +432,8 @@ function init() {
   renderAll();
   attachEventListeners();
   setupImageFallback();
+  setupStatusBanner();
+  setupSelectArrows();
   startCountdownTicker();
   setupStarfield();
   loadLaunches(false);

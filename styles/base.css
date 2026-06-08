@@ -107,6 +107,11 @@ body.overlay-open {
   to { transform: translateX(0); }
 }
 
+@keyframes statusOut {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-4px); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

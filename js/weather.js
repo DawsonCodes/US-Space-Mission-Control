@@ -51,6 +51,19 @@ export function weatherCodeLabel(code) {
   return WEATHER_CODES[code] ?? "Unknown conditions";
 }
 
+// Format an Open-Meteo Celsius temperature for display as Fahrenheit first,
+// then Celsius (e.g. "73°F / 23°C"). Returns null when no value is available so
+// callers can render a graceful placeholder. Centralizes the C→F conversion so
+// rendering code never duplicates it.
+export function formatTemperature(celsius) {
+  if (celsius === null || celsius === undefined) return null;
+  const c = Number(celsius);
+  if (Number.isNaN(c)) return null;
+  const roundedC = Math.round(c);
+  const roundedF = Math.round((c * 9) / 5 + 32);
+  return { c: roundedC, f: roundedF, text: `${roundedF}°F / ${roundedC}°C` };
+}
+
 // In-memory de-dupe of concurrent requests for the same cache key.
 const inflight = new Map();
 
