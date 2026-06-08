@@ -1,38 +1,61 @@
 // Rendering layer: owns the cached DOM references and every function that writes
-// markup to the page (hero spotlight, stats strip, schedule cards, results
-// counts, saved drawer, details modal, weather snippets, countdowns). It builds
-// overlay *content* but never drives overlay mechanics (that lives in modal.js).
+// markup to the page (hero spotlight, mission-overview tiles, schedule cards,
+// results counts, saved drawer, details modal, weather snippets, countdowns,
+// status banner). It builds overlay *content* but never drives overlay
+// mechanics (that lives in modal.js).
 
 import { state } from "./state.js";
 import {
   escapeHtml,
   safeUrl,
-  classifyMission,
-  toneFromMissionType,
   formatDate,
   formatCompactDate,
   getRelativeLabel,
   getCountdownText
 } from "./utils.js";
 import { isFavorite } from "./storage.js";
-import { hasActiveFilters } from "./filters.js";
+import { hasActiveFilters, baseManifest } from "./filters.js";
+import {
+  ORG,
+  ORG_LABELS,
+  ORG_BADGE_CLASS,
+  orgTags,
+  isNASA,
+  isSpaceX,
+  isBlueOrigin,
+  classifyMissionType,
+  missionTypeBadgeClass,
+  MISSION_TYPE_LABELS,
+  flightType,
+  FLIGHT_TYPE_LABELS,
+  normalizeStatus,
+  statusBadgeClass
+} from "./organizations.js";
+import { resolveLaunchImage, launchImageAlt } from "./images.js";
 import { weatherCodeLabel, formatTemperature } from "./weather.js";
 
 export const els = {
   status: document.getElementById("status"),
   keyword: document.getElementById("keyword"),
   missionType: document.getElementById("missionType"),
+  flightType: document.getElementById("flightType"),
   sortMode: document.getElementById("sortMode"),
   dateMode: document.getElementById("dateMode"),
   results: document.getElementById("results"),
   resultsMeta: document.getElementById("resultsMeta"),
-  statsGrid: document.getElementById("statsGrid"),
+  coverageNote: document.getElementById("coverageNote"),
+  overviewTiles: document.getElementById("overviewTiles"),
+  orgTabs: document.getElementById("orgTabs"),
+  moreMenu: document.getElementById("moreMenu"),
   nextLaunchCard: document.getElementById("nextLaunchCard"),
   dataSource: document.getElementById("dataSource"),
   lastUpdated: document.getElementById("lastUpdated"),
   footerMeta: document.getElementById("footerMeta"),
   btnRefresh: document.getElementById("btnRefresh"),
   btnUseDemo: document.getElementById("btnUseDemo"),
+  btnReloadLive: document.getElementById("btnReloadLive"),
+  btnResetMenu: document.getElementById("btnResetMenu"),
+  btnAbout: document.getElementById("btnAbout"),
   btnClearFilters: document.getElementById("btnClearFilters"),
   btnRandom: document.getElementById("btnRandom"),
   btnSaved: document.getElementById("btnSaved"),
@@ -49,22 +72,18 @@ export const els = {
 };
 
 // ----- Status banner lifecycle -------------------------------------------
-// Temporary, dismissible status messages. Success/info/warning auto-dismiss
-// after ~7s and show a per-second countdown plus a shrinking progress line;
-// danger and loading messages persist (no countdown) until replaced or
-// dismissed so failures and in-flight work stay visible. A single 1s interval
-// drives both the countdown text and the dismissal, so pausing on hover/focus
-// keeps them perfectly in sync.
+// Temporary, dismissible status messages. Ordinary tones (success/info/warning/
+// removed) auto-dismiss after EXACTLY 10s, driven by a single deadline
+// timestamp: both the visible seconds and the progress-bar width are derived
+// from the same remaining-time value every tick, so they can never desync.
+// There is NO hover/focus pausing. "loading" and "error" persist (no countdown)
+// until replaced or dismissed.
 
-const STATUS_AUTODISMISS_MS = 7000;
-const PERSISTENT_TONES = new Set(["danger", "loading"]);
+const STATUS_DURATION_MS = 10000;
+const STATUS_TICK_MS = 250;
+const PERSISTENT_TONES = new Set(["loading", "error"]);
 let statusInterval = null;
-let statusRemainingMs = 0;
-let statusPaused = false;
-
-function prefersReducedMotion() {
-  return Boolean(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
-}
+let statusDeadline = 0;
 
 function clearStatusInterval() {
   if (statusInterval) {
@@ -73,7 +92,6 @@ function clearStatusInterval() {
   }
 }
 
-// True only for the auto-dismissing tones (i.e. those that get a countdown).
 function statusHasCountdown(tone) {
   return !PERSISTENT_TONES.has(tone);
 }
@@ -81,31 +99,26 @@ function statusHasCountdown(tone) {
 function paintStatusCountdown() {
   const el = els.status;
   if (!el) return;
-  const secs = Math.max(0, Math.ceil(statusRemainingMs / 1000));
+  const remaining = Math.max(0, statusDeadline - Date.now());
+  const secs = Math.ceil(remaining / 1000);
   const count = el.querySelector("[data-status-count]");
   if (count) count.textContent = `${secs}s`;
   const bar = el.querySelector("[data-status-progress]");
-  if (bar) bar.style.width = `${Math.max(0, (statusRemainingMs / STATUS_AUTODISMISS_MS) * 100)}%`;
+  if (bar) bar.style.width = `${(remaining / STATUS_DURATION_MS) * 100}%`;
 }
 
-function tickStatus() {
-  statusRemainingMs -= 1000;
-  if (statusRemainingMs <= 0) {
-    dismissStatus();
-    return;
-  }
-  paintStatusCountdown();
-}
-
-// Start (or resume) the countdown ticker. reset=true restarts from the full
-// duration (a fresh message); reset=false continues from the remaining time
-// (resuming after a hover/focus pause).
-function runStatusCountdown(reset) {
+function runStatusCountdown() {
   clearStatusInterval();
-  if (reset) statusRemainingMs = STATUS_AUTODISMISS_MS;
+  statusDeadline = Date.now() + STATUS_DURATION_MS;
   paintStatusCountdown();
-  if (statusPaused) return; // stay frozen until the pointer/focus leaves
-  statusInterval = window.setInterval(tickStatus, 1000);
+  statusInterval = window.setInterval(() => {
+    paintStatusCountdown();
+    if (Date.now() >= statusDeadline) dismissStatus();
+  }, STATUS_TICK_MS);
+}
+
+function prefersReducedMotion() {
+  return Boolean(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 }
 
 export function dismissStatus() {
@@ -125,7 +138,7 @@ export function dismissStatus() {
     return;
   }
   el.classList.add("is-leaving");
-  window.setTimeout(collapse, 220);
+  window.setTimeout(collapse, 200);
 }
 
 export function setStatus(message, tone = "info") {
@@ -138,9 +151,9 @@ export function setStatus(message, tone = "info") {
 
   const withCountdown = statusHasCountdown(tone);
   // The countdown + progress line are decorative; hide them from assistive tech
-  // so screen readers don't announce every tick.
+  // so screen readers announce the message once, not every tick.
   const countdown = withCountdown
-    ? `<span class="status-count" data-status-count aria-hidden="true">${Math.round(STATUS_AUTODISMISS_MS / 1000)}s</span>`
+    ? `<span class="status-count" data-status-count aria-hidden="true">${Math.round(STATUS_DURATION_MS / 1000)}s</span>`
     : "";
   const progress = withCountdown
     ? `<span class="status-progress" data-status-progress aria-hidden="true"></span>`
@@ -152,27 +165,7 @@ export function setStatus(message, tone = "info") {
     `<button type="button" class="status-close" data-status-close aria-label="Dismiss message">&times;</button>` +
     progress;
 
-  if (withCountdown) runStatusCountdown(true);
-}
-
-// Pause the countdown + dismissal while the banner is hovered or keyboard-
-// focused, then resume from where it left off. Wired once during boot.
-export function setupStatusBanner() {
-  const el = els.status;
-  if (!el) return;
-  const pause = () => {
-    statusPaused = true;
-    clearStatusInterval();
-  };
-  const resume = () => {
-    statusPaused = false;
-    if (el.hidden) return;
-    if (statusHasCountdown(el.dataset.tone || "info")) runStatusCountdown(false);
-  };
-  el.addEventListener("mouseenter", pause);
-  el.addEventListener("mouseleave", resume);
-  el.addEventListener("focusin", pause);
-  el.addEventListener("focusout", resume);
+  if (withCountdown) runStatusCountdown();
 }
 
 // Format a launch date explicitly in local or UTC, independent of the global
@@ -196,35 +189,72 @@ function concise(launch) {
   return launch.location || launch.padName || "Location pending";
 }
 
-// Enable/disable Reset based on whether any non-default filter is active.
+// ----- Badge builders -----------------------------------------------------
+
+function orgBadgesHtml(launch) {
+  return orgTags(launch)
+    .map(
+      (tag) =>
+        `<span class="badge org-badge ${ORG_BADGE_CLASS[tag]}">${escapeHtml(ORG_LABELS[tag])}</span>`
+    )
+    .join("");
+}
+
+function missionTypeBadgeHtml(launch) {
+  const type = classifyMissionType(launch);
+  return `<span class="badge ${missionTypeBadgeClass(type)}">${escapeHtml(MISSION_TYPE_LABELS[type])}</span>`;
+}
+
+// Flight-type badge — omitted entirely when the type is unknown (no claim).
+function flightTypeBadgeHtml(launch) {
+  const ft = flightType(launch);
+  if (ft === "unknown") return "";
+  return `<span class="badge flight-${ft}">${escapeHtml(FLIGHT_TYPE_LABELS[ft])}</span>`;
+}
+
+function statusBadgeHtml(launch) {
+  const { label } = normalizeStatus(launch);
+  return `<span class="badge ${statusBadgeClass(launch)}">${escapeHtml(label)}</span>`;
+}
+
+function favoriteButtonHtml(launch, { variant = "grid" } = {}) {
+  const active = isFavorite(launch.id);
+  const cls = variant === "hero" ? "favorite-btn" : "favorite-btn btn-small";
+  const label = active ? "★ Saved" : "☆ Save";
+  const aria = active ? `Remove ${launch.name} from saved` : `Save ${launch.name}`;
+  return `<button class="${cls} ${active ? "is-active" : ""}" data-favorite-id="${escapeHtml(launch.id)}" type="button" aria-pressed="${active}" aria-label="${escapeHtml(aria)}">${label}</button>`;
+}
+
+// ----- Reset / inputs -----------------------------------------------------
+
 export function updateResetState() {
-  els.btnClearFilters.disabled = !hasActiveFilters();
+  if (els.btnClearFilters) els.btnClearFilters.disabled = !hasActiveFilters();
 }
 
 export function updateInputsFromState() {
-  els.keyword.value = state.keyword;
-  els.missionType.value = state.missionType;
-  els.sortMode.value = state.sortMode;
-  els.dateMode.value = state.dateMode;
+  if (els.keyword) els.keyword.value = state.keyword;
+  if (els.missionType) els.missionType.value = state.missionType;
+  if (els.flightType) els.flightType.value = state.flightType;
+  if (els.sortMode) els.sortMode.value = state.sortMode;
+  if (els.dateMode) els.dateMode.value = state.dateMode;
   updateResetState();
   syncSearchClear();
   renderSavedCount();
+  renderOrgControls();
 }
 
-// Show the inline search clear (×) only when there is query text.
 export function syncSearchClear() {
   if (els.btnClearSearch) els.btnClearSearch.hidden = state.keyword === "";
 }
 
-// Update only the favorite buttons for one mission inside the results grid,
-// so toggling a save doesn't re-render (and re-animate) the whole grid.
 export function syncGridFavorite(id) {
   const fav = isFavorite(id);
   els.results
     .querySelectorAll(`[data-favorite-id=${JSON.stringify(id)}]`)
     .forEach((btn) => {
       btn.classList.toggle("is-active", fav);
-      btn.textContent = fav ? "Saved" : "Save";
+      btn.setAttribute("aria-pressed", String(fav));
+      btn.textContent = fav ? "★ Saved" : "☆ Save";
     });
 }
 
@@ -283,29 +313,30 @@ export function renderHero() {
   if (!launch) {
     els.nextLaunchCard.innerHTML = `
       <div class="empty-state">
-        <strong>No next launch available</strong>
-        <span>Load live data or switch to demo mode.</span>
+        <strong>No matching mission</strong>
+        <span>Adjust the organization tab or filters, load live data, or switch to demo mode.</span>
       </div>
     `;
     return;
   }
 
-  const missionClass = classifyMission(launch);
   const locationLabel = [launch.padName, launch.location].filter(Boolean).join(" • ");
   const webcastUrl = safeUrl(launch.webcast);
 
   els.nextLaunchCard.innerHTML = `
     <div class="spotlight-head">
-      <span class="eyebrow">Next launch</span>
-      <div class="badge-row">
-        <span class="badge ${toneFromMissionType(missionClass)}">${escapeHtml(missionClass)}</span>
-        <span class="badge">${escapeHtml(launch.statusName)}</span>
-      </div>
+      <span class="eyebrow">Featured mission</span>
+      <div class="badge-row">${orgBadgesHtml(launch)}</div>
     </div>
 
     <div class="spotlight-main">
       <div class="spotlight-copy">
         <h2 class="spotlight-title">${escapeHtml(launch.name)}</h2>
+        <div class="badge-row">
+          ${missionTypeBadgeHtml(launch)}
+          ${flightTypeBadgeHtml(launch)}
+          ${statusBadgeHtml(launch)}
+        </div>
         <dl class="spotlight-facts">
           <div><dt>Rocket</dt><dd>${escapeHtml(launch.rocket || "Unknown rocket")}</dd></div>
           <div><dt>Pad &amp; location</dt><dd>${escapeHtml(locationLabel || "TBA")}</dd></div>
@@ -322,76 +353,111 @@ export function renderHero() {
 
     <div class="card-actions">
       <button class="btn btn-primary" data-details-id="${escapeHtml(launch.id)}" type="button">View details</button>
-      <button class="favorite-btn ${isFavorite(launch.id) ? "is-active" : ""}" data-favorite-id="${escapeHtml(launch.id)}" type="button">
-        ${isFavorite(launch.id) ? "Saved" : "Save mission"}
-      </button>
+      ${favoriteButtonHtml(launch, { variant: "hero" })}
       ${webcastUrl ? `<a class="card-link" href="${webcastUrl}" target="_blank" rel="noopener">Watch webcast</a>` : ""}
     </div>
   `;
 }
 
-// ----- Stats strip --------------------------------------------------------
+// ----- Mission overview ---------------------------------------------------
+// Tile counts use documented semantics:
+//  - "Showing" reflects the final filtered result set + current pagination.
+//  - Organization tiles reflect the matching manifest after non-org filters but
+//    BEFORE the active-org filter, so visitors can compare/switch organizations
+//    without the other tiles collapsing to zero. Counts overlap intentionally.
+//  - "Saved" reflects saved missions and updates immediately.
 
-export function renderStats() {
-  // Category counts reflect the full matching/filtered manifest, not the
-  // currently visible (paginated) slice.
+export function renderOverview() {
   const total = state.filteredLaunches.length;
   const visible = Math.min(state.visibleCount, total);
-  const count = (type) => state.filteredLaunches.filter((l) => classifyMission(l) === type).length;
+  const base = baseManifest();
+  const nasa = base.filter(isNASA).length;
+  const spacex = base.filter(isSpaceX).length;
+  const blue = base.filter(isBlueOrigin).length;
+  const saved = state.favorites.length;
 
-  const items = [
-    {
-      label: "Showing",
-      value: `${visible} / ${total}`,
-      desc: `Showing ${visible} of ${total} matching launch${total === 1 ? "" : "es"}`
-    },
-    { label: "Starlink", value: count("starlink") },
-    { label: "Crew", value: count("crew") },
-    { label: "Starship", value: count("starship") },
-    { label: "Saved", value: state.favorites.length }
-  ];
+  const showingDesc = `Showing ${visible} of ${total} matching launch${total === 1 ? "" : "es"}`;
 
-  els.statsGrid.innerHTML = items
-    .map((item) => {
-      const labelAttr = item.desc ? ` aria-label="${escapeHtml(item.desc)}"` : "";
-      return `
-        <div class="stat-chip"${labelAttr}>
-          <strong>${escapeHtml(item.value)}</strong>
-          <span aria-hidden="${item.desc ? "true" : "false"}">${escapeHtml(item.label)}</span>
-        </div>
-      `;
-    })
-    .join("");
+  const orgTile = (org, value, label) => {
+    const activeAttr = state.activeOrg === org ? "true" : "false";
+    return `
+      <button class="overview-tile is-org" data-org="${org}" type="button" aria-pressed="${activeAttr}">
+        <strong>${escapeHtml(value)}</strong>
+        <span>${escapeHtml(label)}</span>
+      </button>`;
+  };
+
+  els.overviewTiles.innerHTML = `
+    <div class="overview-tile is-showing" aria-label="${escapeHtml(showingDesc)}">
+      <strong>${escapeHtml(visible)} / ${escapeHtml(total)}</strong>
+      <span aria-hidden="true">Showing</span>
+    </div>
+    ${orgTile(ORG.NASA, nasa, "NASA missions")}
+    ${orgTile(ORG.SPACEX, spacex, "SpaceX launches")}
+    ${orgTile(ORG.BLUE_ORIGIN, blue, "Blue Origin flights")}
+    <button class="overview-tile is-saved" data-action="saved" type="button" aria-label="Open saved missions (${saved})">
+      <strong>${escapeHtml(saved)}</strong>
+      <span>Saved</span>
+    </button>
+  `;
+}
+
+// Keep organization tabs (and the active tile state) in sync with state.
+export function renderOrgControls() {
+  if (els.orgTabs) {
+    els.orgTabs.querySelectorAll("[data-org]").forEach((tab) => {
+      const selected = tab.getAttribute("data-org") === state.activeOrg;
+      tab.setAttribute("aria-selected", String(selected));
+      tab.classList.toggle("is-active", selected);
+      tab.tabIndex = selected ? 0 : -1;
+    });
+  }
+  if (els.overviewTiles) {
+    els.overviewTiles.querySelectorAll(".is-org[data-org]").forEach((tile) => {
+      tile.setAttribute("aria-pressed", String(tile.getAttribute("data-org") === state.activeOrg));
+    });
+  }
+}
+
+export function renderCoverageNote() {
+  if (!els.coverageNote) return;
+  if (state.truncated && state.launches.length > 0) {
+    els.coverageNote.hidden = false;
+    els.coverageNote.textContent = `Showing the next ${state.launches.length} tracked launches — some upcoming launches may not be listed.`;
+  } else {
+    els.coverageNote.hidden = true;
+    els.coverageNote.textContent = "";
+  }
 }
 
 // ----- Schedule cards -----------------------------------------------------
 
 function buildLaunchCard(launch, index) {
-  const missionClass = classifyMission(launch);
-  const imageUrl = safeUrl(launch.image);
+  const image = resolveLaunchImage(launch);
   const favoriteActive = isFavorite(launch.id);
-  const stagger = Math.min(index, 12);
+  const stagger = Math.min(index, 10);
 
   return `
     <article class="launch-card" data-launch-id="${escapeHtml(launch.id)}" style="--card-index:${stagger}">
       <div class="launch-card-media">
-        ${
-          imageUrl
-            ? `<img src="${imageUrl}" alt="${escapeHtml(launch.name)}" loading="lazy" />`
-            : `<div class="media-fallback">No image available</div>`
-        }
-        <span class="badge ${toneFromMissionType(missionClass)} badge-float">${escapeHtml(missionClass)}</span>
+        <img src="${escapeHtml(image.src)}" alt="${escapeHtml(launchImageAlt(launch))}" loading="lazy" />
+        <div class="badge-row badge-float">${orgBadgesHtml(launch)}</div>
       </div>
 
       <div class="launch-card-body">
         <div class="card-status-row">
-          <span class="badge">${escapeHtml(launch.statusName)}</span>
+          ${statusBadgeHtml(launch)}
           <span class="card-relative">${escapeHtml(getRelativeLabel(launch.net))}</span>
         </div>
 
         <h3>${escapeHtml(launch.name)}</h3>
         <div class="card-meta">
           ${escapeHtml(formatDate(launch.net))} • <span data-countdown="${escapeHtml(launch.net)}">${escapeHtml(getCountdownText(launch.net))}</span>
+        </div>
+
+        <div class="badge-row card-types">
+          ${missionTypeBadgeHtml(launch)}
+          ${flightTypeBadgeHtml(launch)}
         </div>
 
         <dl class="card-facts">
@@ -401,9 +467,7 @@ function buildLaunchCard(launch, index) {
 
         <div class="card-actions">
           <button class="btn btn-small btn-details" data-details-id="${escapeHtml(launch.id)}" type="button">Details</button>
-          <button class="favorite-btn btn-small ${favoriteActive ? "is-active" : ""}" data-favorite-id="${escapeHtml(launch.id)}" type="button">
-            ${favoriteActive ? "Saved" : "Save"}
-          </button>
+          ${favoriteButtonHtml(launch, { variant: "grid" })}
         </div>
       </div>
     </article>
@@ -430,7 +494,7 @@ export function renderResults() {
     els.results.innerHTML = `
       <div class="empty-state">
         <strong>No launches match your filters</strong>
-        <span>Try a different search or reset the filters.</span>
+        <span>Try a different organization, search, or reset the filters.</span>
       </div>
     `;
     els.resultsMeta.textContent = "0 matches";
@@ -468,18 +532,17 @@ export function renderDrawer() {
   if (els.btnClearFavorites) els.btnClearFavorites.disabled = false;
   els.drawerList.innerHTML = state.favorites
     .map((launch) => {
-      const missionClass = classifyMission(launch);
       return `
         <article class="saved-card">
           <div class="badge-row">
-            <span class="badge ${toneFromMissionType(missionClass)}">${escapeHtml(missionClass)}</span>
+            ${orgBadgesHtml(launch)}
             <span class="badge">${escapeHtml(formatCompactDate(launch.net))}</span>
           </div>
           <h3>${escapeHtml(launch.name)}</h3>
           <p>${escapeHtml(concise(launch))} • ${escapeHtml(getRelativeLabel(launch.net))}</p>
           <div class="card-actions">
             <button class="btn btn-small btn-details" data-details-id="${escapeHtml(launch.id)}" type="button">Details</button>
-            <button class="favorite-btn btn-small is-active" data-favorite-id="${escapeHtml(launch.id)}" type="button">Remove</button>
+            <button class="favorite-btn btn-small is-remove" data-favorite-id="${escapeHtml(launch.id)}" type="button" aria-label="Remove ${escapeHtml(launch.name)} from saved">× Remove</button>
           </div>
         </article>
       `;
@@ -490,7 +553,6 @@ export function renderDrawer() {
 // ----- Details modal content ---------------------------------------------
 
 export function buildDetailsContent(launch) {
-  const missionClass = classifyMission(launch);
   const locationLabel = [launch.padName, launch.location].filter(Boolean).join(" • ");
   const webcastUrl = safeUrl(launch.webcast);
   const officialUrl = launch.official; // already validated in api.js
@@ -502,12 +564,24 @@ export function buildDetailsContent(launch) {
       ? ""
       : `<div><dt>Launch probability</dt><dd>${escapeHtml(launch.probability)}%</dd></div>`;
 
+  const providerRow = launch.providerName
+    ? `<div><dt>Launch provider</dt><dd>${escapeHtml(launch.providerName)}</dd></div>`
+    : "";
+  const agencyNames = (launch.agencies || []).map((a) => a?.name).filter(Boolean).join(", ");
+  const agencyRow = agencyNames
+    ? `<div><dt>Mission agencies</dt><dd>${escapeHtml(agencyNames)}</dd></div>`
+    : "";
+  const orbitRow = launch.orbitName
+    ? `<div><dt>Orbit</dt><dd>${escapeHtml(launch.orbitName)}</dd></div>`
+    : "";
+
   return `
     <div class="details-head">
       <div class="badge-row">
-        <span class="badge ${toneFromMissionType(missionClass)}">${escapeHtml(missionClass)}</span>
-        <span class="badge">${escapeHtml(launch.statusName)}</span>
-        <span class="badge">${escapeHtml(launch.provider)}</span>
+        ${orgBadgesHtml(launch)}
+        ${missionTypeBadgeHtml(launch)}
+        ${flightTypeBadgeHtml(launch)}
+        ${statusBadgeHtml(launch)}
       </div>
       <h2 id="detailsTitle" class="details-title">${escapeHtml(launch.name)}</h2>
     </div>
@@ -522,6 +596,9 @@ export function buildDetailsContent(launch) {
       <div><dt>Launch (UTC)</dt><dd>${escapeHtml(detailDate(launch.net, true))}</dd></div>
       <div><dt>Rocket</dt><dd>${escapeHtml(launch.rocket || "Unknown rocket")}</dd></div>
       <div><dt>Pad &amp; location</dt><dd>${escapeHtml(locationLabel || "TBA")}</dd></div>
+      ${providerRow}
+      ${agencyRow}
+      ${orbitRow}
       ${probabilityRow}
     </dl>
 
@@ -532,9 +609,7 @@ export function buildDetailsContent(launch) {
     <section class="weather-block" data-weather aria-live="polite"></section>
 
     <div class="card-actions details-actions">
-      <button class="favorite-btn ${favoriteActive ? "is-active" : ""}" data-favorite-id="${escapeHtml(launch.id)}" type="button">
-        ${favoriteActive ? "Remove from saved" : "Save mission"}
-      </button>
+      ${favoriteButtonHtml(launch, { variant: "hero" })}
       ${webcastUrl ? `<a class="card-link" href="${webcastUrl}" target="_blank" rel="noopener">Webcast</a>` : ""}
       ${officialUrl ? `<a class="card-link" href="${officialUrl}" target="_blank" rel="noopener">Official page</a>` : ""}
       ${wikiUrl ? `<a class="card-link" href="${wikiUrl}" target="_blank" rel="noopener">Wiki</a>` : ""}
@@ -551,8 +626,7 @@ function weatherRow(label, value) {
 export function buildWeatherHtml(result, { compact = false } = {}) {
   const heading = `<h4 class="weather-heading">Local weather outlook</h4>`;
   const note = `<p class="weather-note">Weather data from Open-Meteo. Not an official launch forecast.</p>`;
-  const wrap = (inner, extraNote = false) =>
-    `${heading}${inner}${extraNote ? note : ""}`;
+  const wrap = (inner, extraNote = false) => `${heading}${inner}${extraNote ? note : ""}`;
 
   if (!result || result.status === "loading") {
     return wrap(`<p class="weather-msg">Loading local weather…</p>`);
@@ -567,7 +641,6 @@ export function buildWeatherHtml(result, { compact = false } = {}) {
     const d = result.data;
     const u = d.units || {};
     const fmt = (v, unit) => (v === null || v === undefined ? "—" : `${Math.round(Number(v))}${unit || ""}`);
-    // Open-Meteo returns °C by default; show Fahrenheit first, then Celsius.
     const tempParts = formatTemperature(d.temperature);
     const temp = tempParts ? tempParts.text : "—";
     const condition = weatherCodeLabel(d.weatherCode);
@@ -599,12 +672,9 @@ export function buildWeatherHtml(result, { compact = false } = {}) {
     return wrap(`<dl class="weather-grid">${rows}</dl>`, true);
   }
 
-  // invalid-time and error both fall through to the temporary-failure wording.
   return wrap(`<p class="weather-msg">Weather outlook temporarily unavailable.</p>`);
 }
 
-// Inject weather HTML into every [data-weather] mount currently in the DOM that
-// belongs to the given launch context (hero + open details share the wording).
 export function renderWeatherInto(container, result, options = {}) {
   if (!container) return;
   container.innerHTML = buildWeatherHtml(result, options);
@@ -629,9 +699,11 @@ export function refreshFooterMeta() {
 export function renderAll() {
   renderHeroMeta();
   renderHero();
-  renderStats();
+  renderOverview();
   renderResults();
   renderDrawer();
+  renderOrgControls();
+  renderCoverageNote();
   updateCountdownNodes();
   refreshFooterMeta();
 }

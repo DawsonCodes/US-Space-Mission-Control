@@ -35,13 +35,13 @@
   }
 }
 
-/* Tablet: two cards per row, wider stats strip. */
+/* Tablet: two cards per row, five overview tiles across. */
 @media (min-width: 640px) {
   .launch-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .stats-strip {
+  .overview-tiles {
     grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 }
@@ -63,5 +63,17 @@
 @media (min-width: 1180px) {
   .launch-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* Footer: side-by-side on desktop, stacked on mobile. */
+.footer {
+  flex-direction: column;
+}
+
+@media (min-width: 720px) {
+  .footer {
+    flex-direction: row;
+    align-items: flex-end;
   }
 }

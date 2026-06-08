@@ -12,8 +12,15 @@ export const state = {
   usingDemo: false,
   dataSource: "none",
   lastUpdated: null,
+  // True when an LL2 feed reported more records than it returned (coverage note).
+  truncated: false,
   dateMode: "local",
+  // Active organization tab/tile filter (all | nasa | spacex | blue-origin).
+  activeOrg: "all",
   missionType: "all",
+  // Flight-type filter (all | orbital | suborbital). "unknown" launches are
+  // never matched by the explicit orbital/suborbital filters.
+  flightType: "all",
   sortMode: "soonest",
   keyword: "",
   // Progressive reveal: how many of the filtered launches are currently shown.

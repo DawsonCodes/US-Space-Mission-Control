@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta
       name="description"
-      content="A polished SpaceX mission tracker with live countdowns, launch filters, saved missions, a local weather outlook, and a cinematic space UI."
+      content="U.S. Space Mission Control — track upcoming NASA missions, SpaceX launches, and Blue Origin flights with live countdowns, launch-site weather, filters, and saved missions."
     />
-    <title>SpaceX Mission Control</title>
+    <title>U.S. Space Mission Control</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="styles/base.css" />
     <link rel="stylesheet" href="styles/layout.css" />
@@ -20,11 +20,23 @@
     <div class="shell">
       <header class="hero panel">
         <div class="hero-copy">
-          <span class="eyebrow">Live mission tracker</span>
-          <h1>SpaceX Mission Control</h1>
+          <span class="eyebrow">Live U.S. spaceflight tracker</span>
+          <h1>U.S. Space Mission Control</h1>
           <p class="hero-text">
-            Track the next SpaceX launch, scan the upcoming manifest, and save the
-            missions you care about — with a local weather outlook when it's available.
+            Track upcoming NASA missions, SpaceX launches, and Blue Origin flights
+            with live countdowns, launch-site weather, filters, and saved missions.
+          </p>
+
+          <div class="org-tabs" id="orgTabs" role="tablist" aria-label="Organization filter">
+            <button class="org-tab is-active" role="tab" type="button" data-org="all" aria-selected="true">All tracked missions</button>
+            <button class="org-tab" role="tab" type="button" data-org="nasa" aria-selected="false" tabindex="-1">NASA</button>
+            <button class="org-tab" role="tab" type="button" data-org="spacex" aria-selected="false" tabindex="-1">SpaceX</button>
+            <button class="org-tab" role="tab" type="button" data-org="blue-origin" aria-selected="false" tabindex="-1">Blue Origin</button>
+          </div>
+          <p class="org-scope-note">
+            Tracks NASA missions, SpaceX launches, and Blue Origin flights — not every
+            launch provider. NASA is a civil agency, so its missions can also appear
+            under the SpaceX or Blue Origin tab.
           </p>
 
           <div class="hero-meta">
@@ -34,11 +46,19 @@
 
           <div class="hero-actions">
             <button id="btnRefresh" class="btn btn-primary" type="button">Refresh data</button>
-            <button id="btnUseDemo" class="btn btn-ghost" type="button">Use demo data</button>
+            <details class="more-menu" id="moreMenu">
+              <summary class="btn btn-ghost">More</summary>
+              <div class="more-menu-list" role="menu">
+                <button id="btnReloadLive" class="more-menu-item" type="button" role="menuitem">Reload live data</button>
+                <button id="btnResetMenu" class="more-menu-item" type="button" role="menuitem">Reset filters</button>
+                <button id="btnUseDemo" class="more-menu-item" type="button" role="menuitem">Use demo data</button>
+                <button id="btnAbout" class="more-menu-item" type="button" role="menuitem">About data sources</button>
+              </div>
+            </details>
           </div>
         </div>
 
-        <section class="next-launch-card" id="nextLaunchCard" aria-live="polite" aria-label="Next launch spotlight">
+        <section class="next-launch-card" id="nextLaunchCard" aria-live="polite" aria-label="Featured mission spotlight">
           <div class="placeholder-card" aria-hidden="true">
             <div class="placeholder-line placeholder-line-lg"></div>
             <div class="placeholder-line"></div>
@@ -51,7 +71,19 @@
         </section>
       </header>
 
-      <section class="stats-strip" id="statsGrid" aria-label="Launch statistics"></section>
+      <section class="overview panel" aria-labelledby="overviewTitle">
+        <div class="overview-head">
+          <div>
+            <span class="eyebrow">Mission overview</span>
+            <h2 id="overviewTitle" class="sr-only">Mission overview</h2>
+          </div>
+          <p class="overview-note" id="overviewNote">
+            Organization counts can overlap — a NASA mission may also be a SpaceX or
+            Blue Origin launch — so they aren't expected to add up to the total.
+          </p>
+        </div>
+        <div class="overview-tiles" id="overviewTiles" aria-label="Mission overview"></div>
+      </section>
 
       <section class="toolbar panel" aria-label="Schedule controls">
         <div class="toolbar-row">
@@ -60,7 +92,7 @@
             <input
               id="keyword"
               type="search"
-              placeholder="Search Starlink, Dragon, Florida…"
+              placeholder="Search Starlink, Dragon, Artemis, Florida…"
               autocomplete="off"
             />
             <button
@@ -76,15 +108,27 @@
             <span class="field-label">Mission type</span>
             <span class="select-wrap">
               <select id="missionType">
-                <option value="all">All missions</option>
-                <option value="starlink">Starlink</option>
+                <option value="all">All mission types</option>
                 <option value="crew">Crew</option>
                 <option value="cargo">Cargo</option>
-                <option value="starship">Starship</option>
-                <option value="transporter">Transporter</option>
-                <option value="rideshare">Rideshare</option>
                 <option value="science">Science</option>
-                <option value="other">Other</option>
+                <option value="starlink">Starlink</option>
+                <option value="rideshare">Rideshare</option>
+                <option value="commercial">Commercial</option>
+                <option value="national-security">National security</option>
+                <option value="test-flight">Test flight</option>
+                <option value="other">Other / Unclassified</option>
+              </select>
+            </span>
+          </label>
+
+          <label class="field">
+            <span class="field-label">Flight type</span>
+            <span class="select-wrap">
+              <select id="flightType">
+                <option value="all">All flights</option>
+                <option value="orbital">Orbital</option>
+                <option value="suborbital">Suborbital</option>
               </select>
             </span>
           </label>
@@ -93,10 +137,11 @@
             <span class="field-label">Sort by</span>
             <span class="select-wrap">
               <select id="sortMode">
-                <option value="soonest">Soonest first</option>
-                <option value="latest">Latest first</option>
-                <option value="name">Mission name</option>
-                <option value="probability">Launch probability</option>
+                <option value="soonest">Soonest launch</option>
+                <option value="latest">Latest launch date</option>
+                <option value="name">Mission name A–Z</option>
+                <option value="probability">Highest launch probability</option>
+                <option value="updated">Recently updated</option>
               </select>
             </span>
           </label>
@@ -115,7 +160,7 @@
             <button id="btnSaved" class="btn btn-toggle" type="button">
               Saved <span class="count-badge" id="savedCount">0</span>
             </button>
-            <button id="btnClearFilters" class="btn" type="button" disabled>Reset</button>
+            <button id="btnClearFilters" class="btn" type="button" disabled>Reset filters</button>
             <button id="btnRandom" class="btn btn-ghost" type="button">Random mission</button>
           </div>
         </div>
@@ -128,8 +173,9 @@
       <main class="schedule panel" aria-labelledby="resultsTitle">
         <div class="panel-head">
           <div>
-            <span class="eyebrow">Launches</span>
+            <span class="eyebrow">Upcoming schedule</span>
             <h2 id="resultsTitle">Upcoming schedule</h2>
+            <p id="coverageNote" class="coverage-note" hidden></p>
           </div>
           <div id="resultsMeta" class="panel-meta">No results loaded yet.</div>
         </div>
@@ -137,19 +183,33 @@
         <div id="results" class="launch-grid"></div>
 
         <div class="reveal-actions">
-          <button id="btnLoadMore" class="btn" type="button" hidden>Load 12 more</button>
+          <button id="btnLoadMore" class="btn" type="button" hidden>Load 10 more</button>
           <button id="btnShowAll" class="btn btn-ghost" type="button" hidden>Show all</button>
         </div>
       </main>
 
       <footer class="footer">
-        <span>
-          Launch data from
-          <a href="https://thespacedevs.com/llapi" target="_blank" rel="noopener">Launch Library 2</a>.
-          Weather from
-          <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>.
-        </span>
-        <span id="footerMeta">Awaiting live data.</span>
+        <div class="footer-main">
+          <strong class="footer-title">U.S. Space Mission Control</strong>
+          <span>Built by <a href="https://github.com/DawsonCodes" target="_blank" rel="noopener">DawsonCodes</a></span>
+          <span>
+            Launch data from
+            <a href="https://thespacedevs.com/llapi" target="_blank" rel="noopener">Launch Library 2</a>.
+            Local weather from
+            <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>.
+          </span>
+          <nav class="footer-links" aria-label="Project links">
+            <a href="https://github.com/DawsonCodes/US-Space-Mission-Control" target="_blank" rel="noopener">GitHub</a>
+            <span aria-hidden="true">•</span>
+            <a href="https://github.com/DawsonCodes/US-Space-Mission-Control/releases" target="_blank" rel="noopener">Releases</a>
+            <span aria-hidden="true">•</span>
+            <a href="LICENSE" target="_blank" rel="noopener">MIT License</a>
+            <span aria-hidden="true">•</span>
+            <a href="CONTRIBUTING.md" target="_blank" rel="noopener">Contributing</a>
+          </nav>
+          <span class="footer-copy">© 2026 DawsonCodes</span>
+        </div>
+        <span id="footerMeta" class="footer-meta">Awaiting live data.</span>
       </footer>
     </div>
 
@@ -170,7 +230,7 @@
         </div>
         <div id="drawerList" class="drawer-list"></div>
         <div class="overlay-foot">
-          <button id="btnClearFavorites" class="btn btn-ghost" type="button">Clear all</button>
+          <button id="btnClearFavorites" class="btn btn-danger-outline" type="button">Clear all</button>
         </div>
       </aside>
     </div>

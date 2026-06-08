@@ -128,28 +128,4 @@ export function getCountdownText(dateString) {
   return `${minutes}m`;
 }
 
-export function classifyMission(launch) {
-  const haystack = [
-    launch.name,
-    launch.missionName,
-    launch.details,
-    launch.rocket,
-    launch.missionType
-  ]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
-
-  if (haystack.includes("starlink")) return "starlink";
-  if (haystack.includes("crew") || haystack.includes("dragon")) return "crew";
-  if (haystack.includes("cargo") || haystack.includes("crs")) return "cargo";
-  if (haystack.includes("starship")) return "starship";
-  if (haystack.includes("transporter")) return "transporter";
-  if (haystack.includes("rideshare")) return "rideshare";
-  if (haystack.includes("science") || haystack.includes("lunar") || haystack.includes("planetary")) return "science";
-  return "other";
-}
-
-export function toneFromMissionType(type) {
-  return `type-${type}`;
-}
+// Mission/organization classification now lives in organizations.js.
