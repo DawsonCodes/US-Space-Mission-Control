@@ -158,10 +158,11 @@ select {
   pointer-events: none;
 }
 
-/* Rotate the arrow while the dropdown is open (JS-driven .is-open) or, as a
-   no-JS fallback, while the select is focused. */
-.select-wrap.is-open::after,
-.select-wrap:focus-within::after {
+/* Rotate the arrow ONLY while the dropdown is explicitly open (JS-driven
+   .is-open). Focus alone must never rotate it — otherwise the arrow can stay
+   "open" after the native popup closes while the select keeps focus. The focus
+   ring (below) communicates focus instead. */
+.select-wrap.is-open::after {
   transform: translateY(-50%) rotate(180deg);
 }
 
@@ -401,9 +402,10 @@ select optgroup {
   text-align: right;
 }
 
-/* Shrinking progress line along the bottom edge; width is stepped once per
-   second in JS and the 1s linear transition smooths it. Reduced-motion users
-   keep the per-second steps without the smoothing (global rule zeroes it). */
+/* Shrinking progress line along the bottom edge. Both the width and the visible
+   seconds are derived from the same remaining-time value every tick (~250ms), so
+   they can never desync. A short linear transition smooths the steps; the global
+   reduced-motion rule zeroes it, leaving honest stepped progress. */
 .status-progress {
   position: absolute;
   left: 0;
@@ -411,7 +413,7 @@ select optgroup {
   height: 2px;
   width: 100%;
   background: linear-gradient(90deg, var(--accent), var(--accent-2));
-  transition: width 1s linear;
+  transition: width 0.25s linear;
   pointer-events: none;
 }
 
@@ -456,10 +458,20 @@ select optgroup {
   box-shadow: 0 0 0 3px rgba(115, 182, 255, 0.18);
 }
 
-.status[data-tone="success"] { border-color: rgba(98, 215, 163, 0.25); color: #c9ffe6; }
-.status[data-tone="warning"] { border-color: rgba(255, 209, 102, 0.28); color: #ffe7a5; }
-.status[data-tone="danger"] { border-color: rgba(255, 128, 142, 0.28); color: #ffc1c9; }
+/* Semantic tones: success=green, info=blue, warning=amber, error/removed=red,
+   loading=blue/neutral. A removed-saved-mission status is red-toned (destructive),
+   never amber. */
+.status[data-tone="success"] { border-color: rgba(98, 215, 163, 0.3); color: #c9ffe6; }
+.status[data-tone="info"] { border-color: rgba(115, 182, 255, 0.3); color: #cfe2ff; }
+.status[data-tone="warning"] { border-color: rgba(255, 209, 102, 0.3); color: #ffe7a5; }
+.status[data-tone="error"],
+.status[data-tone="removed"],
+.status[data-tone="danger"] { border-color: rgba(255, 128, 142, 0.36); color: #ffc1c9; }
 .status[data-tone="loading"] { border-color: rgba(115, 182, 255, 0.28); color: #cfe2ff; }
+.status[data-tone="success"] .status-progress { background: linear-gradient(90deg, var(--success), #8be0bb); }
+.status[data-tone="warning"] .status-progress { background: linear-gradient(90deg, var(--warning), #ffe7a5); }
+.status[data-tone="error"] .status-progress,
+.status[data-tone="removed"] .status-progress { background: linear-gradient(90deg, var(--danger), #ffb0bb); }
 
 /* Launch cards ----------------------------------------------------------- */
 .launch-card {
@@ -518,6 +530,23 @@ select optgroup {
   position: absolute;
   top: 10px;
   left: 10px;
+  right: 10px;
+  gap: 6px;
+}
+
+.card-types {
+  margin-top: 2px;
+}
+
+/* Brief highlight when Random mission lands on a card. */
+@keyframes cardFlash {
+  0% { box-shadow: 0 0 0 0 rgba(115, 182, 255, 0.55); }
+  100% { box-shadow: 0 0 0 8px rgba(115, 182, 255, 0); }
+}
+
+.launch-card.is-flash {
+  border-color: rgba(115, 182, 255, 0.7);
+  animation: cardFlash 1.2s ease-out;
 }
 
 .launch-card-body {
@@ -609,23 +638,46 @@ select optgroup {
   white-space: nowrap;
 }
 
+/* Mission-type badges */
 .badge.type-starlink,
 .badge.type-crew,
-.badge.type-starship,
-.badge.type-transporter,
-.badge.type-rideshare,
 .badge.type-cargo,
-.badge.type-science {
+.badge.type-science,
+.badge.type-rideshare,
+.badge.type-commercial,
+.badge.type-national-security,
+.badge.type-test-flight {
   border-color: transparent;
 }
 
 .badge.type-starlink { background-color: rgba(115, 182, 255, 0.18); }
-.badge.type-crew { background-color: rgba(157, 125, 255, 0.18); }
-.badge.type-starship { background-color: rgba(255, 147, 120, 0.2); }
-.badge.type-transporter { background-color: rgba(98, 215, 163, 0.2); }
-.badge.type-rideshare { background-color: rgba(255, 209, 102, 0.2); color: #fff0b9; }
+.badge.type-crew { background-color: rgba(157, 125, 255, 0.2); }
 .badge.type-cargo { background-color: rgba(255, 128, 142, 0.18); }
 .badge.type-science { background-color: rgba(147, 197, 253, 0.18); }
+.badge.type-rideshare { background-color: rgba(255, 209, 102, 0.2); color: #fff0b9; }
+.badge.type-commercial { background-color: rgba(98, 215, 163, 0.18); }
+.badge.type-national-security { background-color: rgba(255, 147, 120, 0.2); color: #ffd8c6; }
+.badge.type-test-flight { background-color: rgba(190, 160, 255, 0.18); }
+.badge.type-other { background-color: rgba(255, 255, 255, 0.06); color: var(--muted); }
+
+/* Organization badges — distinct, recognizable accents */
+.badge.org-badge { border-color: transparent; font-weight: 600; }
+.badge.org-nasa { background-color: rgba(255, 128, 142, 0.2); color: #ffd2d8; }
+.badge.org-spacex { background-color: rgba(115, 182, 255, 0.22); color: #dbe9ff; }
+.badge.org-blueorigin { background-color: rgba(120, 200, 255, 0.16); color: #cfe6ff; }
+
+/* Flight-type badges (omitted entirely when unknown) */
+.badge.flight-orbital { background-color: rgba(115, 182, 255, 0.14); border-color: rgba(115, 182, 255, 0.3); }
+.badge.flight-suborbital { background-color: rgba(157, 125, 255, 0.16); border-color: rgba(157, 125, 255, 0.32); }
+
+/* Status badges */
+.badge.status-go { background-color: rgba(98, 215, 163, 0.2); border-color: transparent; color: #c9ffe6; }
+.badge.status-success { background-color: rgba(98, 215, 163, 0.2); border-color: transparent; color: #c9ffe6; }
+.badge.status-hold { background-color: rgba(255, 209, 102, 0.22); border-color: transparent; color: #ffe7a5; }
+.badge.status-failure { background-color: rgba(255, 128, 142, 0.22); border-color: transparent; color: #ffc1c9; }
+.badge.status-inflight { background-color: rgba(115, 182, 255, 0.2); border-color: transparent; color: #dbe9ff; }
+.badge.status-tbd,
+.badge.status-tbc { background-color: rgba(255, 255, 255, 0.06); color: var(--muted); }
 
 /* Card / favorite action links ------------------------------------------ */
 .card-link,
@@ -658,15 +710,35 @@ select optgroup {
   box-shadow: 0 0 0 4px rgba(115, 182, 255, 0.18);
 }
 
+/* Saved state: neutral ☆ Save → green ★ Saved (star baked into the label). */
 .favorite-btn.is-active {
   border-color: rgba(98, 215, 163, 0.5);
   background-color: rgba(98, 215, 163, 0.16);
   color: #d6ffe9;
 }
 
-.favorite-btn.is-active::before {
-  content: "★";
-  margin-right: 6px;
+/* Destructive remove (× Remove) in the saved drawer — red, never green. */
+.favorite-btn.is-remove {
+  border-color: rgba(255, 128, 142, 0.5);
+  background-color: rgba(255, 128, 142, 0.14);
+  color: #ffc1c9;
+}
+
+.favorite-btn.is-remove:hover {
+  border-color: rgba(255, 128, 142, 0.7);
+  background-color: rgba(255, 128, 142, 0.22);
+}
+
+/* Clear all — red-outline destructive action. */
+.btn-danger-outline {
+  border-color: rgba(255, 128, 142, 0.5);
+  color: #ffc1c9;
+  background-color: rgba(255, 128, 142, 0.08);
+}
+
+.btn-danger-outline:hover {
+  border-color: rgba(255, 128, 142, 0.75);
+  background-color: rgba(255, 128, 142, 0.16);
 }
 
 /* Overlays (drawer + modal) --------------------------------------------- */
@@ -976,3 +1048,217 @@ select optgroup {
 .placeholder-line-lg { height: 20px; width: 70%; }
 .placeholder-pills { display: flex; gap: 10px; }
 .placeholder-pill { width: 90px; height: 34px; }
+
+/* Organization tabs ------------------------------------------------------ */
+.org-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.org-tab {
+  cursor: pointer;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background-color: rgba(255, 255, 255, 0.04);
+  color: var(--muted);
+  padding: 8px 16px;
+  font-weight: 500;
+  transition: border-color 0.18s ease, background-color 0.18s ease, color 0.18s ease;
+}
+
+.org-tab:hover {
+  border-color: var(--line-strong);
+  background-color: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+}
+
+.org-tab.is-active {
+  border-color: rgba(115, 182, 255, 0.55);
+  background: linear-gradient(135deg, rgba(115, 182, 255, 0.24), rgba(157, 125, 255, 0.22));
+  color: #fff;
+}
+
+.org-tab:focus-visible {
+  outline: none;
+  border-color: rgba(115, 182, 255, 0.85);
+  box-shadow: 0 0 0 4px rgba(115, 182, 255, 0.18);
+}
+
+.org-scope-note {
+  margin: 12px 0 0;
+  max-width: 60ch;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+/* More menu (native <details> disclosure) -------------------------------- */
+.more-menu {
+  position: relative;
+  display: inline-block;
+}
+
+.more-menu > summary {
+  list-style: none;
+  cursor: pointer;
+}
+
+.more-menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.more-menu-list {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 8px);
+  left: 0;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--panel-strong);
+  box-shadow: var(--shadow);
+}
+
+.more-menu-item {
+  cursor: pointer;
+  text-align: left;
+  border-radius: 10px;
+  background-color: transparent;
+  color: var(--text);
+  padding: 9px 12px;
+  font-size: 0.9rem;
+  transition: background-color 0.16s ease;
+}
+
+.more-menu-item:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.more-menu-item:focus-visible {
+  outline: none;
+  background-color: rgba(115, 182, 255, 0.18);
+  box-shadow: inset 0 0 0 1px rgba(115, 182, 255, 0.6);
+}
+
+/* Mission overview ------------------------------------------------------- */
+.overview {
+  padding: 16px 18px;
+}
+
+.overview-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.overview-note {
+  margin: 0;
+  max-width: 48ch;
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.5;
+}
+
+.overview-tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.overview-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background-color: var(--panel-soft);
+  color: var(--text);
+  transition: transform 0.14s ease, border-color 0.18s ease, background-color 0.18s ease;
+}
+
+.overview-tile strong {
+  font-size: 1.3rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.overview-tile span {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+button.overview-tile {
+  cursor: pointer;
+}
+
+button.overview-tile:hover {
+  transform: translateY(-1px);
+  border-color: var(--line-strong);
+  background-color: rgba(255, 255, 255, 0.07);
+}
+
+button.overview-tile:focus-visible {
+  outline: none;
+  border-color: rgba(115, 182, 255, 0.85);
+  box-shadow: 0 0 0 4px rgba(115, 182, 255, 0.18);
+}
+
+.overview-tile.is-org[aria-pressed="true"] {
+  border-color: rgba(115, 182, 255, 0.6);
+  background: linear-gradient(135deg, rgba(115, 182, 255, 0.2), rgba(157, 125, 255, 0.16));
+}
+
+.overview-tile.is-showing {
+  background-color: rgba(115, 182, 255, 0.08);
+  border-color: rgba(115, 182, 255, 0.22);
+}
+
+/* Coverage note (shown only when an LL2 feed is truncated) --------------- */
+.coverage-note {
+  margin: 6px 0 0;
+  color: var(--warning);
+  font-size: 0.82rem;
+}
+
+.coverage-note[hidden] {
+  display: none;
+}
+
+/* Footer ----------------------------------------------------------------- */
+.footer-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.footer-title {
+  font-size: 0.98rem;
+  color: var(--text);
+}
+
+.footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.footer-copy {
+  margin-top: 4px;
+  font-size: 0.82rem;
+  opacity: 0.85;
+}
+
+.footer-meta {
+  align-self: flex-end;
+}

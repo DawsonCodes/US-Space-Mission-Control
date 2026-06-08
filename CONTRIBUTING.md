@@ -1,7 +1,8 @@
-# Contributing to SpaceX Mission Control
+# Contributing to U.S. Space Mission Control
 
-Thanks for your interest in improving SpaceX Mission Control! This is a small,
-friendly, dependency-free portfolio project, and thoughtful contributions of any
+Thanks for your interest in improving U.S. Space Mission Control! This is a
+small, friendly, dependency-free portfolio project that tracks NASA missions,
+SpaceX launches, and Blue Origin flights, and thoughtful contributions of any
 size are welcome — bug fixes, docs, accessibility tweaks, or new ideas.
 
 ## Before you start
@@ -20,10 +21,13 @@ This project is intentionally simple, and we'd like to keep it that way:
   `node_modules` — please don't add one without a discussion first.
 - **Preserve GitHub Pages compatibility.** The site is served from the repo root
   under a project path
-  (`https://dawsoncodes.github.io/SpaceX-Mission-Control/`), so always use
-  **relative** asset paths (`js/main.js`, `styles/base.css`) and never
-  leading-slash absolute paths (`/js/main.js`). Keep `index.html` at the repo
-  root.
+  (`https://dawsoncodes.github.io/US-Space-Mission-Control/`), so always use
+  **relative** asset paths (`js/main.js`, `styles/base.css`, `assets/images/...`)
+  and never leading-slash absolute paths (`/js/main.js`). Keep `index.html` at
+  the repo root.
+- **Keep the focus.** The product tracks NASA (a civil agency) plus the SpaceX
+  and Blue Origin launch providers. Please don't add other providers or an
+  "other providers" view.
 
 ## Branch naming
 
@@ -51,9 +55,18 @@ npx serve .
 ```
 
 Then manually exercise the features you touched: loading live data, refresh,
-demo mode, search, filters, sorting, favorites, the local/UTC toggle, and the
-countdowns. Check the browser console for errors and confirm the page still
-works at mobile, tablet, and desktop widths.
+the organization tabs/overview tiles, demo mode (under **More**), search,
+mission-type and flight-type filters, sorting, favorites, the local/UTC toggle,
+and the countdowns. If you touched classification or the API merge, also run the
+logic tests with Node:
+
+```bash
+node tests/classification.test.mjs
+node tests/merge.test.mjs
+```
+
+Check the browser console for errors and confirm the page still works at mobile,
+tablet, and desktop widths.
 
 ## Pull request checklist
 

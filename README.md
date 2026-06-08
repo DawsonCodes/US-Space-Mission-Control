@@ -1,42 +1,79 @@
-# SpaceX Mission Control
+# U.S. Space Mission Control
 
-A polished, cinematic SpaceX launch tracker built with plain HTML, CSS, and
-JavaScript — live mission data, real-time countdowns, an in-app mission-details
-view, a saved-missions drawer, and a local weather outlook, all wrapped in an
-animated space-themed UI.
+A polished, cinematic U.S. spaceflight dashboard built with plain HTML, CSS, and
+JavaScript — track upcoming **NASA missions, SpaceX launches, and Blue Origin
+flights** with live countdowns, an in-app mission-details view, a saved-missions
+drawer, and a local weather outlook, all wrapped in an animated space-themed UI.
 
-**🚀 Live demo:** <https://dawsoncodes.github.io/SpaceX-Mission-Control/>
+**🚀 Live demo:** <https://dawsoncodes.github.io/US-Space-Mission-Control/>
+
+## Organizations: an agency vs. providers
+
+The dashboard intentionally tracks three organizations — and models them
+honestly:
+
+- **NASA** is a civil space **agency**, matched on a mission's agencies. NASA
+  missions frequently fly on commercial rockets.
+- **SpaceX** and **Blue Origin** are launch **providers**, matched on the launch
+  service provider.
+
+Because of that, organization views overlap on purpose:
+
+- A NASA mission may launch on a SpaceX rocket → it appears under **both** NASA
+  and SpaceX.
+- A NASA payload may launch on a Blue Origin rocket → NASA **and** Blue Origin.
+- A SpaceX Starlink launch is a SpaceX launch but not a NASA mission.
+- A Blue Origin New Shepard flight is a Blue Origin flight and is **suborbital**.
+
+The organization-overview counts can overlap and are not expected to add up to
+the total. There is no "other providers" view — the product stays focused on
+NASA, SpaceX, and Blue Origin.
 
 ## Features
 
-- **Mission dashboard hero** — next-launch spotlight with a live countdown,
-  rocket, pad/location, a compact data-source + last-updated indicator, and a
-  refresh action.
-- **Live launch data** — pulls upcoming SpaceX launches from the Launch
-  Library 2 API.
+- **Organization tabs** — *All tracked missions · NASA · SpaceX · Blue Origin*,
+  the primary organization filter, kept in sync with the clickable overview
+  tiles.
+- **Featured-mission spotlight** — the next matching mission for the active
+  organization + filters, with organization, mission-type, and orbital/suborbital
+  badges, a live countdown, rocket/pad, launch-site weather, and quick actions.
+- **Mission overview** — *Showing · NASA missions · SpaceX launches · Blue Origin
+  flights · Saved* tiles; the organization tiles are clickable shortcuts and the
+  Saved tile opens the drawer.
+- **Live launch data** — pulls upcoming launches from the Launch Library 2 API
+  using two feeds (SpaceX + Blue Origin providers, and NASA-tagged missions),
+  merged and de-duplicated by stable launch id.
+- **Orbital + suborbital support** — Blue Origin New Shepard suborbital flights
+  are included; flight type is shown honestly (orbital / suborbital / omitted
+  when unknown).
 - **Local weather outlook** — a keyless Open-Meteo forecast for the launch pad,
-  shown on the hero and in mission details (never an official go/no-go forecast).
-- **Mission-details modal** — full details for every mission (local + UTC times,
-  rocket, pad, description, weather, launch probability when available, and
-  validated Webcast / Official page / Wiki links).
-- **Saved-missions drawer** — save launches to a slide-over shortlist that
-  survives refreshes; remove individually or clear all.
-- **Search** across mission name, rocket, location, and status.
-- **Mission-type filters** (Starlink, Crew, Cargo, Starship, Transporter,
-  Rideshare, Science, and more).
-- **Sorting** by soonest, latest, mission name, or launch probability.
-- **Progressive results** — a clear "Showing X of Y" count with **Load 12 more**
-  and **Show all** instead of a confusing fixed limit.
+  shown on the spotlight and in mission details (never an official go/no-go
+  forecast).
+- **Mission-details modal** — local + UTC times, provider, mission agencies,
+  orbit, rocket, pad, description, weather, launch probability, and validated
+  Webcast / Official page / Wiki links.
+- **Saved-missions drawer** — ☆ Save / ★ Saved, a red **× Remove**, and a
+  red-outline **Clear all**; saved missions survive refreshes.
+- **Search** across mission name, rocket, location, status, provider, and agency.
+- **Filters** — an evidence-based mission-type taxonomy (Crew, Cargo, Science,
+  Starlink, Rideshare, Commercial, National security, Test flight, …), a
+  flight-type filter, and sorting by soonest, latest, name, highest probability,
+  or recently updated.
+- **Progressive results** — 10 cards initially with **Load 10 more** / **Show
+  all**, shown only while more matching results remain.
 - **Local time / UTC toggle** for every date and countdown.
-- **Demo mode** so the full UI works even when the API is unavailable.
-- **Smart caching** of launch and weather responses (sessionStorage) with
-  request cancellation for snappy refreshes.
-- **Cinematic starfield** background with parallax glow and shooting stars,
-  polished hover/entrance animations, and full `prefers-reduced-motion` support.
-- **Accessible overlays** — focus trap, Escape/backdrop close, focus
-  restoration, and background scroll lock.
-- **Responsive** layout: three cards per row on wide desktop, two on tablet,
-  one on mobile.
+- **Demo mode** (under the **More** menu) so the full UI works even when the API
+  is unavailable, with future-dated records covering NASA/SpaceX/Blue Origin,
+  crew/cargo/science/Starlink/rideshare/Starship/New Glenn/New Shepard, and
+  overlapping NASA-on-provider missions.
+- **Smart caching** of launch and weather responses (sessionStorage) with request
+  cancellation, comfortably inside Launch Library 2's request budget.
+- **Cinematic starfield** background, polished animations, and full
+  `prefers-reduced-motion` support.
+- **Accessible** overlays (focus trap, Escape/backdrop close, focus restoration),
+  ARIA-labelled tabs/tiles, and keyboard navigation.
+- **Responsive** layout: three cards per row on wide desktop, two on tablet, one
+  on mobile.
 
 ## Tech stack
 
@@ -53,24 +90,33 @@ animated space-themed UI.
 ```
 index.html            # App shell (entry point, stays at repo root)
 favicon.svg           # Lightweight inline SVG favicon
+assets/
+  images/
+    fallbacks/        # Original, provider-neutral SVG image fallbacks
+    ATTRIBUTION.md    # Image source + reuse documentation
 styles/
   base.css            # Design tokens, reset, typography, starfield, a11y, keyframes
   layout.css          # Page shell, panels, grids, structural layout
-  components.css      # Buttons, selects, cards, badges, overlays, weather, status
+  components.css      # Buttons, selects, tabs, tiles, cards, badges, overlays, status
   responsive.css      # Breakpoints (1/2/3 columns, sticky toolbar, mobile sheets)
 js/
-  config.js           # Constants (API URLs, storage keys, TTLs, reveal sizes)
+  config.js           # Constants (LL2 URLs + IDs, storage keys, TTLs, reveal sizes)
   state.js            # Shared application state
   demo-data.js        # Offline/demo missions (always future-dated)
-  storage.js          # Preferences, favorites, and API cache persistence
+  storage.js          # Preferences, favorites, API cache + one-time key migration
   utils.js            # Escaping, URL safety/validation, date/countdown formatting
-  api.js              # Live fetch (caching + cancellation) + payload normalization
+  api.js              # Two-feed fetch + normalize + conservative merge/dedupe
+  organizations.js    # Org / mission-type / flight-type / status classification
+  images.js           # Launch-image resolver (LL2 first, then SVG fallback)
   filters.js          # Keyword matching, sorting, filter pipeline
   weather.js          # Open-Meteo fetch, nearest-hour, caching, formatting
   modal.js            # Accessible overlay mechanics (focus trap, ESC, scroll lock)
   render.js           # DOM references and all rendering (incl. overlay content)
   starfield.js        # Animated canvas background
   main.js             # Composition root: wires events and boots the app
+tests/
+  classification.test.mjs  # Mission-type + flight-type + org rules
+  merge.test.mjs           # Conservative two-feed merge / dedupe
 ```
 
 ## Local setup
@@ -89,25 +135,44 @@ python3 -m http.server 8000
 npx serve .
 ```
 
-No installation or build step is required — what you see is what ships.
+No installation or build step is required — what you see is what ships. The
+optional logic tests run with Node:
+
+```bash
+node tests/classification.test.mjs
+node tests/merge.test.mjs
+```
+
+## GitHub Pages
+
+The site is served from the repository root under a project path
+(`https://dawsoncodes.github.io/US-Space-Mission-Control/`), so all asset paths
+are **relative** (`js/main.js`, `styles/base.css`, `assets/images/...`). Never
+use leading-slash absolute paths (`/js/main.js`), and keep `index.html` at the
+repository root.
 
 ## Data sources
 
 - Upcoming launch data is provided by the
   [Launch Library 2](https://thespacedevs.com/llapi) API by The Space Devs.
+  SpaceX + Blue Origin launches and NASA-tagged missions are fetched as two
+  feeds and merged by stable launch id.
 - The local weather outlook is provided by the free, keyless
   [Open-Meteo](https://open-meteo.com/) forecast API. Weather is fetched only for
-  the next-launch hero card and the open mission-details view (never for every
-  card), cached briefly in `sessionStorage`, and is **not** an official launch
-  go/no-go forecast.
+  the featured-mission spotlight and the open mission-details view (never for
+  every card), cached briefly in `sessionStorage`, and is **not** an official
+  launch go/no-go forecast.
+- Launch images come from Launch Library 2 first; small original
+  provider-neutral SVGs are used as fallbacks (see
+  [`assets/images/ATTRIBUTION.md`](assets/images/ATTRIBUTION.md)).
 
 ## Project background
 
 This project began as an **AP Computer Science Principles** semester final
-project, where it earned a **100/100**. It has since been refactored and
-polished into a public, recruiter-facing portfolio piece — modularized into ES
-modules and split stylesheets while staying deliberately framework-free and easy
-to deploy.
+project, where it earned a **100/100**. It has since grown from a SpaceX-only
+tracker into a broader, recruiter-facing portfolio dashboard covering U.S.
+spaceflight (NASA, SpaceX, and Blue Origin) — modularized into ES modules and
+split stylesheets while staying deliberately framework-free and easy to deploy.
 
 ## Contributing
 
