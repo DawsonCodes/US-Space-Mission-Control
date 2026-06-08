@@ -133,17 +133,38 @@ select {
 select {
   appearance: none;
   padding-right: 34px;
-  background-image:
-    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
-    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
-  background-position:
-    calc(100% - 18px) calc(50% - 3px),
-    calc(100% - 13px) calc(50% - 3px);
-  background-size: 6px 6px, 6px 6px;
-  background-repeat: no-repeat;
 }
 
-/* background-color only — keeps the select arrow background-image intact. */
+/* Custom arrow lives on a wrapper pseudo-element (not a select background image)
+   so hover/focus background changes can never wipe it, and so it can rotate. */
+.select-wrap {
+  position: relative;
+  display: block;
+}
+
+.select-wrap::after {
+  content: "";
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid var(--muted);
+  transform: translateY(-50%);
+  transform-origin: center;
+  transition: transform 0.2s ease;
+  pointer-events: none;
+}
+
+/* Rotate the arrow while the dropdown is open (JS-driven .is-open) or, as a
+   no-JS fallback, while the select is focused. */
+.select-wrap.is-open::after,
+.select-wrap:focus-within::after {
+  transform: translateY(-50%) rotate(180deg);
+}
+
 input:hover,
 select:hover {
   border-color: var(--line-strong);
@@ -167,6 +188,57 @@ select optgroup {
 .field-label {
   font-size: 0.82rem;
   color: var(--muted);
+}
+
+/* Inline search clear (×) ------------------------------------------------ */
+.field-search {
+  position: relative;
+}
+
+/* Leave room for the custom clear button and suppress the WebKit native one so
+   there is a single, consistent clear control across browsers. */
+.field-search input[type="search"] {
+  padding-right: 40px;
+}
+
+.field-search input[type="search"]::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.search-clear {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background-color: rgba(255, 255, 255, 0.06);
+  color: var(--muted);
+  font-size: 1.05rem;
+  line-height: 1;
+  transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+
+.search-clear[hidden] {
+  display: none;
+}
+
+.search-clear:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+  border-color: var(--line-strong);
+  color: var(--text);
+}
+
+.search-clear:focus-visible {
+  outline: none;
+  border-color: rgba(115, 182, 255, 0.85);
+  box-shadow: 0 0 0 3px rgba(115, 182, 255, 0.18);
 }
 
 /* Indicators ------------------------------------------------------------- */
@@ -303,6 +375,10 @@ select optgroup {
 
 /* Status banner ---------------------------------------------------------- */
 .status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   margin-top: 14px;
   padding: 13px 15px;
   border-radius: var(--radius-md);
@@ -312,9 +388,51 @@ select optgroup {
   font-size: 0.92rem;
 }
 
+/* Collapse fully when dismissed so no empty gap is left in the toolbar. */
+.status[hidden] {
+  display: none;
+}
+
+.status.is-leaving {
+  animation: statusOut 0.2s ease forwards;
+}
+
+.status-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.status-close {
+  flex: none;
+  cursor: pointer;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background-color: rgba(255, 255, 255, 0.05);
+  color: inherit;
+  font-size: 1.05rem;
+  line-height: 1;
+  transition: background-color 0.18s ease, border-color 0.18s ease;
+}
+
+.status-close:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+  border-color: var(--line-strong);
+}
+
+.status-close:focus-visible {
+  outline: none;
+  border-color: rgba(115, 182, 255, 0.85);
+  box-shadow: 0 0 0 3px rgba(115, 182, 255, 0.18);
+}
+
 .status[data-tone="success"] { border-color: rgba(98, 215, 163, 0.25); color: #c9ffe6; }
 .status[data-tone="warning"] { border-color: rgba(255, 209, 102, 0.28); color: #ffe7a5; }
 .status[data-tone="danger"] { border-color: rgba(255, 128, 142, 0.28); color: #ffc1c9; }
+.status[data-tone="loading"] { border-color: rgba(115, 182, 255, 0.28); color: #cfe2ff; }
 
 /* Launch cards ----------------------------------------------------------- */
 .launch-card {

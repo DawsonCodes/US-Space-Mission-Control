@@ -16,7 +16,7 @@ import {
 } from "./utils.js";
 import { isFavorite } from "./storage.js";
 import { hasActiveFilters } from "./filters.js";
-import { weatherCodeLabel } from "./weather.js";
+import { weatherCodeLabel, formatTemperature } from "./weather.js";
 
 export const els = {
   status: document.getElementById("status"),
@@ -44,12 +44,83 @@ export const els = {
   drawerCount: document.getElementById("drawerCount"),
   btnClearFavorites: document.getElementById("btnClearFavorites"),
   detailsModal: document.getElementById("detailsModal"),
-  detailsContent: document.getElementById("detailsContent")
+  detailsContent: document.getElementById("detailsContent"),
+  btnClearSearch: document.getElementById("btnClearSearch")
 };
 
+// ----- Status banner lifecycle -------------------------------------------
+// Temporary, dismissible status messages. Success/info/warning auto-dismiss
+// after ~7s (timer pauses on hover/focus); danger and loading messages persist
+// until replaced or dismissed so failures and in-flight work stay visible.
+
+const STATUS_AUTODISMISS_MS = 7000;
+const PERSISTENT_TONES = new Set(["danger", "loading"]);
+let statusTimer = null;
+
+function prefersReducedMotion() {
+  return Boolean(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+}
+
+function clearStatusTimer() {
+  if (statusTimer) {
+    window.clearTimeout(statusTimer);
+    statusTimer = null;
+  }
+}
+
+function scheduleStatusDismiss() {
+  clearStatusTimer();
+  statusTimer = window.setTimeout(() => dismissStatus(), STATUS_AUTODISMISS_MS);
+}
+
+export function dismissStatus() {
+  clearStatusTimer();
+  const el = els.status;
+  if (!el || el.hidden) return;
+
+  const collapse = () => {
+    el.hidden = true;
+    el.classList.remove("is-leaving");
+    el.innerHTML = "";
+    delete el.dataset.tone;
+  };
+
+  if (prefersReducedMotion()) {
+    collapse();
+    return;
+  }
+  el.classList.add("is-leaving");
+  window.setTimeout(collapse, 220);
+}
+
 export function setStatus(message, tone = "info") {
-  els.status.textContent = message;
-  els.status.dataset.tone = tone;
+  const el = els.status;
+  if (!el) return;
+  clearStatusTimer();
+  el.classList.remove("is-leaving");
+  el.hidden = false;
+  el.dataset.tone = tone;
+  el.innerHTML =
+    `<span class="status-text">${escapeHtml(message)}</span>` +
+    `<button type="button" class="status-close" data-status-close aria-label="Dismiss message">&times;</button>`;
+  if (!PERSISTENT_TONES.has(tone)) scheduleStatusDismiss();
+}
+
+// Pause the auto-dismiss timer while the banner is hovered or keyboard-focused,
+// then resume it once the pointer/focus leaves. Wired once during boot.
+export function setupStatusBanner() {
+  const el = els.status;
+  if (!el) return;
+  const pause = () => clearStatusTimer();
+  const resume = () => {
+    if (el.hidden) return;
+    const tone = el.dataset.tone || "info";
+    if (!PERSISTENT_TONES.has(tone)) scheduleStatusDismiss();
+  };
+  el.addEventListener("mouseenter", pause);
+  el.addEventListener("mouseleave", resume);
+  el.addEventListener("focusin", pause);
+  el.addEventListener("focusout", resume);
 }
 
 // Format a launch date explicitly in local or UTC, independent of the global
@@ -84,7 +155,13 @@ export function updateInputsFromState() {
   els.sortMode.value = state.sortMode;
   els.dateMode.value = state.dateMode;
   updateResetState();
+  syncSearchClear();
   renderSavedCount();
+}
+
+// Show the inline search clear (×) only when there is query text.
+export function syncSearchClear() {
+  if (els.btnClearSearch) els.btnClearSearch.hidden = state.keyword === "";
 }
 
 // Update only the favorite buttons for one mission inside the results grid,
@@ -204,23 +281,34 @@ export function renderHero() {
 // ----- Stats strip --------------------------------------------------------
 
 export function renderStats() {
-  const count = (type) => state.launches.filter((l) => classifyMission(l) === type).length;
+  // Category counts reflect the full matching/filtered manifest, not the
+  // currently visible (paginated) slice.
+  const total = state.filteredLaunches.length;
+  const visible = Math.min(state.visibleCount, total);
+  const count = (type) => state.filteredLaunches.filter((l) => classifyMission(l) === type).length;
+
   const items = [
-    { label: "Total", value: state.launches.length },
+    {
+      label: "Showing",
+      value: `${visible} / ${total}`,
+      desc: `Showing ${visible} of ${total} matching launch${total === 1 ? "" : "es"}`
+    },
     { label: "Starlink", value: count("starlink") },
     { label: "Crew", value: count("crew") },
     { label: "Starship", value: count("starship") },
     { label: "Saved", value: state.favorites.length }
   ];
+
   els.statsGrid.innerHTML = items
-    .map(
-      (item) => `
-        <div class="stat-chip">
+    .map((item) => {
+      const labelAttr = item.desc ? ` aria-label="${escapeHtml(item.desc)}"` : "";
+      return `
+        <div class="stat-chip"${labelAttr}>
           <strong>${escapeHtml(item.value)}</strong>
-          <span>${escapeHtml(item.label)}</span>
+          <span aria-hidden="${item.desc ? "true" : "false"}">${escapeHtml(item.label)}</span>
         </div>
-      `
-    )
+      `;
+    })
     .join("");
 }
 
@@ -427,13 +515,16 @@ export function buildWeatherHtml(result, { compact = false } = {}) {
     const d = result.data;
     const u = d.units || {};
     const fmt = (v, unit) => (v === null || v === undefined ? "—" : `${Math.round(Number(v))}${unit || ""}`);
-    const temp = d.temperature === null || d.temperature === undefined
-      ? "—"
-      : `${Math.round(Number(d.temperature))}${u.temperature_2m || "°"}`;
+    // Open-Meteo returns °C by default; show Fahrenheit first, then Celsius.
+    const tempParts = formatTemperature(d.temperature);
+    const temp = tempParts ? tempParts.text : "—";
     const condition = weatherCodeLabel(d.weatherCode);
 
     if (compact) {
-      const precip = d.precipitationProbability === null ? "" : ` • ${fmt(d.precipitationProbability, "%")} precip`;
+      const precip =
+        d.precipitationProbability === null || d.precipitationProbability === undefined
+          ? ""
+          : ` · ${Math.round(Number(d.precipitationProbability))}% precip`;
       return wrap(
         `<p class="weather-compact"><strong>${escapeHtml(condition)}</strong> · ${escapeHtml(temp)}${escapeHtml(precip)}</p>`,
         true
