@@ -198,13 +198,21 @@ function resetFilters() {
 }
 
 function randomMission() {
-  if (state.launches.length === 0) {
-    setStatus("Load some launches first so I have something to pick.", "warning");
+  // Pick only from the full filtered manifest so an active mission-type filter
+  // (or search, or any future result filter wired into applyFilters) is always
+  // honored — never a launch that the current filters would immediately hide.
+  const pool = state.filteredLaunches;
+  if (pool.length === 0) {
+    if (state.launches.length === 0) {
+      setStatus("Load some launches first so I have something to pick.", "warning");
+    } else {
+      setStatus("No matching missions available. Try changing or resetting your filters.", "warning");
+    }
     return;
   }
-  const pick = state.launches[Math.floor(Math.random() * state.launches.length)];
+  const pick = pool[Math.floor(Math.random() * pool.length)];
   state.keyword = pick.name.split("|").pop()?.trim() || pick.name;
-  state.visibleCount = DEFAULT_VISIBLE;
+  state.visibleCount = DEFAULT_VISIBLE; // reveal from the top so the pick is shown
   applyFilters();
   renderResults();
   renderStats();
