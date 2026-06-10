@@ -11,7 +11,8 @@ import {
   formatDate,
   formatCompactDate,
   getRelativeLabel,
-  getCountdownText
+  getCountdownText,
+  validTimeZone
 } from "./utils.js";
 import { isFavorite } from "./storage.js";
 import { hasActiveFilters, baseManifest } from "./filters.js";
@@ -20,11 +21,10 @@ import {
   ORG,
   ORG_LABELS,
   ORG_BADGE_CLASS,
+  PROVIDER_ORGS,
+  ORG_MATCHERS,
   orgTags,
   isNASA,
-  isSpaceX,
-  isBlueOrigin,
-  isRocketLab,
   classifyMissionType,
   missionTypeBadgeClass,
   MISSION_TYPE_LABELS,
@@ -41,6 +41,9 @@ export const els = {
   keyword: document.getElementById("keyword"),
   missionType: document.getElementById("missionType"),
   flightType: document.getElementById("flightType"),
+  dateRange: document.getElementById("dateRange"),
+  launchSite: document.getElementById("launchSite"),
+  orbit: document.getElementById("orbit"),
   sortMode: document.getElementById("sortMode"),
   dateMode: document.getElementById("dateMode"),
   results: document.getElementById("results"),
@@ -61,6 +64,10 @@ export const els = {
   btnReloadLive: document.getElementById("btnReloadLive"),
   btnResetMenu: document.getElementById("btnResetMenu"),
   btnAbout: document.getElementById("btnAbout"),
+  btnLegend: document.getElementById("btnLegend"),
+  aboutModal: document.getElementById("aboutModal"),
+  aboutContent: document.getElementById("aboutContent"),
+  legendModal: document.getElementById("legendModal"),
   btnClearFilters: document.getElementById("btnClearFilters"),
   btnRandom: document.getElementById("btnRandom"),
   btnSaved: document.getElementById("btnSaved"),
@@ -190,6 +197,24 @@ function detailDate(dateString, utc = false) {
   return new Intl.DateTimeFormat(undefined, options).format(date);
 }
 
+// Format a launch date in its launch-site timezone for the details modal, or
+// null when the launch has no usable timezone (the modal then omits the row).
+function siteDate(launch) {
+  const date = new Date(launch?.net);
+  if (Number.isNaN(date.getTime())) return null;
+  const tz = validTimeZone(launch?.tzId);
+  if (!tz) return null;
+  return new Intl.DateTimeFormat(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZoneName: "short",
+    timeZone: tz
+  }).format(date);
+}
+
 function concise(launch) {
   return launch.location || launch.padName || "Location pending";
 }
@@ -270,6 +295,9 @@ export function updateInputsFromState() {
   if (els.keyword) els.keyword.value = state.keyword;
   if (els.missionType) els.missionType.value = state.missionType;
   if (els.flightType) els.flightType.value = state.flightType;
+  if (els.dateRange) els.dateRange.value = state.dateRange;
+  if (els.launchSite) els.launchSite.value = state.launchSite;
+  if (els.orbit) els.orbit.value = state.orbit;
   if (els.sortMode) els.sortMode.value = state.sortMode;
   if (els.dateMode) els.dateMode.value = state.dateMode;
   updateResetState();
@@ -374,7 +402,7 @@ export function renderHero() {
         <dl class="spotlight-facts">
           <div><dt>Rocket</dt><dd>${escapeHtml(launch.rocket || "Unknown rocket")}</dd></div>
           <div><dt>Pad &amp; location</dt><dd>${escapeHtml(locationLabel || "TBA")}</dd></div>
-          <div><dt>Launch time</dt><dd>${escapeHtml(formatDate(launch.net))}</dd></div>
+          <div><dt>Launch time</dt><dd>${escapeHtml(formatDate(launch.net, launch.tzId))}</dd></div>
         </dl>
       </div>
       <div class="countdown-ring">
@@ -401,36 +429,42 @@ export function renderHero() {
 //    without the other tiles collapsing to zero. Counts overlap intentionally.
 //  - "Saved" reflects saved missions and updates immediately.
 
+// Tile labels for each organization (provider-specific wording).
+const ORG_TILE_LABELS = {
+  nasa: "NASA missions",
+  spacex: "SpaceX launches",
+  "blue-origin": "Blue Origin flights",
+  "rocket-lab": "Rocket Lab launches",
+  ula: "ULA launches",
+  firefly: "Firefly launches"
+};
+
 export function renderOverview() {
   const total = state.filteredLaunches.length;
   const visible = Math.min(state.visibleCount, total);
   const base = baseManifest();
-  const nasa = base.filter(isNASA).length;
-  const spacex = base.filter(isSpaceX).length;
-  const blue = base.filter(isBlueOrigin).length;
-  const rocketLab = base.filter(isRocketLab).length;
   const saved = state.favorites.length;
 
   const showingDesc = `Showing ${visible} of ${total} matching launch${total === 1 ? "" : "es"}. Activate to show all tracked missions.`;
 
-  const orgTile = (org, value, label) => {
+  const orgTile = (org) => {
+    const value = base.filter(ORG_MATCHERS[org]).length;
     const activeAttr = state.activeOrg === org ? "true" : "false";
     return `
       <button class="overview-tile is-org" data-org="${org}" type="button" aria-pressed="${activeAttr}">
         <strong>${escapeHtml(value)}</strong>
-        <span>${escapeHtml(label)}</span>
+        <span>${escapeHtml(ORG_TILE_LABELS[org])}</span>
       </button>`;
   };
+
+  const orgOrder = [ORG.NASA, ...PROVIDER_ORGS];
 
   els.overviewTiles.innerHTML = `
     <button class="overview-tile is-showing" data-action="showing" type="button" aria-label="${escapeHtml(showingDesc)}">
       <strong>${escapeHtml(visible)} / ${escapeHtml(total)}</strong>
       <span aria-hidden="true">Showing</span>
     </button>
-    ${orgTile(ORG.NASA, nasa, "NASA missions")}
-    ${orgTile(ORG.SPACEX, spacex, "SpaceX launches")}
-    ${orgTile(ORG.BLUE_ORIGIN, blue, "Blue Origin flights")}
-    ${orgTile(ORG.ROCKET_LAB, rocketLab, "Rocket Lab launches")}
+    ${orgOrder.map(orgTile).join("")}
     <button class="overview-tile is-saved" data-action="saved" type="button" aria-label="Open saved missions (${saved})">
       <strong>${escapeHtml(saved)}</strong>
       <span>Saved</span>
@@ -449,26 +483,34 @@ export function renderInsights() {
   if (!els.insightsChips) return;
   const pool = state.filteredLaunches;
   const now = Date.now();
+  const days7 = now + 7 * 24 * 60 * 60 * 1000;
   const days30 = now + 30 * 24 * 60 * 60 * 1000;
   const weatherHorizon = now + WEATHER_FORECAST_DAYS * 24 * 60 * 60 * 1000;
 
-  const within30 = pool.filter((l) => {
+  const inWindow = (l, end) => {
     const t = new Date(l.net).getTime();
-    return Number.isFinite(t) && t >= now && t <= days30;
-  }).length;
+    return Number.isFinite(t) && t >= now && t <= end;
+  };
+  const within7 = pool.filter((l) => inWindow(l, days7)).length;
+  const within30 = pool.filter((l) => inWindow(l, days30)).length;
   const webcasts = pool.filter((l) => safeUrl(l.webcast)).length;
   const orbital = pool.filter((l) => flightType(l) === "orbital").length;
   const suborbital = pool.filter((l) => flightType(l) === "suborbital").length;
   const crew = pool.filter((l) => classifyMissionType(l) === "crew").length;
   const science = pool.filter((l) => classifyMissionType(l) === "science").length;
-  const sites = new Set(
-    pool.map((l) => l.padName || l.location).filter(Boolean)
-  ).size;
+  const sites = new Set(pool.map((l) => l.padName || l.location).filter(Boolean)).size;
   const weatherable = pool.filter((l) => {
     if (typeof l.padLat !== "number" || typeof l.padLon !== "number") return false;
     const t = new Date(l.net).getTime();
     return Number.isFinite(t) && t <= weatherHorizon;
   }).length;
+  // Distinct tracked provider organizations represented in the filtered view.
+  const providers = new Set();
+  for (const l of pool) {
+    for (const org of PROVIDER_ORGS) {
+      if (ORG_MATCHERS[org](l)) providers.add(org);
+    }
+  }
 
   const chip = (value, label) => `
     <div class="insight-chip">
@@ -477,6 +519,7 @@ export function renderInsights() {
     </div>`;
 
   els.insightsChips.innerHTML =
+    chip(within7, "Launches in the next 7 days") +
     chip(within30, "Launches in the next 30 days") +
     chip(webcasts, "Webcasts available") +
     chip(orbital, "Orbital missions") +
@@ -484,7 +527,8 @@ export function renderInsights() {
     chip(crew, "Crew missions") +
     chip(science, "Science missions") +
     chip(sites, "Active launch sites") +
-    chip(weatherable, "Weather outlooks available");
+    chip(weatherable, "Weather outlooks available") +
+    chip(providers.size, "Providers represented");
 }
 
 // Keep organization tabs (and the active tile state) in sync with state.
@@ -543,7 +587,7 @@ function buildLaunchCard(launch, index) {
 
         <h3>${escapeHtml(launch.name)}</h3>
         <div class="card-meta">
-          ${escapeHtml(formatDate(launch.net))} • <span data-countdown="${escapeHtml(launch.net)}">${escapeHtml(getCountdownText(launch.net))}</span>
+          ${escapeHtml(formatDate(launch.net, launch.tzId))} • <span data-countdown="${escapeHtml(launch.net)}">${escapeHtml(getCountdownText(launch.net))}</span>
         </div>
 
         <div class="badge-row card-types">
@@ -693,6 +737,17 @@ export function buildDetailsContent(launch) {
     ? `<div><dt>Orbit</dt><dd>${escapeHtml(launch.orbitName)}</dd></div>`
     : "";
 
+  const siteFormatted = siteDate(launch);
+  const siteRow = siteFormatted
+    ? `<div><dt>Launch (site time)</dt><dd>${escapeHtml(siteFormatted)}</dd></div>`
+    : `<div><dt>Launch (site time)</dt><dd>Site timezone unavailable — showing local time above.</dd></div>`;
+
+  const validNet = Number.isFinite(new Date(launch.net).getTime());
+  const calendarAction = validNet
+    ? `<button class="card-link" data-calendar-id="${escapeHtml(launch.id)}" type="button">Add to calendar</button>`
+    : "";
+  const shareAction = `<button class="card-link" data-share-id="${escapeHtml(launch.id)}" type="button">Copy mission link</button>`;
+
   return `
     <div class="details-head">
       <div class="badge-row">
@@ -712,6 +767,7 @@ export function buildDetailsContent(launch) {
     <dl class="details-grid">
       <div><dt>Launch (local)</dt><dd>${escapeHtml(detailDate(launch.net, false))}</dd></div>
       <div><dt>Launch (UTC)</dt><dd>${escapeHtml(detailDate(launch.net, true))}</dd></div>
+      ${siteRow}
       <div><dt>Rocket</dt><dd>${escapeHtml(launch.rocket || "Unknown rocket")}</dd></div>
       <div><dt>Pad &amp; location</dt><dd>${escapeHtml(locationLabel || "TBA")}</dd></div>
       ${providerRow}
@@ -731,8 +787,65 @@ export function buildDetailsContent(launch) {
     <div class="card-actions details-actions">
       ${favoriteButtonHtml(launch, { variant: "hero" })}
       ${webcastActionHtml(launch)}
+      ${calendarAction}
+      ${shareAction}
       ${officialUrl ? `<a class="card-link" href="${officialUrl}" target="_blank" rel="noopener">Official page</a>` : ""}
       ${wikiUrl ? `<a class="card-link" href="${wikiUrl}" target="_blank" rel="noopener">Wiki</a>` : ""}
+    </div>
+  `;
+}
+
+// ----- About this data ----------------------------------------------------
+
+export function buildAboutContent() {
+  const loaded = state.launches.length;
+  const filtered = state.filteredLaunches.length;
+  const source = state.usingDemo
+    ? "Demo data"
+    : state.dataSource === "live"
+      ? "Live data"
+      : state.dataSource === "cache"
+        ? "Cached live data"
+        : "Not loaded";
+  const refreshed = state.lastUpdated ? formatCompactDate(state.lastUpdated) : "—";
+  const coverage = state.truncated
+    ? "Partial — more upcoming launches exist than were returned."
+    : "Complete for the tracked providers.";
+
+  const row = (label, value) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`;
+
+  return `
+    <h2 id="aboutTitle" class="details-title">About this data</h2>
+    <dl class="details-grid about-grid">
+      ${row("Launch data", "Launch Library 2 (The Space Devs)")}
+      ${row("Weather", "Open-Meteo")}
+      ${row("Launch-pad maps", "OpenStreetMap")}
+      ${row("Loaded missions", String(loaded))}
+      ${row("Currently shown", String(filtered))}
+      ${row("Last refresh", refreshed)}
+      ${row("Data status", source)}
+      ${row("Coverage", coverage)}
+    </dl>
+    <div class="about-orgs">
+      <h3 class="about-subhead">Tracked organizations</h3>
+      <div class="badge-row">
+        <span class="badge org-badge org-nasa">NASA</span>
+        <span class="badge org-badge org-spacex">SpaceX</span>
+        <span class="badge org-badge org-blueorigin">Blue Origin</span>
+        <span class="badge org-badge org-rocketlab">Rocket Lab</span>
+        <span class="badge org-badge org-ula">ULA</span>
+        <span class="badge org-badge org-firefly">Firefly</span>
+      </div>
+      <p class="about-note">
+        NASA is a civil space <strong>agency</strong>; SpaceX, Blue Origin, Rocket Lab,
+        ULA, and Firefly are launch <strong>providers</strong>. A NASA mission can also
+        appear under its provider, so organization totals may overlap intentionally and
+        are not expected to sum to the total.
+      </p>
+      <p class="about-note">
+        Schedules, launch statuses, and webcast links may change at any time. This is
+        not an official launch forecast.
+      </p>
     </div>
   `;
 }

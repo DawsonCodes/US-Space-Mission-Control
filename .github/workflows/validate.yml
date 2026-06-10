@@ -1,0 +1,48 @@
+name: Validate
+
+# Plain-Node validation for this zero-build, dependency-free project.
+# No package manager, no npm install, no package.json — just Node running the
+# repository's own audit and test scripts.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Syntax-check every JavaScript module
+        run: |
+          set -e
+          for f in js/*.js tests/*.mjs; do
+            echo "node --check $f"
+            node --check "$f"
+          done
+
+      - name: Project audit (imports, relative paths, no build artifacts)
+        run: node tests/check-project.mjs
+
+      - name: Classification tests (incl. ULA + Firefly)
+        run: node tests/classification.test.mjs
+
+      - name: Merge / deduplication tests
+        run: node tests/merge.test.mjs
+
+      - name: Calendar (.ics) tests
+        run: node tests/calendar.test.mjs
+
+      - name: Deep-link tests
+        run: node tests/deeplink.test.mjs
+
+      - name: Headless UI / render harness
+        run: node tests/headless.test.mjs

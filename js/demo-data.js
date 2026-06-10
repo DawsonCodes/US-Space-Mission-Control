@@ -17,6 +17,8 @@ const NASA = { id: 44, name: "National Aeronautics and Space Administration", ty
 const SPACEX = { provider: "SpaceX", providerName: "SpaceX", providerId: 121, providerType: "Commercial" };
 const BLUE_ORIGIN = { provider: "Blue Origin", providerName: "Blue Origin", providerId: 141, providerType: "Commercial" };
 const ROCKET_LAB = { provider: "Rocket Lab", providerName: "Rocket Lab", providerId: 147, providerType: "Commercial" };
+const ULA = { provider: "United Launch Alliance", providerName: "United Launch Alliance", providerId: 124, providerType: "Commercial" };
+const FIREFLY = { provider: "Firefly Aerospace", providerName: "Firefly Aerospace", providerId: 265, providerType: "Commercial" };
 
 function record(base) {
   return {
@@ -27,6 +29,7 @@ function record(base) {
     rocketFamily: "",
     orbitName: "",
     orbitAbbrev: "",
+    tzId: "",
     image: "",
     missionImage: "",
     missionThumb: "",
@@ -324,6 +327,7 @@ export function getDemoLaunches() {
       rocketFamily: "Neutron",
       orbitName: "Low Earth Orbit",
       orbitAbbrev: "LEO",
+      tzId: "America/New_York",
       padName: "Launch Complex 3",
       location: "Wallops Island, Virginia, USA",
       padLat: 37.8337,
@@ -331,6 +335,148 @@ export function getDemoLaunches() {
       webcast: "",
       official: "https://www.rocketlabusa.com/launch/neutron/",
       wikipedia: "https://en.wikipedia.org/wiki/Rocket_Lab_Neutron"
+    }),
+    record({
+      ...ULA,
+      agencies: [NASA],
+      id: "demo-nasa-ula-vulcan",
+      name: "Vulcan VC4 | NASA Science Orbiter",
+      net: inDays(26, 11, 30),
+      missionType: "Planetary Science",
+      details:
+        "A NASA planetary-science orbiter on a ULA Vulcan Centaur — a NASA mission AND a ULA launch, so it appears under both organizations.",
+      statusName: "Go for Launch",
+      probability: 80,
+      rocket: "Vulcan VC4",
+      rocketFamily: "Vulcan",
+      orbitName: "Geostationary Transfer Orbit",
+      orbitAbbrev: "GTO",
+      tzId: "America/New_York",
+      padName: "Space Launch Complex 41",
+      location: "Cape Canaveral SFS, FL, USA",
+      padLat: 28.5833,
+      padLon: -80.5827,
+      webcast: "https://www.youtube.com/@ulalaunch",
+      official: "https://www.nasa.gov/",
+      wikipedia: "https://en.wikipedia.org/wiki/Vulcan_Centaur"
+    }),
+    record({
+      ...ULA,
+      id: "demo-ula-commercial",
+      name: "Vulcan VC2 | Commercial Comsat",
+      net: inDays(40, 23, 15),
+      missionType: "Communications",
+      details:
+        "A commercial ULA Vulcan launch — a ULA launch but not a NASA mission, so it appears only under ULA. Webcast included; no mission or rocket image, so the neutral placeholder shows.",
+      statusName: "To Be Confirmed",
+      probability: null,
+      rocket: "Vulcan VC2",
+      rocketFamily: "Vulcan",
+      orbitName: "Geostationary Orbit",
+      orbitAbbrev: "GEO",
+      tzId: "America/New_York",
+      padName: "Space Launch Complex 41",
+      location: "Cape Canaveral SFS, FL, USA",
+      padLat: 28.5833,
+      padLon: -80.5827,
+      webcast: "https://www.youtube.com/@ulalaunch",
+      official: "https://www.ulalaunch.com/missions",
+      wikipedia: "https://en.wikipedia.org/wiki/Vulcan_Centaur"
+    }),
+    record({
+      ...ULA,
+      id: "demo-ula-atlas-nsl",
+      name: "Atlas V 551 | National Security Payload",
+      net: inDays(54, 9, 0),
+      missionType: "Government/Top Secret",
+      details:
+        "A clearly-labeled legacy Atlas V national-security launch for ULA. Demonstrates the National security mission type and the Atlas family.",
+      statusName: "To Be Determined",
+      probability: null,
+      rocket: "Atlas V 551",
+      rocketFamily: "Atlas",
+      orbitName: "",
+      orbitAbbrev: "",
+      tzId: "",
+      padName: "Space Launch Complex 41",
+      location: "Cape Canaveral SFS, FL, USA",
+      padLat: 28.5833,
+      padLon: -80.5827,
+      webcast: "",
+      official: "https://www.ulalaunch.com/missions",
+      wikipedia: "https://en.wikipedia.org/wiki/Atlas_V"
+    }),
+    record({
+      ...FIREFLY,
+      agencies: [NASA],
+      id: "demo-nasa-firefly-alpha",
+      name: "Alpha | NASA Smallsat Tech Demo",
+      net: inDays(16, 6, 45),
+      missionType: "Earth Science",
+      details:
+        "A NASA technology-demonstration smallsat on a Firefly Alpha — a NASA mission AND a Firefly launch, appearing under both organizations.",
+      statusName: "Go for Launch",
+      probability: 75,
+      rocket: "Alpha",
+      rocketFamily: "Alpha",
+      orbitName: "Sun-Synchronous Orbit",
+      orbitAbbrev: "SSO",
+      tzId: "America/Los_Angeles",
+      padName: "Space Launch Complex 2W",
+      location: "Vandenberg SFB, CA, USA",
+      padLat: 34.7556,
+      padLon: -120.6224,
+      webcast: "https://www.youtube.com/@FireflySpace",
+      official: "https://www.nasa.gov/",
+      wikipedia: "https://en.wikipedia.org/wiki/Firefly_Alpha"
+    }),
+    record({
+      ...FIREFLY,
+      id: "demo-firefly-commercial",
+      name: "Alpha | Commercial Smallsat",
+      net: inDays(33, 20, 10),
+      missionType: "Commercial",
+      details:
+        "A commercial Firefly Alpha launch — a Firefly launch but not a NASA mission, so it appears only under Firefly. Orbit data is intentionally absent to exercise the Unknown-orbit bucket.",
+      statusName: "To Be Determined",
+      probability: null,
+      rocket: "Alpha",
+      rocketFamily: "Alpha",
+      orbitName: "",
+      orbitAbbrev: "",
+      tzId: "America/Los_Angeles",
+      padName: "Space Launch Complex 2W",
+      location: "Vandenberg SFB, CA, USA",
+      padLat: 34.7556,
+      padLon: -120.6224,
+      webcast: "https://www.youtube.com/@FireflySpace",
+      official: "https://fireflyspace.com/missions/",
+      wikipedia: "https://en.wikipedia.org/wiki/Firefly_Alpha"
+    }),
+    // Edge case: malformed optional fields (bad coords, invalid date, junk
+    // webcast) must be handled gracefully — no map, no calendar, no webcast,
+    // and it only appears under "All upcoming".
+    record({
+      ...FIREFLY,
+      id: "demo-firefly-malformed",
+      name: "Alpha | Data-Quality Edge Case",
+      net: "not-a-real-date",
+      missionType: "",
+      details: "Intentionally malformed demo record: invalid date, bad coordinates, and an unsafe webcast URL. The UI must degrade gracefully.",
+      statusName: "",
+      probability: null,
+      rocket: "Alpha",
+      rocketFamily: "Alpha",
+      orbitName: "",
+      orbitAbbrev: "",
+      tzId: "Not/AZone",
+      padName: "",
+      location: "",
+      padLat: 999,
+      padLon: null,
+      webcast: "javascript:alert(1)",
+      official: "",
+      wikipedia: ""
     })
   ];
 }

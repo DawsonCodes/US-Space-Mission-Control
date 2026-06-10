@@ -86,6 +86,8 @@ export function simplifyLaunch(raw) {
     location: raw?.pad?.location?.name || "",
     padLat: toCoord(raw?.pad?.latitude),
     padLon: toCoord(raw?.pad?.longitude),
+    // IANA timezone for the launch site, used by the "Launch-site time" mode.
+    tzId: raw?.pad?.location?.timezone_name || "",
     image: missionImage,
     missionImage,
     missionThumb,
@@ -165,6 +167,7 @@ export function mergeLaunch(a, b) {
     location: nonEmpty(a.location, b.location),
     padLat: a.padLat ?? b.padLat,
     padLon: a.padLon ?? b.padLon,
+    tzId: nonEmpty(a.tzId, b.tzId),
     program: richerText(a.program, b.program),
     details: richerText(a.details, b.details),
     image: nonEmpty(a.image, b.image),

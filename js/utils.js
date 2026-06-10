@@ -46,41 +46,70 @@ export function isPublicMissionUrl(value) {
   return url;
 }
 
-export function formatDate(dateString) {
-  const date = new Date(dateString);
-  if (Number.isNaN(date.getTime())) return "Unknown time";
+// Validate an IANA timezone id by attempting to use it. Returns the id when
+// usable, otherwise "". Caches results so repeated formatting stays cheap.
+const tzCache = new Map();
+export function validTimeZone(tzId) {
+  const id = String(tzId || "").trim();
+  if (!id) return "";
+  if (tzCache.has(id)) return tzCache.get(id);
+  let ok = "";
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: id }).format(0);
+    ok = id;
+  } catch {
+    ok = "";
+  }
+  tzCache.set(id, ok);
+  return ok;
+}
 
-  const options = {
-    year: "numeric",
-    month: "short",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit"
-  };
-
+// Apply the active time mode to Intl options. In "site" mode we use the launch
+// pad timezone when it is valid; otherwise we fall back to local time (the
+// details modal labels that fallback honestly).
+function applyTimeMode(options, tzId) {
   if (state.dateMode === "utc") {
     options.timeZone = "UTC";
     options.timeZoneName = "short";
+  } else if (state.dateMode === "site") {
+    const tz = validTimeZone(tzId);
+    if (tz) options.timeZone = tz;
+    options.timeZoneName = "short"; // show the abbreviation so the zone is clear
   }
+  return options;
+}
+
+export function formatDate(dateString, tzId) {
+  const date = new Date(dateString);
+  if (Number.isNaN(date.getTime())) return "Unknown time";
+
+  const options = applyTimeMode(
+    {
+      year: "numeric",
+      month: "short",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit"
+    },
+    tzId
+  );
 
   return new Intl.DateTimeFormat(undefined, options).format(date);
 }
 
-export function formatCompactDate(dateString) {
+export function formatCompactDate(dateString, tzId) {
   const date = new Date(dateString);
   if (Number.isNaN(date.getTime())) return "Unknown";
 
-  const options = {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit"
-  };
-
-  if (state.dateMode === "utc") {
-    options.timeZone = "UTC";
-    options.timeZoneName = "short";
-  }
+  const options = applyTimeMode(
+    {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    },
+    tzId
+  );
 
   return new Intl.DateTimeFormat(undefined, options).format(date);
 }

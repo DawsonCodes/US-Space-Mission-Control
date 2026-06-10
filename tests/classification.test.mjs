@@ -7,11 +7,15 @@ import assert from "node:assert/strict";
 import {
   classifyMissionType,
   flightType,
+  orbitCategory,
+  launchSiteCategory,
   orgTags,
   isNASA,
   isSpaceX,
   isBlueOrigin,
-  isRocketLab
+  isRocketLab,
+  isULA,
+  isFirefly
 } from "../js/organizations.js";
 
 const NASA = { id: 44, name: "National Aeronautics and Space Administration", type: "Government", abbrev: "NASA" };
@@ -28,7 +32,10 @@ const cases = [
   ["New Glenn (orbital)", { name: "New Glenn | Comsat", missionType: "Communications", rocket: "New Glenn", providerName: "Blue Origin", providerId: 141, orbitName: "Low Earth Orbit" }, "commercial", "orbital"],
   ["New Shepard (suborbital)", { name: "New Shepard | NS-30", missionType: "Tourism", rocket: "New Shepard", providerName: "Blue Origin", providerId: 141, orbitName: "Suborbital", orbitAbbrev: "Sub" }, "commercial", "suborbital"],
   ["Electron (orbital)", { name: "Electron | Smallsat Rideshare", missionType: "Dedicated Rideshare", rocket: "Electron", providerName: "Rocket Lab", providerId: 147, orbitName: "Sun-Synchronous Orbit" }, "rideshare", "orbital"],
-  ["Electron fallback (no orbit data => orbital)", { name: "Electron | Mystery Payload", missionType: "", rocket: "Electron", providerName: "Rocket Lab", providerId: 147, orbitName: "" }, "other", "orbital"]
+  ["Electron fallback (no orbit data => orbital)", { name: "Electron | Mystery Payload", missionType: "", rocket: "Electron", providerName: "Rocket Lab", providerId: 147, orbitName: "" }, "other", "orbital"],
+  ["Vulcan (ULA, orbital)", { name: "Vulcan VC4 | Comsat", missionType: "Communications", rocket: "Vulcan VC4", providerName: "United Launch Alliance", providerId: 124, orbitName: "Geostationary Transfer Orbit" }, "commercial", "orbital"],
+  ["Atlas V national security", { name: "Atlas V 551 | NROL", missionType: "Government/Top Secret", rocket: "Atlas V 551", providerName: "United Launch Alliance", providerId: 124, orbitName: "" }, "national-security", "orbital"],
+  ["Alpha (Firefly, orbital)", { name: "Alpha | Smallsat", missionType: "Commercial", rocket: "Alpha", providerName: "Firefly Aerospace", providerId: 265, orbitName: "Low Earth Orbit" }, "commercial", "orbital"]
 ];
 
 let failures = 0;
@@ -91,6 +98,67 @@ try {
 } catch (err) {
   failures += 1;
   console.error(`FAIL - ${err.message}`);
+}
+
+// NASA-on-ULA overlap; commercial ULA stays NASA-free.
+try {
+  const overlap = { providerName: "United Launch Alliance", providerId: 124, agencies: [NASA] };
+  assert.ok(isNASA(overlap) && isULA(overlap), "overlap tags");
+  assert.deepEqual(orgTags(overlap).sort(), ["nasa", "ula"], "overlap org tags");
+  const commercial = { providerName: "United Launch Alliance", providerId: 124, agencies: [] };
+  assert.ok(isULA(commercial) && !isNASA(commercial), "commercial ULA not NASA");
+  assert.deepEqual(orgTags(commercial), ["ula"], "commercial org tags");
+  console.log("ok  - NASA-on-ULA overlap; commercial ULA stays NASA-free");
+} catch (err) {
+  failures += 1;
+  console.error(`FAIL - ${err.message}`);
+}
+
+// NASA-on-Firefly overlap; commercial Firefly stays NASA-free.
+try {
+  const overlap = { providerName: "Firefly Aerospace", providerId: 265, agencies: [NASA] };
+  assert.ok(isNASA(overlap) && isFirefly(overlap), "overlap tags");
+  assert.deepEqual(orgTags(overlap).sort(), ["firefly", "nasa"], "overlap org tags");
+  const commercial = { providerName: "Firefly Aerospace", providerId: 265, agencies: [] };
+  assert.ok(isFirefly(commercial) && !isNASA(commercial), "commercial Firefly not NASA");
+  assert.deepEqual(orgTags(commercial), ["firefly"], "commercial org tags");
+  console.log("ok  - NASA-on-Firefly overlap; commercial Firefly stays NASA-free");
+} catch (err) {
+  failures += 1;
+  console.error(`FAIL - ${err.message}`);
+}
+
+// Orbit normalization buckets (conservative; unknown stays unknown).
+try {
+  assert.equal(orbitCategory({ orbitName: "Low Earth Orbit", orbitAbbrev: "LEO" }), "leo");
+  assert.equal(orbitCategory({ orbitName: "Sun-Synchronous Orbit", orbitAbbrev: "SSO" }), "sso");
+  assert.equal(orbitCategory({ orbitName: "Geostationary Transfer Orbit", orbitAbbrev: "GTO" }), "gto");
+  assert.equal(orbitCategory({ orbitName: "Geostationary Orbit", orbitAbbrev: "GEO" }), "geo");
+  assert.equal(orbitCategory({ orbitName: "Medium Earth Orbit", orbitAbbrev: "MEO" }), "meo");
+  assert.equal(orbitCategory({ orbitName: "Polar Orbit" }), "polar");
+  assert.equal(orbitCategory({ orbitName: "Trans-Lunar Injection" }), "lunar");
+  assert.equal(orbitCategory({ orbitName: "Heliocentric" }), "interplanetary");
+  assert.equal(orbitCategory({ orbitName: "Suborbital", orbitAbbrev: "Sub" }), "suborbital");
+  assert.equal(orbitCategory({ orbitName: "" }), "unknown");
+  console.log("ok  - orbit normalization buckets");
+} catch (err) {
+  failures += 1;
+  console.error(`FAIL - orbit: ${err.message}`);
+}
+
+// Launch-site categorization (conservative variants; other fallback).
+try {
+  assert.equal(launchSiteCategory({ padName: "SLC-40", location: "Cape Canaveral SFS, FL, USA" }), "cape-canaveral");
+  assert.equal(launchSiteCategory({ padName: "LC-39A", location: "Kennedy Space Center, FL, USA" }), "kennedy");
+  assert.equal(launchSiteCategory({ location: "Vandenberg SFB, CA, USA" }), "vandenberg");
+  assert.equal(launchSiteCategory({ location: "Wallops Island, Virginia, USA" }), "wallops");
+  assert.equal(launchSiteCategory({ location: "Mahia Peninsula, New Zealand" }), "rocketlab-lc1");
+  assert.equal(launchSiteCategory({ location: "Baikonur Cosmodrome" }), "other");
+  assert.equal(launchSiteCategory({ padName: "", location: "" }), "other");
+  console.log("ok  - launch-site categorization");
+} catch (err) {
+  failures += 1;
+  console.error(`FAIL - launch site: ${err.message}`);
 }
 
 if (failures > 0) {

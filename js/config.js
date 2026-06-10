@@ -2,22 +2,33 @@
 
 // ---- Launch Library 2 (LL2) ----------------------------------------------
 // All values below were verified against the official LL2 2.3.0 documentation.
-// SpaceX, Blue Origin, and Rocket Lab are launch *providers* (lsp__id); NASA is
-// a civil *agency* matched on the mission's agencies (mission__agency__ids).
-// The app intentionally tracks only these four organizations.
+// SpaceX, Blue Origin, Rocket Lab, ULA, and Firefly are launch *providers*
+// (lsp__id); NASA is a civil *agency* matched on the mission's agencies
+// (mission__agency__ids). The app intentionally tracks only these organizations.
 export const LL2_UPCOMING = "https://ll.thespacedevs.com/2.3.0/launches/upcoming/";
 
 // Verified provider / agency IDs (see docs links in the PR description).
 export const SPACEX_PROVIDER_ID = 121;
 export const BLUE_ORIGIN_PROVIDER_ID = 141;
 export const ROCKET_LAB_PROVIDER_ID = 147;
+export const ULA_PROVIDER_ID = 124; // United Launch Alliance
+export const FIREFLY_PROVIDER_ID = 265; // Firefly Aerospace
 export const NASA_AGENCY_ID = 44;
 
-// Feed A — SpaceX + Blue Origin + Rocket Lab launches (orbital + suborbital so
-// New Shepard flights are not missed). A single request covers all three
-// providers because lsp__id accepts comma-separated values.
+// Every tracked provider id, in the order used for the combined feed.
+export const PROVIDER_IDS = [
+  SPACEX_PROVIDER_ID,
+  BLUE_ORIGIN_PROVIDER_ID,
+  ROCKET_LAB_PROVIDER_ID,
+  ULA_PROVIDER_ID,
+  FIREFLY_PROVIDER_ID
+];
+
+// Feed A — all tracked provider launches (orbital + suborbital so New Shepard
+// flights are not missed). A single request covers every provider because
+// LL2 2.3.0 lsp__id accepts comma-separated values.
 export const API_PROVIDERS =
-  `${LL2_UPCOMING}?lsp__id=${SPACEX_PROVIDER_ID},${BLUE_ORIGIN_PROVIDER_ID},${ROCKET_LAB_PROVIDER_ID}` +
+  `${LL2_UPCOMING}?lsp__id=${PROVIDER_IDS.join(",")}` +
   "&include_suborbital=true&mode=detailed&limit=100&ordering=net&hide_recent_previous=true";
 
 // Feed B — NASA-tagged missions (may fly on providers other than the tracked

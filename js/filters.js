@@ -2,8 +2,48 @@
 // list of launches currently shown in the results grid.
 
 import { state } from "./state.js";
-import { classifyMissionType, matchesOrg, flightType } from "./organizations.js";
+import {
+  classifyMissionType,
+  matchesOrg,
+  flightType,
+  orbitCategory,
+  launchSiteCategory
+} from "./organizations.js";
 import { savePreferences } from "./storage.js";
+
+const HOUR_MS = 1000 * 60 * 60;
+const DAY_MS = HOUR_MS * 24;
+
+// Date-range filter against the launch NET. Missing/invalid dates only ever
+// match "All upcoming" — a stricter range logically excludes an unknown date.
+export function matchesDateRange(launch, range) {
+  if (range === "all") return true;
+  const t = new Date(launch?.net).getTime();
+  if (!Number.isFinite(t)) return false;
+  const now = Date.now();
+  switch (range) {
+    case "24h":
+      return t >= now && t <= now + 24 * HOUR_MS;
+    case "7d":
+      return t >= now && t <= now + 7 * DAY_MS;
+    case "30d":
+      return t >= now && t <= now + 30 * DAY_MS;
+    case "year":
+      return new Date(t).getFullYear() === new Date(now).getFullYear();
+    default:
+      return true;
+  }
+}
+
+export function matchesLaunchSite(launch, site) {
+  if (site === "all") return true;
+  return launchSiteCategory(launch) === site;
+}
+
+export function matchesOrbit(launch, orbit) {
+  if (orbit === "all") return true;
+  return orbitCategory(launch) === orbit;
+}
 
 export function matchesKeyword(launch, keyword) {
   const query = keyword.trim().toLowerCase();
@@ -56,6 +96,9 @@ function passesNonOrgFilters(launch) {
   if (!matchesKeyword(launch, state.keyword)) return false;
   if (state.missionType !== "all" && classifyMissionType(launch) !== state.missionType) return false;
   if (state.flightType !== "all" && flightType(launch) !== state.flightType) return false;
+  if (!matchesDateRange(launch, state.dateRange)) return false;
+  if (!matchesLaunchSite(launch, state.launchSite)) return false;
+  if (!matchesOrbit(launch, state.orbit)) return false;
   return true;
 }
 
@@ -82,6 +125,9 @@ export function hasActiveFilters() {
     state.activeOrg !== "all" ||
     state.missionType !== "all" ||
     state.flightType !== "all" ||
+    state.dateRange !== "all" ||
+    state.launchSite !== "all" ||
+    state.orbit !== "all" ||
     state.sortMode !== "soonest"
   );
 }
