@@ -15,6 +15,8 @@ import {
   SPACEX_PROVIDER_ID,
   BLUE_ORIGIN_PROVIDER_ID,
   ROCKET_LAB_PROVIDER_ID,
+  ULA_PROVIDER_ID,
+  FIREFLY_PROVIDER_ID,
   NASA_AGENCY_ID
 } from "./config.js";
 
@@ -23,7 +25,9 @@ export const ORG = {
   NASA: "nasa",
   SPACEX: "spacex",
   BLUE_ORIGIN: "blue-origin",
-  ROCKET_LAB: "rocket-lab"
+  ROCKET_LAB: "rocket-lab",
+  ULA: "ula",
+  FIREFLY: "firefly"
 };
 
 export const ORG_LABELS = {
@@ -31,15 +35,22 @@ export const ORG_LABELS = {
   nasa: "NASA",
   spacex: "SpaceX",
   "blue-origin": "Blue Origin",
-  "rocket-lab": "Rocket Lab"
+  "rocket-lab": "Rocket Lab",
+  ula: "ULA",
+  firefly: "Firefly"
 };
 
 export const ORG_BADGE_CLASS = {
   nasa: "org-nasa",
   spacex: "org-spacex",
   "blue-origin": "org-blueorigin",
-  "rocket-lab": "org-rocketlab"
+  "rocket-lab": "org-rocketlab",
+  ula: "org-ula",
+  firefly: "org-firefly"
 };
+
+// Provider organizations only (NASA is an agency overlay, handled separately).
+export const PROVIDER_ORGS = [ORG.SPACEX, ORG.BLUE_ORIGIN, ORG.ROCKET_LAB, ORG.ULA, ORG.FIREFLY];
 
 // ---- Organization matchers -----------------------------------------------
 
@@ -65,6 +76,16 @@ export function isRocketLab(launch) {
   return /rocket\s*lab/i.test(launch?.providerName || launch?.provider || "");
 }
 
+export function isULA(launch) {
+  if (Number(launch?.providerId) === ULA_PROVIDER_ID) return true;
+  return /united\s*launch\s*alliance|\bula\b/i.test(launch?.providerName || launch?.provider || "");
+}
+
+export function isFirefly(launch) {
+  if (Number(launch?.providerId) === FIREFLY_PROVIDER_ID) return true;
+  return /firefly/i.test(launch?.providerName || launch?.provider || "");
+}
+
 // Subset of org tags that apply to a launch (overlap ok).
 export function orgTags(launch) {
   const tags = [];
@@ -72,8 +93,20 @@ export function orgTags(launch) {
   if (isSpaceX(launch)) tags.push(ORG.SPACEX);
   if (isBlueOrigin(launch)) tags.push(ORG.BLUE_ORIGIN);
   if (isRocketLab(launch)) tags.push(ORG.ROCKET_LAB);
+  if (isULA(launch)) tags.push(ORG.ULA);
+  if (isFirefly(launch)) tags.push(ORG.FIREFLY);
   return tags;
 }
+
+// Matcher used by overview tile counts: org id -> predicate.
+export const ORG_MATCHERS = {
+  nasa: isNASA,
+  spacex: isSpaceX,
+  "blue-origin": isBlueOrigin,
+  "rocket-lab": isRocketLab,
+  ula: isULA,
+  firefly: isFirefly
+};
 
 export function matchesOrg(launch, org) {
   if (!org || org === ORG.ALL) return true;
@@ -192,7 +225,7 @@ export function flightType(launch) {
   }
   const rocket = `${launch?.rocket || ""} ${launch?.rocketFamily || ""}`.toLowerCase();
   if (/new\s*shepard/.test(rocket)) return "suborbital";
-  if (/new\s*glenn|falcon|starship|electron|neutron/.test(rocket)) return "orbital";
+  if (/new\s*glenn|falcon|starship|electron|neutron|vulcan|atlas|delta|alpha/.test(rocket)) return "orbital";
   return "unknown";
 }
 
@@ -200,6 +233,62 @@ export const FLIGHT_TYPE_LABELS = {
   orbital: "Orbital",
   suborbital: "Suborbital"
 };
+
+// ---- Orbit classification -------------------------------------------------
+// Conservative normalization of LL2 orbit names/abbreviations into a small set
+// of filterable buckets. "unknown" means no orbit data at all; "other" means an
+// orbit is named but doesn't match a known bucket (it still shows under All
+// orbits, never under a specific orbit filter, and is not mislabeled unknown).
+export const ORBIT_LABELS = {
+  leo: "Low Earth orbit",
+  sso: "Sun-synchronous orbit",
+  gto: "Geostationary transfer orbit",
+  geo: "Geostationary orbit",
+  meo: "Medium Earth orbit",
+  polar: "Polar orbit",
+  lunar: "Lunar",
+  interplanetary: "Interplanetary",
+  suborbital: "Suborbital",
+  unknown: "Unknown orbit"
+};
+
+export function orbitCategory(launch) {
+  const text = `${launch?.orbitName || ""} ${launch?.orbitAbbrev || ""}`.trim().toLowerCase();
+  if (!text) return "unknown";
+  if (SUBORBITAL_RE.test(text)) return "suborbital";
+  if (/sun-?synchronous|\bsso\b|helio-?synchronous/.test(text)) return "sso";
+  if (/transfer|\bgto\b|\bgeo\s*transfer\b/.test(text)) return "gto";
+  if (/geostationary|geosynchronous|\bgeo\b/.test(text)) return "geo";
+  if (/medium\s*earth|\bmeo\b/.test(text)) return "meo";
+  if (/\blunar\b|\bmoon\b|trans-?lunar|\btli\b|cislunar/.test(text)) return "lunar";
+  if (/helio|interplanetary|\bmars\b|trans-?mars|escape|solar|venus|jupiter/.test(text)) return "interplanetary";
+  if (/polar/.test(text)) return "polar";
+  if (/low\s*earth|\bleo\b/.test(text)) return "leo";
+  return "other";
+}
+
+// ---- Launch-site classification -------------------------------------------
+// Conservative text matching over normalized pad + location data, with a final
+// "other" bucket so nothing is dropped. Multiple naming variants are tolerated.
+export const LAUNCH_SITE_LABELS = {
+  "cape-canaveral": "Cape Canaveral",
+  kennedy: "Kennedy Space Center",
+  vandenberg: "Vandenberg",
+  wallops: "Wallops",
+  "rocketlab-lc1": "Rocket Lab Launch Complex 1",
+  other: "Other launch sites"
+};
+
+export function launchSiteCategory(launch) {
+  const text = `${launch?.padName || ""} ${launch?.location || ""}`.trim().toLowerCase();
+  if (!text) return "other";
+  if (/mahia|rocket\s*lab\s*launch\s*complex\s*1|\blc-?1\b/.test(text)) return "rocketlab-lc1";
+  if (/kennedy|\bksc\b/.test(text)) return "kennedy";
+  if (/cape\s*canaveral|\bccsfs\b|\bccafs\b/.test(text)) return "cape-canaveral";
+  if (/vandenberg|\bvsfb\b|\bvafb\b/.test(text)) return "vandenberg";
+  if (/wallops|\bmars\s*pad\b|mid-?atlantic\s*regional/.test(text)) return "wallops";
+  return "other";
+}
 
 // ---- Status normalization -------------------------------------------------
 // Maps LL2 status names/abbreviations to a label + CSS key for the status badge.

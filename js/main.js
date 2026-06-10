@@ -15,9 +15,11 @@ import {
 } from "./storage.js";
 import { applyFilters } from "./filters.js";
 import { fetchLiveLaunches } from "./api.js";
-import { ORG } from "./organizations.js";
+import { ORG, ORG_LABELS } from "./organizations.js";
+import { buildICS, icsFilename } from "./calendar.js";
+import { buildMissionUrl, parseMissionId, stripMissionParam } from "./deeplink.js";
 import { setupStarfield } from "./starfield.js";
-import { openOverlay, closeOverlay } from "./modal.js";
+import { openOverlay, closeOverlay, isOverlayOpen } from "./modal.js";
 import { getWeatherForLaunch } from "./weather.js";
 import {
   els,
@@ -36,6 +38,7 @@ import {
   renderDrawer,
   renderSavedCount,
   buildDetailsContent,
+  buildAboutContent,
   renderWeatherInto,
   updateCountdownNodes,
   refreshFooterMeta,
@@ -183,6 +186,7 @@ async function loadLaunches(forceRefresh = false) {
     const suffix = state.dataSource === "cache" ? "from cache." : "from the live API.";
     const note = truncated ? " (partial list)" : "";
     setStatus(`Loaded ${state.launches.length} upcoming launches ${suffix}${note}`, "success");
+    openMissionFromUrl();
   } catch (error) {
     if (error.name === "AbortError") return;
     setStatus("Live API failed. Try again or switch to demo data.", "error");
@@ -205,6 +209,7 @@ function useDemoData() {
   heroWeather = null;
   loadHeroWeather();
   setStatus(`Demo mode active with ${state.launches.length} missions.`, "warning");
+  openMissionFromUrl();
 }
 
 // ----- Organization tabs / tiles ------------------------------------------
@@ -220,7 +225,7 @@ function setActiveOrg(org, { announce = false } = {}) {
   updateResetState();
   savePreferences();
   if (announce) {
-    const label = org === ORG.ALL ? "all tracked missions" : org.replace("-", " ");
+    const label = ORG_LABELS[org] || "all tracked missions";
     setStatus(`Showing ${label}.`, "info");
   }
 }
@@ -247,6 +252,9 @@ function resetFilters() {
   state.activeOrg = "all";
   state.missionType = "all";
   state.flightType = "all";
+  state.dateRange = "all";
+  state.launchSite = "all";
+  state.orbit = "all";
   state.sortMode = "soonest";
   state.visibleCount = DEFAULT_VISIBLE;
   applyFilters();
@@ -294,12 +302,103 @@ function randomMission() {
   setStatus(`Random pick: "${pick.name}".`, "success");
 }
 
-function aboutDataSources() {
-  setStatus(
-    "U.S. Space Mission Control tracks NASA missions, SpaceX launches, Blue Origin flights, and Rocket Lab launches. " +
-      "Launch data: Launch Library 2 (The Space Devs). Local weather: Open-Meteo. Pad maps: OpenStreetMap. Not an official launch forecast.",
-    "info"
-  );
+function openAbout(opener) {
+  els.aboutContent.innerHTML = buildAboutContent();
+  els.aboutModal.setAttribute("aria-labelledby", "aboutTitle");
+  openOverlay(els.aboutModal, { returnFocusTo: opener || els.btnAbout });
+}
+
+function openLegend(opener) {
+  els.legendModal.setAttribute("aria-labelledby", "legendTitle");
+  openOverlay(els.legendModal, { returnFocusTo: opener || els.btnLegend });
+}
+
+// ----- Calendar export & share links --------------------------------------
+
+function downloadCalendar(id) {
+  const launch = findLaunch(id);
+  if (!launch) return;
+  const ics = buildICS(launch);
+  if (!ics) {
+    setStatus("This launch has no confirmed time yet, so it can't be added to a calendar.", "warning");
+    return;
+  }
+  try {
+    const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = icsFilename(launch);
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    // Revoke after the click has a chance to start the download.
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setStatus(`Calendar event downloaded for "${launch.name}".`, "success");
+  } catch {
+    setStatus("Couldn't generate the calendar file in this browser.", "error");
+  }
+}
+
+async function copyMissionLink(id) {
+  const launch = findLaunch(id);
+  if (!launch) return;
+  const url = buildMissionUrl(window.location.href, id);
+  let copied = false;
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(url);
+      copied = true;
+    }
+  } catch {
+    copied = false;
+  }
+  if (!copied) {
+    // Graceful fallback: a temporary textarea + execCommand for older browsers.
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = url;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "absolute";
+      ta.style.left = "-9999px";
+      document.body.appendChild(ta);
+      ta.select();
+      copied = document.execCommand && document.execCommand("copy");
+      ta.remove();
+    } catch {
+      copied = false;
+    }
+  }
+  if (copied) setStatus("Mission link copied.", "success");
+  else setStatus(`Copy not supported — link: ${url}`, "info");
+}
+
+// ----- Mission deep links (?mission=<id>) ---------------------------------
+
+// Open the mission referenced by the current URL, if any, once data is loaded.
+function openMissionFromUrl() {
+  const id = parseMissionId(window.location.search);
+  if (!id) return;
+  const launch = findLaunch(id);
+  if (launch) {
+    openDetails(id, null, { fromUrl: true });
+  } else {
+    setStatus("That shared mission isn't in the current view. Try reloading live data.", "warning");
+    // Leave the page usable; drop the stale param.
+    history.replaceState({}, "", stripMissionParam(window.location.href));
+  }
+}
+
+function onPopState() {
+  const id = parseMissionId(window.location.search);
+  if (id) {
+    if (state.selectedLaunchId !== id) {
+      const launch = findLaunch(id);
+      if (launch) openDetails(id, null, { fromUrl: true });
+    }
+  } else if (isOverlayOpen(els.detailsModal)) {
+    closeOverlay();
+  }
 }
 
 // ----- Overlays -----------------------------------------------------------
@@ -337,14 +436,25 @@ async function loadDetailsWeather(launch) {
   }
 }
 
-function openDetails(id, opener) {
+function openDetails(id, opener, { fromUrl = false } = {}) {
   const launch = findLaunch(id);
   if (!launch) return;
   state.selectedLaunchId = id;
   els.detailsContent.innerHTML = buildDetailsContent(launch);
   els.detailsModal.setAttribute("aria-labelledby", "detailsTitle");
 
-  const fromDrawer = els.savedDrawer.contains(opener);
+  // Reflect the open mission in the URL (?mission=<id>) without reloading, so
+  // the link is shareable and the Back button closes the modal. When opened
+  // FROM the URL (deep link or popstate) we don't push a new entry.
+  if (!fromUrl) {
+    try {
+      history.pushState({ mission: id }, "", buildMissionUrl(window.location.href, id));
+    } catch {
+      // history may be unavailable (e.g. file://) — degrade silently.
+    }
+  }
+
+  const fromDrawer = opener ? els.savedDrawer.contains(opener) : false;
   openOverlay(els.detailsModal, {
     returnFocusTo: fromDrawer ? els.btnSaved : opener,
     onClose: () => {
@@ -352,6 +462,14 @@ function openDetails(id, opener) {
       if (state.activeWeatherRequest) {
         state.activeWeatherRequest.abort();
         state.activeWeatherRequest = null;
+      }
+      // Remove the mission query param on close (no reload).
+      if (parseMissionId(window.location.search)) {
+        try {
+          history.replaceState({}, "", stripMissionParam(window.location.href));
+        } catch {
+          /* ignore */
+        }
       }
     }
   });
@@ -508,9 +626,14 @@ function attachEventListeners() {
       resetFilters();
     });
   if (els.btnAbout)
-    els.btnAbout.addEventListener("click", () => {
+    els.btnAbout.addEventListener("click", (e) => {
       closeMoreMenu();
-      aboutDataSources();
+      openAbout(e.currentTarget);
+    });
+  if (els.btnLegend)
+    els.btnLegend.addEventListener("click", (e) => {
+      closeMoreMenu();
+      openLegend(e.currentTarget);
     });
 
   els.btnClearFilters.addEventListener("click", resetFilters);
@@ -557,6 +680,24 @@ function attachEventListeners() {
       onFilterChange();
     });
   }
+  if (els.dateRange) {
+    els.dateRange.addEventListener("change", (e) => {
+      state.dateRange = e.target.value;
+      onFilterChange();
+    });
+  }
+  if (els.launchSite) {
+    els.launchSite.addEventListener("change", (e) => {
+      state.launchSite = e.target.value;
+      onFilterChange();
+    });
+  }
+  if (els.orbit) {
+    els.orbit.addEventListener("change", (e) => {
+      state.orbit = e.target.value;
+      onFilterChange();
+    });
+  }
   els.sortMode.addEventListener("change", (e) => {
     state.sortMode = e.target.value;
     onFilterChange();
@@ -574,7 +715,8 @@ function attachEventListeners() {
         loadDetailsWeather(launch);
       }
     }
-    setStatus(`Showing ${state.dateMode === "utc" ? "UTC" : "local"} time.`, "success");
+    const modeLabel = state.dateMode === "utc" ? "UTC" : state.dateMode === "site" ? "launch-site" : "local";
+    setStatus(`Showing ${modeLabel} time.`, "success");
   });
 
   // Delegated clicks for dynamically rendered controls.
@@ -615,6 +757,18 @@ function attachEventListeners() {
       return;
     }
 
+    const calendarBtn = event.target.closest("[data-calendar-id]");
+    if (calendarBtn) {
+      downloadCalendar(calendarBtn.getAttribute("data-calendar-id"));
+      return;
+    }
+
+    const shareBtn = event.target.closest("[data-share-id]");
+    if (shareBtn) {
+      copyMissionLink(shareBtn.getAttribute("data-share-id"));
+      return;
+    }
+
     const detailsBtn = event.target.closest("[data-details-id]");
     if (detailsBtn) {
       openDetails(detailsBtn.getAttribute("data-details-id"), detailsBtn);
@@ -648,6 +802,7 @@ function init() {
   setupOrgTabs();
   setupMoreMenu();
   setupInsights();
+  window.addEventListener("popstate", onPopState);
   startCountdownTicker();
   setupStarfield();
   loadLaunches(false);

@@ -672,6 +672,8 @@ select optgroup {
 .badge.org-spacex { background-color: rgba(115, 182, 255, 0.22); color: #dbe9ff; }
 .badge.org-blueorigin { background-color: rgba(120, 200, 255, 0.16); color: #cfe6ff; }
 .badge.org-rocketlab { background-color: rgba(98, 215, 163, 0.18); color: #d6ffe9; }
+.badge.org-ula { background-color: rgba(255, 184, 108, 0.2); color: #ffe1c2; }
+.badge.org-firefly { background-color: rgba(255, 145, 90, 0.2); color: #ffd2b8; }
 
 /* Organization badges OVER imagery need to stay legible against bright clouds
    and pale rockets: a dark translucent backing, a subtle border + shadow, and
@@ -696,6 +698,8 @@ select optgroup {
 .launch-card-media .badge.org-spacex { border-color: rgba(115, 182, 255, 0.65); color: #dbe9ff; }
 .launch-card-media .badge.org-blueorigin { border-color: rgba(120, 200, 255, 0.6); color: #cfe6ff; }
 .launch-card-media .badge.org-rocketlab { border-color: rgba(98, 215, 163, 0.6); color: #d6ffe9; }
+.launch-card-media .badge.org-ula { border-color: rgba(255, 184, 108, 0.6); color: #ffe1c2; }
+.launch-card-media .badge.org-firefly { border-color: rgba(255, 145, 90, 0.6); color: #ffd2b8; }
 
 /* Flight-type badges (omitted entirely when unknown) */
 .badge.flight-orbital { background-color: rgba(115, 182, 255, 0.14); border-color: rgba(115, 182, 255, 0.3); }
@@ -1081,15 +1085,25 @@ select optgroup {
 .placeholder-pill { width: 90px; height: 34px; }
 
 /* Organization tabs ------------------------------------------------------ */
+/* Single row that fits on desktop and becomes a clean horizontally scrollable
+   strip on narrow screens (never an ugly multi-line wrap). Padding leaves room
+   for the focus ring since overflow-x clips vertical overflow. */
 .org-tabs {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 8px;
   margin-top: 16px;
+  padding: 4px 2px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch;
 }
 
 .org-tab {
   cursor: pointer;
+  flex: 0 0 auto;
+  white-space: nowrap;
   border-radius: 999px;
   border: 1px solid var(--line);
   background-color: rgba(255, 255, 255, 0.04);
@@ -1437,4 +1451,60 @@ button.overview-tile:focus-visible {
 
 .pad-map-attribution a:hover {
   text-decoration: underline;
+}
+
+/* About this data + status legend ----------------------------------------- */
+.about-grid {
+  margin-bottom: 4px;
+}
+
+.about-subhead {
+  margin: 14px 0 8px;
+  font-size: 0.95rem;
+}
+
+.about-note {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.legend-intro {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.legend-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.legend-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.legend-list li > span:last-child {
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
+.legend-list .badge {
+  flex: 0 0 auto;
+  min-width: 116px;
+  justify-content: center;
+}
+
+.legend-note {
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 0.78rem;
 }

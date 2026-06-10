@@ -5,8 +5,12 @@
 import { STORAGE_KEYS, LEGACY_STORAGE_KEYS, CACHE_TTL_MS } from "./config.js";
 import { state } from "./state.js";
 
-const ORG_VALUES = new Set(["all", "nasa", "spacex", "blue-origin"]);
+const ORG_VALUES = new Set(["all", "nasa", "spacex", "blue-origin", "rocket-lab", "ula", "firefly"]);
 const FLIGHT_VALUES = new Set(["all", "orbital", "suborbital"]);
+const DATE_MODE_VALUES = new Set(["local", "utc", "site"]);
+const DATE_RANGE_VALUES = new Set(["all", "24h", "7d", "30d", "year"]);
+const LAUNCH_SITE_VALUES = new Set(["all", "cape-canaveral", "kennedy", "vandenberg", "wallops", "rocketlab-lc1", "other"]);
+const ORBIT_VALUES = new Set(["all", "leo", "sso", "gto", "geo", "meo", "polar", "lunar", "interplanetary", "suborbital", "unknown"]);
 
 // One-time migration from the old spacex-mission-control-* keys to the renamed
 // us-space-mission-control-* keys. Runs before load; only copies forward when
@@ -49,12 +53,15 @@ export function loadPreferences() {
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== "object") return;
 
-    state.dateMode = parsed.dateMode === "utc" ? "utc" : state.dateMode;
+    if (DATE_MODE_VALUES.has(parsed.dateMode)) state.dateMode = parsed.dateMode;
     state.missionType = typeof parsed.missionType === "string" ? parsed.missionType : state.missionType;
     state.sortMode = typeof parsed.sortMode === "string" ? parsed.sortMode : state.sortMode;
     state.keyword = typeof parsed.keyword === "string" ? parsed.keyword : state.keyword;
     if (ORG_VALUES.has(parsed.activeOrg)) state.activeOrg = parsed.activeOrg;
     if (FLIGHT_VALUES.has(parsed.flightType)) state.flightType = parsed.flightType;
+    if (DATE_RANGE_VALUES.has(parsed.dateRange)) state.dateRange = parsed.dateRange;
+    if (LAUNCH_SITE_VALUES.has(parsed.launchSite)) state.launchSite = parsed.launchSite;
+    if (ORBIT_VALUES.has(parsed.orbit)) state.orbit = parsed.orbit;
   } catch {
     // ignore bad local storage
   }
@@ -67,7 +74,10 @@ export function savePreferences() {
     sortMode: state.sortMode,
     keyword: state.keyword,
     activeOrg: state.activeOrg,
-    flightType: state.flightType
+    flightType: state.flightType,
+    dateRange: state.dateRange,
+    launchSite: state.launchSite,
+    orbit: state.orbit
   };
 
   localStorage.setItem(STORAGE_KEYS.prefs, JSON.stringify(prefs));

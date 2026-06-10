@@ -34,11 +34,13 @@
             <button class="org-tab" role="tab" type="button" data-org="spacex" aria-selected="false" tabindex="-1">SpaceX</button>
             <button class="org-tab" role="tab" type="button" data-org="blue-origin" aria-selected="false" tabindex="-1">Blue Origin</button>
             <button class="org-tab" role="tab" type="button" data-org="rocket-lab" aria-selected="false" tabindex="-1">Rocket Lab</button>
+            <button class="org-tab" role="tab" type="button" data-org="ula" aria-selected="false" tabindex="-1">ULA</button>
+            <button class="org-tab" role="tab" type="button" data-org="firefly" aria-selected="false" tabindex="-1">Firefly</button>
           </div>
           <p class="org-scope-note">
-            Tracks NASA missions plus SpaceX, Blue Origin, and Rocket Lab launches —
-            not every launch provider. NASA is a civil agency, so its missions can
-            also appear under a provider tab.
+            Tracks NASA missions plus SpaceX, Blue Origin, Rocket Lab, ULA, and Firefly
+            launches — not every launch provider. NASA is a civil agency, so its
+            missions can also appear under a provider tab.
           </p>
 
           <div class="hero-meta">
@@ -54,7 +56,8 @@
                 <button id="btnReloadLive" class="more-menu-item" type="button" role="menuitem">Reload live data</button>
                 <button id="btnResetMenu" class="more-menu-item" type="button" role="menuitem">Reset filters</button>
                 <button id="btnUseDemo" class="more-menu-item" type="button" role="menuitem">Use demo data</button>
-                <button id="btnAbout" class="more-menu-item" type="button" role="menuitem">About data sources</button>
+                <button id="btnAbout" class="more-menu-item" type="button" role="menuitem">About this data</button>
+                <button id="btnLegend" class="more-menu-item" type="button" role="menuitem">Mission status legend</button>
               </div>
             </details>
           </div>
@@ -80,8 +83,9 @@
             <h2 id="overviewTitle" class="sr-only">Mission overview</h2>
           </div>
           <p class="overview-note" id="overviewNote">
-            Organization counts can overlap — a NASA mission may also be a SpaceX or
-            Blue Origin launch — so they aren't expected to add up to the total.
+            Organization counts can overlap — a NASA mission may also count under its
+            launch provider (SpaceX, Blue Origin, Rocket Lab, ULA, or Firefly) — so they
+            aren't expected to add up to the total.
           </p>
         </div>
         <div class="overview-tiles" id="overviewTiles" aria-label="Mission overview"></div>
@@ -155,6 +159,53 @@
           </label>
 
           <label class="field">
+            <span class="field-label">Date range</span>
+            <span class="select-wrap">
+              <select id="dateRange">
+                <option value="all">All upcoming</option>
+                <option value="24h">Next 24 hours</option>
+                <option value="7d">Next 7 days</option>
+                <option value="30d">Next 30 days</option>
+                <option value="year">This year</option>
+              </select>
+            </span>
+          </label>
+
+          <label class="field">
+            <span class="field-label">Launch site</span>
+            <span class="select-wrap">
+              <select id="launchSite">
+                <option value="all">All launch sites</option>
+                <option value="cape-canaveral">Cape Canaveral</option>
+                <option value="kennedy">Kennedy Space Center</option>
+                <option value="vandenberg">Vandenberg</option>
+                <option value="wallops">Wallops</option>
+                <option value="rocketlab-lc1">Rocket Lab Launch Complex 1</option>
+                <option value="other">Other launch sites</option>
+              </select>
+            </span>
+          </label>
+
+          <label class="field">
+            <span class="field-label">Orbit</span>
+            <span class="select-wrap">
+              <select id="orbit">
+                <option value="all">All orbits</option>
+                <option value="leo">Low Earth orbit</option>
+                <option value="sso">Sun-synchronous orbit</option>
+                <option value="gto">Geostationary transfer orbit</option>
+                <option value="geo">Geostationary orbit</option>
+                <option value="meo">Medium Earth orbit</option>
+                <option value="polar">Polar orbit</option>
+                <option value="lunar">Lunar</option>
+                <option value="interplanetary">Interplanetary</option>
+                <option value="suborbital">Suborbital</option>
+                <option value="unknown">Unknown orbit</option>
+              </select>
+            </span>
+          </label>
+
+          <label class="field">
             <span class="field-label">Sort by</span>
             <span class="select-wrap">
               <select id="sortMode">
@@ -173,6 +224,7 @@
               <select id="dateMode">
                 <option value="local" selected>Local time</option>
                 <option value="utc">UTC</option>
+                <option value="site">Launch-site time</option>
               </select>
             </span>
           </label>
@@ -268,6 +320,51 @@
       <div class="overlay-panel modal-panel" data-overlay-panel tabindex="-1">
         <button class="icon-btn modal-close" data-overlay-close type="button" aria-label="Close mission details">✕</button>
         <div id="detailsContent" class="details-content"></div>
+      </div>
+    </div>
+
+    <!-- About this data modal -->
+    <div
+      id="aboutModal"
+      class="overlay modal-overlay"
+      aria-hidden="true"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div class="overlay-backdrop" data-overlay-backdrop></div>
+      <div class="overlay-panel modal-panel" data-overlay-panel tabindex="-1">
+        <button class="icon-btn modal-close" data-overlay-close type="button" aria-label="Close about this data">✕</button>
+        <div id="aboutContent" class="details-content"></div>
+      </div>
+    </div>
+
+    <!-- Mission status legend modal -->
+    <div
+      id="legendModal"
+      class="overlay modal-overlay"
+      aria-hidden="true"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="legendTitle"
+    >
+      <div class="overlay-backdrop" data-overlay-backdrop></div>
+      <div class="overlay-panel modal-panel" data-overlay-panel tabindex="-1">
+        <button class="icon-btn modal-close" data-overlay-close type="button" aria-label="Close mission status legend">✕</button>
+        <div class="details-content">
+          <h2 id="legendTitle" class="details-title">Mission status legend</h2>
+          <p class="legend-intro">The launch statuses surfaced by Launch Library 2, in plain language.</p>
+          <ul class="legend-list">
+            <li><span class="badge status-go">Go for Launch</span><span>Cleared and on track for the scheduled time.</span></li>
+            <li><span class="badge status-tbc">To Be Confirmed</span><span>Date is likely but awaiting final confirmation.</span></li>
+            <li><span class="badge status-tbd">To Be Determined</span><span>Date is tentative and may still move.</span></li>
+            <li><span class="badge status-hold">Hold</span><span>Countdown paused; launch is temporarily held.</span></li>
+            <li><span class="badge status-success">Success</span><span>The launch completed successfully.</span></li>
+            <li><span class="badge status-failure">Failure</span><span>The launch failed to reach its objective.</span></li>
+            <li><span class="badge status-failure">Partial Failure</span><span>Partially successful — some objectives were missed.</span></li>
+            <li><span class="badge status-tbd">Unknown status</span><span>No recognized status was provided.</span></li>
+          </ul>
+          <p class="legend-note">Statuses can change as a launch approaches.</p>
+        </div>
       </div>
     </div>
 
