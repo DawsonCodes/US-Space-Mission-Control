@@ -10,7 +10,8 @@ import {
   orgTags,
   isNASA,
   isSpaceX,
-  isBlueOrigin
+  isBlueOrigin,
+  isRocketLab
 } from "../js/organizations.js";
 
 const NASA = { id: 44, name: "National Aeronautics and Space Administration", type: "Government", abbrev: "NASA" };
@@ -25,7 +26,9 @@ const cases = [
   ["NASA cargo (not science)", { name: "Falcon 9 | NASA CRS Cargo Dragon", missionType: "Resupply", agencies: [NASA], rocket: "Falcon 9", orbitName: "Low Earth Orbit" }, "cargo", "orbital"],
   ["Starship test flight", { name: "Starship | Integrated Flight Test", missionType: "Test Flight", rocket: "Starship", orbitName: "" }, "test-flight", "orbital"],
   ["New Glenn (orbital)", { name: "New Glenn | Comsat", missionType: "Communications", rocket: "New Glenn", providerName: "Blue Origin", providerId: 141, orbitName: "Low Earth Orbit" }, "commercial", "orbital"],
-  ["New Shepard (suborbital)", { name: "New Shepard | NS-30", missionType: "Tourism", rocket: "New Shepard", providerName: "Blue Origin", providerId: 141, orbitName: "Suborbital", orbitAbbrev: "Sub" }, "commercial", "suborbital"]
+  ["New Shepard (suborbital)", { name: "New Shepard | NS-30", missionType: "Tourism", rocket: "New Shepard", providerName: "Blue Origin", providerId: 141, orbitName: "Suborbital", orbitAbbrev: "Sub" }, "commercial", "suborbital"],
+  ["Electron (orbital)", { name: "Electron | Smallsat Rideshare", missionType: "Dedicated Rideshare", rocket: "Electron", providerName: "Rocket Lab", providerId: 147, orbitName: "Sun-Synchronous Orbit" }, "rideshare", "orbital"],
+  ["Electron fallback (no orbit data => orbital)", { name: "Electron | Mystery Payload", missionType: "", rocket: "Electron", providerName: "Rocket Lab", providerId: 147, orbitName: "" }, "other", "orbital"]
 ];
 
 let failures = 0;
@@ -57,6 +60,34 @@ try {
   assert.ok(!isBlueOrigin(overlap), "overlap is not Blue Origin");
   assert.deepEqual(orgTags(overlap).sort(), ["nasa", "spacex"], "overlap org tags");
   console.log("ok  - NASA-on-SpaceX overlap tags both organizations");
+} catch (err) {
+  failures += 1;
+  console.error(`FAIL - ${err.message}`);
+}
+
+// NASA-on-Rocket-Lab overlap, and commercial Rocket Lab staying NASA-free.
+try {
+  const overlap = { providerName: "Rocket Lab", providerId: 147, agencies: [NASA] };
+  assert.ok(isNASA(overlap), "overlap is NASA");
+  assert.ok(isRocketLab(overlap), "overlap is Rocket Lab");
+  assert.deepEqual(orgTags(overlap).sort(), ["nasa", "rocket-lab"], "overlap org tags");
+
+  const commercial = { providerName: "Rocket Lab", providerId: 147, agencies: [] };
+  assert.ok(isRocketLab(commercial), "commercial is Rocket Lab");
+  assert.ok(!isNASA(commercial), "commercial is not NASA");
+  assert.deepEqual(orgTags(commercial), ["rocket-lab"], "commercial org tags");
+  console.log("ok  - NASA-on-Rocket-Lab overlap; commercial Rocket Lab stays NASA-free");
+} catch (err) {
+  failures += 1;
+  console.error(`FAIL - ${err.message}`);
+}
+
+// NASA-on-Blue-Origin overlap.
+try {
+  const overlap = { providerName: "Blue Origin", providerId: 141, agencies: [NASA] };
+  assert.ok(isNASA(overlap) && isBlueOrigin(overlap), "overlap tags");
+  assert.deepEqual(orgTags(overlap).sort(), ["blue-origin", "nasa"], "overlap org tags");
+  console.log("ok  - NASA-on-Blue-Origin overlap tags both organizations");
 } catch (err) {
   failures += 1;
   console.error(`FAIL - ${err.message}`);

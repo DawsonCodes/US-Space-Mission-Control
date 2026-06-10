@@ -518,12 +518,18 @@ select optgroup {
   transform: scale(1.06);
 }
 
+/* Neutral no-image placeholder: quiet centered text over the card's existing
+   dark gradient — no illustrations, no fake photography. */
 .media-fallback {
   display: grid;
   place-items: center;
   height: 100%;
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  opacity: 0.85;
+  text-align: center;
+  padding: 0 12px;
 }
 
 .badge-float {
@@ -665,6 +671,31 @@ select optgroup {
 .badge.org-nasa { background-color: rgba(255, 128, 142, 0.2); color: #ffd2d8; }
 .badge.org-spacex { background-color: rgba(115, 182, 255, 0.22); color: #dbe9ff; }
 .badge.org-blueorigin { background-color: rgba(120, 200, 255, 0.16); color: #cfe6ff; }
+.badge.org-rocketlab { background-color: rgba(98, 215, 163, 0.18); color: #d6ffe9; }
+
+/* Organization badges OVER imagery need to stay legible against bright clouds
+   and pale rockets: a dark translucent backing, a subtle border + shadow, and
+   restrained backdrop blur where supported (the solid-ish backing below is the
+   non-blur fallback). The org accent survives in the border + text color. */
+.launch-card-media .badge {
+  background-color: rgba(9, 14, 26, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+  color: #f2f6ff;
+}
+
+@supports ((backdrop-filter: blur(6px)) or (-webkit-backdrop-filter: blur(6px))) {
+  .launch-card-media .badge {
+    background-color: rgba(9, 14, 26, 0.55);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+  }
+}
+
+.launch-card-media .badge.org-nasa { border-color: rgba(255, 128, 142, 0.65); color: #ffd2d8; }
+.launch-card-media .badge.org-spacex { border-color: rgba(115, 182, 255, 0.65); color: #dbe9ff; }
+.launch-card-media .badge.org-blueorigin { border-color: rgba(120, 200, 255, 0.6); color: #cfe6ff; }
+.launch-card-media .badge.org-rocketlab { border-color: rgba(98, 215, 163, 0.6); color: #d6ffe9; }
 
 /* Flight-type badges (omitted entirely when unknown) */
 .badge.flight-orbital { background-color: rgba(115, 182, 255, 0.14); border-color: rgba(115, 182, 255, 0.3); }
@@ -1111,10 +1142,11 @@ select optgroup {
 
 .more-menu-list {
   position: absolute;
-  z-index: 30;
+  z-index: 60;
   top: calc(100% + 8px);
   left: 0;
   min-width: 200px;
+  max-width: calc(100vw - 48px);
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -1144,6 +1176,15 @@ select optgroup {
   outline: none;
   background-color: rgba(115, 182, 255, 0.18);
   box-shadow: inset 0 0 0 1px rgba(115, 182, 255, 0.6);
+}
+
+/* Flip the menu above the button when vertical space is constrained
+   (e.g. mobile landscape) so it never extends past the viewport bottom. */
+@media (max-height: 480px) {
+  .more-menu-list {
+    top: auto;
+    bottom: calc(100% + 8px);
+  }
 }
 
 /* Mission overview ------------------------------------------------------- */
@@ -1261,4 +1302,139 @@ button.overview-tile:focus-visible {
 
 .footer-meta {
   align-self: flex-end;
+}
+
+/* Mission insights --------------------------------------------------------- */
+.insights {
+  margin-top: 12px;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+
+.insights-toggle {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background-color: transparent;
+  color: var(--accent);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  transition: background-color 0.16s ease, border-color 0.16s ease;
+}
+
+.insights-toggle:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-color: var(--line);
+}
+
+.insights-toggle:focus-visible {
+  outline: none;
+  border-color: rgba(115, 182, 255, 0.85);
+  box-shadow: 0 0 0 3px rgba(115, 182, 255, 0.18);
+}
+
+.insights-chevron {
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid currentColor;
+  transition: transform 0.18s ease;
+}
+
+.insights-toggle[aria-expanded="true"] .insights-chevron {
+  transform: rotate(180deg);
+}
+
+.insights-body {
+  margin-top: 10px;
+}
+
+.insights-body[hidden] {
+  display: none;
+}
+
+.insights-note {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.insights-chips {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.insight-chip {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background-color: rgba(255, 255, 255, 0.035);
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.insight-chip strong {
+  color: var(--text);
+  font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Webcast availability ----------------------------------------------------- */
+/* Honest styling only: "Webcast available" normally; "Check live webcast" with
+   a restrained pulse inside the near-launch window. Never a LIVE claim. The
+   global prefers-reduced-motion rule disables the pulse animation. */
+@keyframes webcastPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 128, 142, 0.35); }
+  50% { box-shadow: 0 0 0 5px rgba(255, 128, 142, 0); }
+}
+
+.webcast-link.is-near-launch {
+  border-color: rgba(255, 128, 142, 0.55);
+  color: #ffd2d8;
+  animation: webcastPulse 2.4s ease-in-out infinite;
+}
+
+/* Launch pad map (details modal) ------------------------------------------- */
+.pad-map {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+.pad-map-heading {
+  margin: 0 0 8px;
+  font-size: 0.95rem;
+}
+
+.pad-map-place {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.pad-map-attribution {
+  margin: 10px 0 0;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.pad-map-attribution a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.pad-map-attribution a:hover {
+  text-decoration: underline;
 }

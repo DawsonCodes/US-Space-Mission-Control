@@ -296,8 +296,8 @@ function randomMission() {
 
 function aboutDataSources() {
   setStatus(
-    "U.S. Space Mission Control tracks NASA missions, SpaceX launches, and Blue Origin flights. " +
-      "Launch data: Launch Library 2 (The Space Devs). Local weather: Open-Meteo. Not an official launch forecast.",
+    "U.S. Space Mission Control tracks NASA missions, SpaceX launches, Blue Origin flights, and Rocket Lab launches. " +
+      "Launch data: Launch Library 2 (The Space Devs). Local weather: Open-Meteo. Pad maps: OpenStreetMap. Not an official launch forecast.",
     "info"
   );
 }
@@ -381,7 +381,7 @@ function setupImageFallback() {
       if (!media.querySelector(".media-fallback")) {
         const fallback = document.createElement("div");
         fallback.className = "media-fallback";
-        fallback.textContent = "No image available";
+        fallback.textContent = "No mission image available";
         media.prepend(fallback);
       }
     },
@@ -464,6 +464,30 @@ function setupMoreMenu() {
   document.addEventListener("pointerdown", (event) => {
     if (els.moreMenu.open && !els.moreMenu.contains(event.target)) closeMoreMenu();
   });
+  // Escape closes the menu and restores focus to the More button.
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape" || !els.moreMenu.open) return;
+    closeMoreMenu();
+    els.moreMenu.querySelector("summary")?.focus();
+  });
+}
+
+// Mission insights disclosure: accessible button with aria-expanded, defaulting
+// to collapsed on small screens so mobile stays compact.
+function setupInsights() {
+  if (!els.insightsToggle || !els.insightsBody) return;
+
+  const setOpen = (open) => {
+    els.insightsToggle.setAttribute("aria-expanded", String(open));
+    els.insightsBody.hidden = !open;
+  };
+
+  const mobile = window.matchMedia && window.matchMedia("(max-width: 640px)").matches;
+  setOpen(!mobile);
+
+  els.insightsToggle.addEventListener("click", () => {
+    setOpen(els.insightsToggle.getAttribute("aria-expanded") !== "true");
+  });
 }
 
 function attachEventListeners() {
@@ -494,7 +518,9 @@ function attachEventListeners() {
   els.btnSaved.addEventListener("click", (e) => openSavedDrawer(e.currentTarget));
   els.btnClearFavorites.addEventListener("click", clearFavorites);
   els.btnLoadMore.addEventListener("click", () => {
-    state.visibleCount += LOAD_MORE_STEP;
+    // Increment by 10, clamped to the filtered total; renderResults hides both
+    // controls as soon as the final page is visible.
+    state.visibleCount = Math.min(state.visibleCount + LOAD_MORE_STEP, state.filteredLaunches.length);
     renderResults();
     renderOverview();
   });
@@ -571,7 +597,13 @@ function attachEventListeners() {
       return;
     }
 
-    // Overview tiles: organization shortcuts + Saved.
+    // Overview tiles: Showing returns to All, org tiles toggle, Saved opens
+    // the drawer.
+    const showingTile = event.target.closest('.overview-tile[data-action="showing"]');
+    if (showingTile) {
+      setActiveOrg(ORG.ALL);
+      return;
+    }
     const orgTile = event.target.closest(".overview-tile[data-org]");
     if (orgTile) {
       toggleOrg(orgTile.getAttribute("data-org"));
@@ -615,6 +647,7 @@ function init() {
   setupSelectArrows();
   setupOrgTabs();
   setupMoreMenu();
+  setupInsights();
   startCountdownTicker();
   setupStarfield();
   loadLaunches(false);

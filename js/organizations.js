@@ -2,10 +2,11 @@
 //
 // Modeling rules (deliberate):
 //  - NASA is a civil *agency* overlay, matched on a launch's mission agencies.
-//  - SpaceX and Blue Origin are launch *providers*, matched on the launch
-//    service provider. They are NOT modeled as agencies.
+//  - SpaceX, Blue Origin, and Rocket Lab are launch *providers*, matched on the
+//    launch service provider. They are NOT modeled as agencies.
 //  - A launch can carry multiple organization tags (e.g. a NASA mission flying
-//    on a SpaceX rocket is tagged both NASA and SpaceX). Counts may overlap.
+//    on a SpaceX or Rocket Lab rocket is tagged with both organizations).
+//    Counts may overlap.
 //
 // All classification fallbacks are documented inline. Provider/agency IDs are
 // verified values from config.js; name matching is a resilient fallback only.
@@ -13,6 +14,7 @@
 import {
   SPACEX_PROVIDER_ID,
   BLUE_ORIGIN_PROVIDER_ID,
+  ROCKET_LAB_PROVIDER_ID,
   NASA_AGENCY_ID
 } from "./config.js";
 
@@ -20,20 +22,23 @@ export const ORG = {
   ALL: "all",
   NASA: "nasa",
   SPACEX: "spacex",
-  BLUE_ORIGIN: "blue-origin"
+  BLUE_ORIGIN: "blue-origin",
+  ROCKET_LAB: "rocket-lab"
 };
 
 export const ORG_LABELS = {
   all: "All tracked missions",
   nasa: "NASA",
   spacex: "SpaceX",
-  "blue-origin": "Blue Origin"
+  "blue-origin": "Blue Origin",
+  "rocket-lab": "Rocket Lab"
 };
 
 export const ORG_BADGE_CLASS = {
   nasa: "org-nasa",
   spacex: "org-spacex",
-  "blue-origin": "org-blueorigin"
+  "blue-origin": "org-blueorigin",
+  "rocket-lab": "org-rocketlab"
 };
 
 // ---- Organization matchers -----------------------------------------------
@@ -55,12 +60,18 @@ export function isBlueOrigin(launch) {
   return /blue\s*origin/i.test(launch?.providerName || launch?.provider || "");
 }
 
-// Subset of nasa|spacex|blue-origin tags that apply to a launch (overlap ok).
+export function isRocketLab(launch) {
+  if (Number(launch?.providerId) === ROCKET_LAB_PROVIDER_ID) return true;
+  return /rocket\s*lab/i.test(launch?.providerName || launch?.provider || "");
+}
+
+// Subset of org tags that apply to a launch (overlap ok).
 export function orgTags(launch) {
   const tags = [];
   if (isNASA(launch)) tags.push(ORG.NASA);
   if (isSpaceX(launch)) tags.push(ORG.SPACEX);
   if (isBlueOrigin(launch)) tags.push(ORG.BLUE_ORIGIN);
+  if (isRocketLab(launch)) tags.push(ORG.ROCKET_LAB);
   return tags;
 }
 
@@ -168,8 +179,8 @@ export function classifyMissionType(launch) {
 //  - Verified orbit data wins. A named orbit (LEO, GTO, SSO, …) means orbital;
 //    an orbit named/abbreviated "suborbital" means suborbital.
 //  - With no orbit data, fall back to rocket family ONLY where reliable
-//    (Blue Origin New Shepard is suborbital; New Glenn / Falcon / Starship are
-//    orbital launch vehicles).
+//    (Blue Origin New Shepard is suborbital; New Glenn / Falcon / Starship /
+//    Electron / Neutron are orbital launch vehicles).
 //  - Otherwise "unknown" — never guess "orbital" for missing data. The UI omits
 //    the flight-type badge for unknown and the explicit filters exclude it.
 const SUBORBITAL_RE = /sub[\s-]?orbital/i;
@@ -181,7 +192,7 @@ export function flightType(launch) {
   }
   const rocket = `${launch?.rocket || ""} ${launch?.rocketFamily || ""}`.toLowerCase();
   if (/new\s*shepard/.test(rocket)) return "suborbital";
-  if (/new\s*glenn|falcon|starship/.test(rocket)) return "orbital";
+  if (/new\s*glenn|falcon|starship|electron|neutron/.test(rocket)) return "orbital";
   return "unknown";
 }
 

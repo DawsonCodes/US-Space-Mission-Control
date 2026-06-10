@@ -15,6 +15,7 @@ import {
 } from "./utils.js";
 import { isFavorite } from "./storage.js";
 import { hasActiveFilters, baseManifest } from "./filters.js";
+import { WEATHER_FORECAST_DAYS } from "./config.js";
 import {
   ORG,
   ORG_LABELS,
@@ -23,6 +24,7 @@ import {
   isNASA,
   isSpaceX,
   isBlueOrigin,
+  isRocketLab,
   classifyMissionType,
   missionTypeBadgeClass,
   MISSION_TYPE_LABELS,
@@ -45,6 +47,9 @@ export const els = {
   resultsMeta: document.getElementById("resultsMeta"),
   coverageNote: document.getElementById("coverageNote"),
   overviewTiles: document.getElementById("overviewTiles"),
+  insightsToggle: document.getElementById("insightsToggle"),
+  insightsBody: document.getElementById("insightsBody"),
+  insightsChips: document.getElementById("insightsChips"),
   orgTabs: document.getElementById("orgTabs"),
   moreMenu: document.getElementById("moreMenu"),
   nextLaunchCard: document.getElementById("nextLaunchCard"),
@@ -217,6 +222,36 @@ function statusBadgeHtml(launch) {
   return `<span class="badge ${statusBadgeClass(launch)}">${escapeHtml(label)}</span>`;
 }
 
+// ----- Webcast availability (honest) ---------------------------------------
+// We never claim a stream is LIVE — LL2 gives us a URL, not a live state.
+// Inside a near-launch window (30 min before NET through ~3 h after) the action
+// reads "Check live webcast" and gets a restrained pulse (disabled for
+// reduced-motion users via the global rule); otherwise it reads
+// "Webcast available". No webcast URL → no action at all.
+
+const WEBCAST_WINDOW_BEFORE_MS = 30 * 60 * 1000;
+const WEBCAST_WINDOW_AFTER_MS = 3 * 60 * 60 * 1000;
+
+export function webcastState(launch) {
+  const url = safeUrl(launch?.webcast);
+  if (!url) return null;
+  const net = new Date(launch?.net).getTime();
+  if (Number.isFinite(net)) {
+    const now = Date.now();
+    if (now >= net - WEBCAST_WINDOW_BEFORE_MS && now <= net + WEBCAST_WINDOW_AFTER_MS) {
+      return { url, label: "Check live webcast", nearLaunch: true };
+    }
+  }
+  return { url, label: "Webcast available", nearLaunch: false };
+}
+
+function webcastActionHtml(launch) {
+  const w = webcastState(launch);
+  if (!w) return "";
+  const cls = w.nearLaunch ? "card-link webcast-link is-near-launch" : "card-link webcast-link";
+  return `<a class="${cls}" href="${w.url}" target="_blank" rel="noopener noreferrer" aria-label="${escapeHtml(`${w.label} for ${launch.name}`)}">${escapeHtml(w.label)}</a>`;
+}
+
 function favoriteButtonHtml(launch, { variant = "grid" } = {}) {
   const active = isFavorite(launch.id);
   const cls = variant === "hero" ? "favorite-btn" : "favorite-btn btn-small";
@@ -321,7 +356,6 @@ export function renderHero() {
   }
 
   const locationLabel = [launch.padName, launch.location].filter(Boolean).join(" • ");
-  const webcastUrl = safeUrl(launch.webcast);
 
   els.nextLaunchCard.innerHTML = `
     <div class="spotlight-head">
@@ -354,7 +388,7 @@ export function renderHero() {
     <div class="card-actions">
       <button class="btn btn-primary" data-details-id="${escapeHtml(launch.id)}" type="button">View details</button>
       ${favoriteButtonHtml(launch, { variant: "hero" })}
-      ${webcastUrl ? `<a class="card-link" href="${webcastUrl}" target="_blank" rel="noopener">Watch webcast</a>` : ""}
+      ${webcastActionHtml(launch)}
     </div>
   `;
 }
@@ -374,9 +408,10 @@ export function renderOverview() {
   const nasa = base.filter(isNASA).length;
   const spacex = base.filter(isSpaceX).length;
   const blue = base.filter(isBlueOrigin).length;
+  const rocketLab = base.filter(isRocketLab).length;
   const saved = state.favorites.length;
 
-  const showingDesc = `Showing ${visible} of ${total} matching launch${total === 1 ? "" : "es"}`;
+  const showingDesc = `Showing ${visible} of ${total} matching launch${total === 1 ? "" : "es"}. Activate to show all tracked missions.`;
 
   const orgTile = (org, value, label) => {
     const activeAttr = state.activeOrg === org ? "true" : "false";
@@ -388,18 +423,68 @@ export function renderOverview() {
   };
 
   els.overviewTiles.innerHTML = `
-    <div class="overview-tile is-showing" aria-label="${escapeHtml(showingDesc)}">
+    <button class="overview-tile is-showing" data-action="showing" type="button" aria-label="${escapeHtml(showingDesc)}">
       <strong>${escapeHtml(visible)} / ${escapeHtml(total)}</strong>
       <span aria-hidden="true">Showing</span>
-    </div>
+    </button>
     ${orgTile(ORG.NASA, nasa, "NASA missions")}
     ${orgTile(ORG.SPACEX, spacex, "SpaceX launches")}
     ${orgTile(ORG.BLUE_ORIGIN, blue, "Blue Origin flights")}
+    ${orgTile(ORG.ROCKET_LAB, rocketLab, "Rocket Lab launches")}
     <button class="overview-tile is-saved" data-action="saved" type="button" aria-label="Open saved missions (${saved})">
       <strong>${escapeHtml(saved)}</strong>
       <span>Saved</span>
     </button>
   `;
+
+  renderInsights();
+}
+
+// ----- Mission insights ----------------------------------------------------
+// Compact chips derived from the CURRENT filtered manifest (never all-time
+// statistics). Recomputed alongside the overview tiles, so every org/filter/
+// search change refreshes both.
+
+export function renderInsights() {
+  if (!els.insightsChips) return;
+  const pool = state.filteredLaunches;
+  const now = Date.now();
+  const days30 = now + 30 * 24 * 60 * 60 * 1000;
+  const weatherHorizon = now + WEATHER_FORECAST_DAYS * 24 * 60 * 60 * 1000;
+
+  const within30 = pool.filter((l) => {
+    const t = new Date(l.net).getTime();
+    return Number.isFinite(t) && t >= now && t <= days30;
+  }).length;
+  const webcasts = pool.filter((l) => safeUrl(l.webcast)).length;
+  const orbital = pool.filter((l) => flightType(l) === "orbital").length;
+  const suborbital = pool.filter((l) => flightType(l) === "suborbital").length;
+  const crew = pool.filter((l) => classifyMissionType(l) === "crew").length;
+  const science = pool.filter((l) => classifyMissionType(l) === "science").length;
+  const sites = new Set(
+    pool.map((l) => l.padName || l.location).filter(Boolean)
+  ).size;
+  const weatherable = pool.filter((l) => {
+    if (typeof l.padLat !== "number" || typeof l.padLon !== "number") return false;
+    const t = new Date(l.net).getTime();
+    return Number.isFinite(t) && t <= weatherHorizon;
+  }).length;
+
+  const chip = (value, label) => `
+    <div class="insight-chip">
+      <strong>${escapeHtml(value)}</strong>
+      <span>${escapeHtml(label)}</span>
+    </div>`;
+
+  els.insightsChips.innerHTML =
+    chip(within30, "Launches in the next 30 days") +
+    chip(webcasts, "Webcasts available") +
+    chip(orbital, "Orbital missions") +
+    chip(suborbital, "Suborbital flights") +
+    chip(crew, "Crew missions") +
+    chip(science, "Science missions") +
+    chip(sites, "Active launch sites") +
+    chip(weatherable, "Weather outlooks available");
 }
 
 // Keep organization tabs (and the active tile state) in sync with state.
@@ -434,13 +519,19 @@ export function renderCoverageNote() {
 
 function buildLaunchCard(launch, index) {
   const image = resolveLaunchImage(launch);
-  const favoriteActive = isFavorite(launch.id);
   const stagger = Math.min(index, 10);
+
+  // No usable LL2 image (or a malformed URL) → quiet neutral placeholder that
+  // preserves the card's media dimensions. Broken loads fall back to the same
+  // panel via the global error handler in main.js.
+  const media = image.src
+    ? `<img src="${escapeHtml(image.src)}" alt="${escapeHtml(launchImageAlt(launch))}" loading="lazy" />`
+    : `<div class="media-fallback">No mission image available</div>`;
 
   return `
     <article class="launch-card" data-launch-id="${escapeHtml(launch.id)}" style="--card-index:${stagger}">
       <div class="launch-card-media">
-        <img src="${escapeHtml(image.src)}" alt="${escapeHtml(launchImageAlt(launch))}" loading="lazy" />
+        ${media}
         <div class="badge-row badge-float">${orgBadgesHtml(launch)}</div>
       </div>
 
@@ -552,12 +643,39 @@ export function renderDrawer() {
 
 // ----- Details modal content ---------------------------------------------
 
+// Keyless OpenStreetMap link for a launch pad. Built only from validated
+// finite coordinates, run through safeUrl, and opened by the user on demand —
+// no map tiles or third-party requests are loaded into the app itself.
+function padMapSectionHtml(launch) {
+  const lat = launch.padLat;
+  const lon = launch.padLon;
+  if (typeof lat !== "number" || typeof lon !== "number") return "";
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return "";
+  if (Math.abs(lat) > 90 || Math.abs(lon) > 180) return "";
+
+  const la = lat.toFixed(5);
+  const lo = lon.toFixed(5);
+  const url = safeUrl(
+    `https://www.openstreetmap.org/?mlat=${encodeURIComponent(la)}&mlon=${encodeURIComponent(lo)}#map=15/${encodeURIComponent(la)}/${encodeURIComponent(lo)}`
+  );
+  if (!url) return "";
+
+  const padLabel = launch.padName || "launch pad";
+  const place = [launch.padName, launch.location].filter(Boolean).map(escapeHtml).join("<br />");
+  return `
+    <section class="pad-map">
+      <h4 class="pad-map-heading">Launch pad map</h4>
+      ${place ? `<p class="pad-map-place">${place}</p>` : ""}
+      <a class="card-link" href="${url}" target="_blank" rel="noopener noreferrer" aria-label="${escapeHtml(`Open map for ${padLabel}`)}">Open pad map</a>
+      <p class="pad-map-attribution">Map data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors.</p>
+    </section>
+  `;
+}
+
 export function buildDetailsContent(launch) {
   const locationLabel = [launch.padName, launch.location].filter(Boolean).join(" • ");
-  const webcastUrl = safeUrl(launch.webcast);
   const officialUrl = launch.official; // already validated in api.js
   const wikiUrl = safeUrl(launch.wikipedia);
-  const favoriteActive = isFavorite(launch.id);
 
   const probabilityRow =
     launch.probability === null
@@ -608,9 +726,11 @@ export function buildDetailsContent(launch) {
 
     <section class="weather-block" data-weather aria-live="polite"></section>
 
+    ${padMapSectionHtml(launch)}
+
     <div class="card-actions details-actions">
       ${favoriteButtonHtml(launch, { variant: "hero" })}
-      ${webcastUrl ? `<a class="card-link" href="${webcastUrl}" target="_blank" rel="noopener">Webcast</a>` : ""}
+      ${webcastActionHtml(launch)}
       ${officialUrl ? `<a class="card-link" href="${officialUrl}" target="_blank" rel="noopener">Official page</a>` : ""}
       ${wikiUrl ? `<a class="card-link" href="${wikiUrl}" target="_blank" rel="noopener">Wiki</a>` : ""}
     </div>

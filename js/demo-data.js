@@ -16,6 +16,7 @@ function inDays(days, hour = 12, minute = 0) {
 const NASA = { id: 44, name: "National Aeronautics and Space Administration", type: "Government", abbrev: "NASA" };
 const SPACEX = { provider: "SpaceX", providerName: "SpaceX", providerId: 121, providerType: "Commercial" };
 const BLUE_ORIGIN = { provider: "Blue Origin", providerName: "Blue Origin", providerId: 141, providerType: "Commercial" };
+const ROCKET_LAB = { provider: "Rocket Lab", providerName: "Rocket Lab", providerId: 147, providerType: "Commercial" };
 
 function record(base) {
   return {
@@ -263,6 +264,73 @@ export function getDemoLaunches() {
       webcast: "https://www.youtube.com/@blueorigin",
       official: "https://www.nasa.gov/",
       wikipedia: "https://en.wikipedia.org/wiki/Blue_Origin_New_Glenn"
+    }),
+    record({
+      ...ROCKET_LAB,
+      id: "demo-electron-commercial",
+      name: "Electron | Commercial Smallsat Rideshare",
+      net: inDays(5, 2, 45),
+      missionType: "Dedicated Rideshare",
+      details:
+        "A commercial Rocket Lab Electron launch — a Rocket Lab launch but not a NASA mission, so it appears only under Rocket Lab. Webcast and pad coordinates included; no mission image, so the neutral placeholder shows.",
+      statusName: "Go for Launch",
+      probability: 85,
+      rocket: "Electron",
+      rocketFamily: "Electron",
+      orbitName: "Sun-Synchronous Orbit",
+      orbitAbbrev: "SSO",
+      padName: "Rocket Lab Launch Complex 1A",
+      location: "Mahia Peninsula, New Zealand",
+      padLat: -39.2615,
+      padLon: 177.8646,
+      webcast: "https://www.youtube.com/@RocketLab",
+      official: "https://www.rocketlabusa.com/missions/",
+      wikipedia: "https://en.wikipedia.org/wiki/Rocket_Lab_Electron"
+    }),
+    record({
+      ...ROCKET_LAB,
+      agencies: [NASA],
+      id: "demo-nasa-rocket-lab",
+      name: "Electron | NASA Earth-Science Smallsat",
+      net: inDays(18, 8, 15),
+      missionType: "Earth Science",
+      details:
+        "A NASA Earth-science smallsat flying on a Rocket Lab Electron — a NASA mission AND a Rocket Lab launch, appearing under both organizations.",
+      statusName: "To Be Determined",
+      probability: null,
+      rocket: "Electron",
+      rocketFamily: "Electron",
+      orbitName: "Low Earth Orbit",
+      orbitAbbrev: "LEO",
+      padName: "Rocket Lab Launch Complex 2",
+      location: "Wallops Island, Virginia, USA",
+      padLat: 37.8337,
+      padLon: -75.4881,
+      webcast: "https://www.youtube.com/@RocketLab",
+      official: "https://www.nasa.gov/",
+      wikipedia: "https://en.wikipedia.org/wiki/Rocket_Lab_Electron"
+    }),
+    record({
+      ...ROCKET_LAB,
+      id: "demo-neutron-tentative",
+      name: "Neutron | Orbital Demo (Tentative)",
+      net: inDays(85, 17, 0),
+      missionType: "Test Flight",
+      details:
+        "Tentative: a future Rocket Lab Neutron demonstration flight. Date and mission profile are placeholders and clearly not confirmed.",
+      statusName: "To Be Determined",
+      probability: null,
+      rocket: "Neutron",
+      rocketFamily: "Neutron",
+      orbitName: "Low Earth Orbit",
+      orbitAbbrev: "LEO",
+      padName: "Launch Complex 3",
+      location: "Wallops Island, Virginia, USA",
+      padLat: 37.8337,
+      padLon: -75.4881,
+      webcast: "",
+      official: "https://www.rocketlabusa.com/launch/neutron/",
+      wikipedia: "https://en.wikipedia.org/wiki/Rocket_Lab_Neutron"
     })
   ];
 }
