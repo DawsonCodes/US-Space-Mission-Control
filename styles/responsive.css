@@ -35,14 +35,18 @@
   }
 }
 
-/* Tablet: two cards per row, five overview tiles across. */
+/* Tablet: two cards per row, three of the six overview tiles per row. */
 @media (min-width: 640px) {
   .launch-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .overview-tiles {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .insights-chips {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
@@ -59,10 +63,14 @@
   }
 }
 
-/* Wide desktop: three cards per row. */
+/* Wide desktop: three cards per row, all six overview tiles in one row. */
 @media (min-width: 1180px) {
   .launch-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .overview-tiles {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
   }
 }
 

@@ -2,25 +2,26 @@
 
 // ---- Launch Library 2 (LL2) ----------------------------------------------
 // All values below were verified against the official LL2 2.3.0 documentation.
-// SpaceX and Blue Origin are launch *providers* (lsp__id); NASA is a civil
-// *agency* matched on the mission's agencies (mission__agency__ids). The app
-// intentionally tracks only these three organizations.
+// SpaceX, Blue Origin, and Rocket Lab are launch *providers* (lsp__id); NASA is
+// a civil *agency* matched on the mission's agencies (mission__agency__ids).
+// The app intentionally tracks only these four organizations.
 export const LL2_UPCOMING = "https://ll.thespacedevs.com/2.3.0/launches/upcoming/";
 
 // Verified provider / agency IDs (see docs links in the PR description).
 export const SPACEX_PROVIDER_ID = 121;
 export const BLUE_ORIGIN_PROVIDER_ID = 141;
+export const ROCKET_LAB_PROVIDER_ID = 147;
 export const NASA_AGENCY_ID = 44;
 
-// Feed A — SpaceX + Blue Origin launches (orbital + suborbital so New Shepard
-// flights are not missed). A single request covers both providers because
-// lsp__id accepts comma-separated values.
+// Feed A — SpaceX + Blue Origin + Rocket Lab launches (orbital + suborbital so
+// New Shepard flights are not missed). A single request covers all three
+// providers because lsp__id accepts comma-separated values.
 export const API_PROVIDERS =
-  `${LL2_UPCOMING}?lsp__id=${SPACEX_PROVIDER_ID},${BLUE_ORIGIN_PROVIDER_ID}` +
+  `${LL2_UPCOMING}?lsp__id=${SPACEX_PROVIDER_ID},${BLUE_ORIGIN_PROVIDER_ID},${ROCKET_LAB_PROVIDER_ID}` +
   "&include_suborbital=true&mode=detailed&limit=100&ordering=net&hide_recent_previous=true";
 
-// Feed B — NASA-tagged missions (may fly on providers other than SpaceX/Blue
-// Origin; that provider is shown only as secondary metadata, never as a tab).
+// Feed B — NASA-tagged missions (may fly on providers other than the tracked
+// ones; that provider is shown only as secondary metadata, never as a tab).
 export const API_NASA =
   `${LL2_UPCOMING}?mission__agency__ids=${NASA_AGENCY_ID}` +
   "&mode=detailed&limit=100&ordering=net&hide_recent_previous=true";

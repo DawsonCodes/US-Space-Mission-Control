@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta
       name="description"
-      content="U.S. Space Mission Control — track upcoming NASA missions, SpaceX launches, and Blue Origin flights with live countdowns, launch-site weather, filters, and saved missions."
+      content="U.S. Space Mission Control — track upcoming NASA missions, SpaceX launches, Blue Origin flights, and Rocket Lab launches with live countdowns, launch-site weather, filters, and saved missions."
     />
     <title>U.S. Space Mission Control</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
@@ -23,8 +23,9 @@
           <span class="eyebrow">Live U.S. spaceflight tracker</span>
           <h1>U.S. Space Mission Control</h1>
           <p class="hero-text">
-            Track upcoming NASA missions, SpaceX launches, and Blue Origin flights
-            with live countdowns, launch-site weather, filters, and saved missions.
+            Track upcoming NASA missions, SpaceX launches, Blue Origin flights, and
+            Rocket Lab launches with live countdowns, launch-site weather, filters,
+            and saved missions.
           </p>
 
           <div class="org-tabs" id="orgTabs" role="tablist" aria-label="Organization filter">
@@ -32,11 +33,12 @@
             <button class="org-tab" role="tab" type="button" data-org="nasa" aria-selected="false" tabindex="-1">NASA</button>
             <button class="org-tab" role="tab" type="button" data-org="spacex" aria-selected="false" tabindex="-1">SpaceX</button>
             <button class="org-tab" role="tab" type="button" data-org="blue-origin" aria-selected="false" tabindex="-1">Blue Origin</button>
+            <button class="org-tab" role="tab" type="button" data-org="rocket-lab" aria-selected="false" tabindex="-1">Rocket Lab</button>
           </div>
           <p class="org-scope-note">
-            Tracks NASA missions, SpaceX launches, and Blue Origin flights — not every
-            launch provider. NASA is a civil agency, so its missions can also appear
-            under the SpaceX or Blue Origin tab.
+            Tracks NASA missions plus SpaceX, Blue Origin, and Rocket Lab launches —
+            not every launch provider. NASA is a civil agency, so its missions can
+            also appear under a provider tab.
           </p>
 
           <div class="hero-meta">
@@ -83,6 +85,25 @@
           </p>
         </div>
         <div class="overview-tiles" id="overviewTiles" aria-label="Mission overview"></div>
+
+        <div class="insights">
+          <button
+            id="insightsToggle"
+            class="insights-toggle"
+            type="button"
+            aria-expanded="true"
+            aria-controls="insightsBody"
+          >
+            Mission insights
+            <span class="insights-chevron" aria-hidden="true"></span>
+          </button>
+          <div id="insightsBody" class="insights-body">
+            <p class="insights-note">
+              Counts reflect the currently loaded, filtered view — not all-time statistics.
+            </p>
+            <div id="insightsChips" class="insights-chips"></div>
+          </div>
+        </div>
       </section>
 
       <section class="toolbar panel" aria-label="Schedule controls">
@@ -92,7 +113,7 @@
             <input
               id="keyword"
               type="search"
-              placeholder="Search Starlink, Dragon, Artemis, Florida…"
+              placeholder="Search Starlink, Dragon, Electron, Florida…"
               autocomplete="off"
             />
             <button

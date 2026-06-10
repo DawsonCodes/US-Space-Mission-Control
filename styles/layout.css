@@ -30,12 +30,21 @@
 }
 
 /* Hero ------------------------------------------------------------------- */
+/* overflow must stay visible so the absolutely-positioned More menu is never
+   clipped by the panel's rounded corners; nothing else in the hero overflows. */
 .hero {
   display: grid;
   grid-template-columns: 1fr;
   gap: 20px;
   padding: 24px;
-  overflow: hidden;
+  overflow: visible;
+}
+
+/* Panels create stacking contexts (backdrop-filter), so a later sibling panel
+   would normally paint over the hero's open More menu. Lift the hero only
+   while the menu is open. */
+.hero:has(.more-menu[open]) {
+  z-index: 40;
 }
 
 .hero-copy {

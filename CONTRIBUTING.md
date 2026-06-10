@@ -2,7 +2,8 @@
 
 Thanks for your interest in improving U.S. Space Mission Control! This is a
 small, friendly, dependency-free portfolio project that tracks NASA missions,
-SpaceX launches, and Blue Origin flights, and thoughtful contributions of any
+SpaceX launches, Blue Origin flights, and Rocket Lab launches, and thoughtful
+contributions of any
 size are welcome — bug fixes, docs, accessibility tweaks, or new ideas.
 
 ## Before you start
@@ -25,9 +26,9 @@ This project is intentionally simple, and we'd like to keep it that way:
   **relative** asset paths (`js/main.js`, `styles/base.css`, `assets/images/...`)
   and never leading-slash absolute paths (`/js/main.js`). Keep `index.html` at
   the repo root.
-- **Keep the focus.** The product tracks NASA (a civil agency) plus the SpaceX
-  and Blue Origin launch providers. Please don't add other providers or an
-  "other providers" view.
+- **Keep the focus.** The product tracks NASA (a civil agency) plus the SpaceX,
+  Blue Origin, and Rocket Lab launch providers. Please don't add other providers
+  or an "other providers" view.
 
 ## Branch naming
 
