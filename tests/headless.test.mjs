@@ -28,7 +28,9 @@ function makeEl(id = "") {
   };
 }
 const elCache = new Map();
+const rootProps = new Map();
 globalThis.document = {
+  documentElement: { style: { setProperty: (k, v) => rootProps.set(k, v), removeProperty: (k) => rootProps.delete(k) } },
   getElementById(id) { if (!elCache.has(id)) elCache.set(id, makeEl(id)); return elCache.get(id); },
   querySelector() { return null; }, querySelectorAll() { return []; },
   createElement() { return makeEl(); }, createDocumentFragment() { return makeEl(); },
@@ -178,6 +180,20 @@ check("overview Showing tile + org tiles carry data-count for animated counts", 
   const html = document.getElementById("overviewTiles").innerHTML;
   assert.ok(html.includes('data-count-key="nasa"'));
   assert.ok(html.includes('data-count-key="saved"'));
+});
+check("default organization accents are applied to :root on boot", () => {
+  assert.equal(rootProps.get("--org-spacex"), "#5aa0ff");
+  assert.equal(rootProps.get("--org-blueorigin"), "#ffcf5c");
+  assert.equal(rootProps.get("--org-ula"), "#b69bff");
+});
+check("color-customizer content builds rows for all six customizable orgs", async () => {
+  const { buildColorCustomizerContent } = await import("../js/customize.js");
+  const html = buildColorCustomizerContent();
+  for (const name of ["NASA", "SpaceX", "Blue Origin", "Rocket Lab", "ULA", "Firefly"]) {
+    assert.ok(html.includes(name), name);
+  }
+  assert.ok(html.includes("data-reset-colors"));
+  assert.ok(html.includes("swatch"));
 });
 
 if (failures > 0) { console.error(`\n${failures} headless check(s) failed.`); process.exit(1); }

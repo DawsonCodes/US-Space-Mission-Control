@@ -3,6 +3,27 @@
 All notable changes to U.S. Space Mission Control are documented here. Dates use
 the release ordering; the project follows a simple semantic-style versioning.
 
+## v3.3.1 — Launch Stabilization
+
+- Full mobile responsive repair: no page-level horizontal overflow or forced
+  zoom-out; long mission names/locations wrap; hero, modal, and saved drawer fit
+  and scroll cleanly on small screens
+- Redesigned hero organization selector into a clean wrapping layout (every
+  provider always visible, no desktop horizontal scrolling, no clipped pill)
+- Distinct, centralized organization color system (one accent family per
+  organization) applied to pills, badges, on-image badges, and overview tiles
+- Locally-saved organization-color customization with curated accessible swatches,
+  live preview, Reset to defaults, and malformed-storage safety
+- Typewriter-style animated search hint (stops on focus/typing, pauses while the
+  tab is hidden, static placeholder for reduced motion)
+- Mission Overview redesign: balanced responsive grid, clearer selected state,
+  quieter overlap note, non-clipping labels
+- API startup resilience: partial-success handling (one feed can fail without
+  destroying the dashboard), honest partial-coverage and stale-cache messages, and
+  a single bounded retry when the first uncached load fails
+- Expanded plain-Node CI validation (org colors, search hint, API resilience,
+  retry, stale-cache, duplicate-refresh, responsive audit)
+
 ## v3.3.0 — Interface, Motion & Performance Polish
 
 - Premium visual refresh across the hero, overview, filters, cards, overlays, drawer, More menu, and footer

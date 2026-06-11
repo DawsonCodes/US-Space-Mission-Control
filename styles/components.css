@@ -683,14 +683,35 @@ select optgroup {
 .badge.type-test-flight { background-color: rgba(190, 160, 255, 0.18); }
 .badge.type-other { background-color: rgba(255, 255, 255, 0.06); color: var(--muted); }
 
-/* Organization badges — distinct, recognizable accents */
+/* Organization badges — distinct, recognizable accents derived from the central
+   --org-* tokens (so user color customization propagates everywhere). A soft
+   tint background + a brighter token-tinted text keep contrast on the dark UI. */
 .badge.org-badge { border-color: transparent; font-weight: 600; }
-.badge.org-nasa { background-color: rgba(255, 128, 142, 0.2); color: #ffd2d8; }
-.badge.org-spacex { background-color: rgba(115, 182, 255, 0.22); color: #dbe9ff; }
-.badge.org-blueorigin { background-color: rgba(120, 200, 255, 0.16); color: #cfe6ff; }
-.badge.org-rocketlab { background-color: rgba(98, 215, 163, 0.18); color: #d6ffe9; }
-.badge.org-ula { background-color: rgba(255, 184, 108, 0.2); color: #ffe1c2; }
-.badge.org-firefly { background-color: rgba(255, 145, 90, 0.2); color: #ffd2b8; }
+.badge.org-nasa,
+.badge.org-spacex,
+.badge.org-blueorigin,
+.badge.org-rocketlab,
+.badge.org-ula,
+.badge.org-firefly {
+  background-color: color-mix(in srgb, var(--org-accent, var(--accent)) 22%, transparent);
+  color: color-mix(in srgb, var(--org-accent, var(--accent)) 78%, #ffffff);
+}
+.badge.org-nasa { --org-accent: var(--org-nasa); }
+.badge.org-spacex { --org-accent: var(--org-spacex); }
+.badge.org-blueorigin { --org-accent: var(--org-blueorigin); }
+.badge.org-rocketlab { --org-accent: var(--org-rocketlab); }
+.badge.org-ula { --org-accent: var(--org-ula); }
+.badge.org-firefly { --org-accent: var(--org-firefly); }
+
+/* Fallback for browsers without color-mix(): legible static accents. */
+@supports not (color: color-mix(in srgb, red, blue)) {
+  .badge.org-nasa { background-color: rgba(255, 122, 144, 0.22); color: #ffd2d8; }
+  .badge.org-spacex { background-color: rgba(90, 160, 255, 0.22); color: #dbe9ff; }
+  .badge.org-blueorigin { background-color: rgba(255, 207, 92, 0.2); color: #ffe9b8; }
+  .badge.org-rocketlab { background-color: rgba(81, 216, 168, 0.2); color: #d6ffe9; }
+  .badge.org-ula { background-color: rgba(182, 155, 255, 0.22); color: #e6dcff; }
+  .badge.org-firefly { background-color: rgba(255, 138, 76, 0.2); color: #ffd2b8; }
+}
 
 /* Organization badges OVER imagery need to stay legible against bright clouds
    and pale rockets: a dark translucent backing, a subtle border + shadow, and
@@ -711,12 +732,17 @@ select optgroup {
   }
 }
 
-.launch-card-media .badge.org-nasa { border-color: rgba(255, 128, 142, 0.65); color: #ffd2d8; }
-.launch-card-media .badge.org-spacex { border-color: rgba(115, 182, 255, 0.65); color: #dbe9ff; }
-.launch-card-media .badge.org-blueorigin { border-color: rgba(120, 200, 255, 0.6); color: #cfe6ff; }
-.launch-card-media .badge.org-rocketlab { border-color: rgba(98, 215, 163, 0.6); color: #d6ffe9; }
-.launch-card-media .badge.org-ula { border-color: rgba(255, 184, 108, 0.6); color: #ffe1c2; }
-.launch-card-media .badge.org-firefly { border-color: rgba(255, 145, 90, 0.6); color: #ffd2b8; }
+/* On-image org badges keep the dark backing (above) but take a brighter
+   token-tinted border + text so provider identity reads on bright photos. */
+.launch-card-media .badge.org-nasa,
+.launch-card-media .badge.org-spacex,
+.launch-card-media .badge.org-blueorigin,
+.launch-card-media .badge.org-rocketlab,
+.launch-card-media .badge.org-ula,
+.launch-card-media .badge.org-firefly {
+  border-color: color-mix(in srgb, var(--org-accent, var(--accent)) 70%, transparent);
+  color: color-mix(in srgb, var(--org-accent, var(--accent)) 55%, #ffffff);
+}
 
 /* Flight-type badges (omitted entirely when unknown) */
 .badge.flight-orbital { background-color: rgba(115, 182, 255, 0.14); border-color: rgba(115, 182, 255, 0.3); }
@@ -831,11 +857,13 @@ select optgroup {
 }
 
 .drawer-panel {
-  width: min(420px, 100%);
+  width: min(420px, 100vw);
+  max-width: 100vw;
   height: 100%;
   border-radius: var(--radius-lg) 0 0 var(--radius-lg);
   padding: 20px;
   gap: 14px;
+  overflow: hidden; /* the inner .drawer-list scrolls */
 }
 
 .overlay.is-open .drawer-panel {
@@ -849,9 +877,11 @@ select optgroup {
 }
 
 .modal-panel {
-  width: min(640px, 100%);
-  max-height: calc(100vh - 48px);
+  width: min(640px, calc(100vw - 24px));
+  max-height: 90vh;
+  max-height: 90dvh; /* progressive: avoids mobile browser-chrome clipping */
   overflow: auto;
+  overscroll-behavior: contain;
   border-radius: var(--radius-lg);
   padding: 24px;
 }
@@ -1103,34 +1133,51 @@ select optgroup {
 
 /* Organization tabs ------------------------------------------------------ */
 /* Single row that fits on desktop and becomes a clean horizontally scrollable
-   strip on narrow screens (never an ugly multi-line wrap). Padding leaves room
-   for the focus ring since overflow-x clips vertical overflow. */
-.org-tabs {
+   the strip wraps cleanly onto multiple rows (no horizontal scrolling, no
+   clipped final pill), so every organization is always fully visible. */
+.org-selector {
   display: flex;
-  flex-wrap: nowrap;
-  gap: var(--space-2);
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
   margin-top: var(--space-4);
-  padding: var(--space-1) 2px;
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
-  -webkit-overflow-scrolling: touch;
-  /* Subtle edge-fade hints that the strip is scrollable on narrow screens. */
-  -webkit-mask-image: linear-gradient(90deg, transparent, #000 14px, #000 calc(100% - 14px), transparent);
-  mask-image: linear-gradient(90deg, transparent, #000 14px, #000 calc(100% - 14px), transparent);
 }
 
-.org-tabs::-webkit-scrollbar {
-  height: 6px;
+.org-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: 2px;
+  min-width: 0;
 }
-.org-tabs::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.16);
+
+/* Compact "Customize colors" affordance next to the selector. */
+.customize-colors-btn {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 6px 12px;
   border-radius: var(--radius-pill);
+  border: 1px dashed var(--line-strong);
+  background-color: rgba(255, 255, 255, 0.03);
+  color: var(--muted);
+  font-size: 0.8rem;
+  transition: color var(--motion-fast) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard), background-color var(--motion-fast) var(--ease-standard);
 }
-.org-tabs::-webkit-scrollbar-track {
-  background: transparent;
+.customize-colors-btn:hover {
+  color: var(--text);
+  border-color: var(--accent);
+  background-color: rgba(255, 255, 255, 0.06);
 }
+.customize-colors-btn:focus-visible {
+  outline: none;
+  border-style: solid;
+  box-shadow: 0 0 0 3px rgba(115, 182, 255, 0.22);
+}
+.customize-colors-icon { font-size: 0.95rem; line-height: 1; }
 
 .org-tab {
   cursor: pointer;
@@ -1158,13 +1205,24 @@ select optgroup {
   }
 }
 
+/* Per-organization accent on the pills + overview tiles (single source: the
+   --org-* tokens, so customization propagates to selected states too). */
+.org-tab[data-org="all"], .overview-tile.is-showing { --org-accent: var(--org-all); }
+.org-tab[data-org="nasa"], .overview-tile[data-org="nasa"] { --org-accent: var(--org-nasa); }
+.org-tab[data-org="spacex"], .overview-tile[data-org="spacex"] { --org-accent: var(--org-spacex); }
+.org-tab[data-org="blue-origin"], .overview-tile[data-org="blue-origin"] { --org-accent: var(--org-blueorigin); }
+.org-tab[data-org="rocket-lab"], .overview-tile[data-org="rocket-lab"] { --org-accent: var(--org-rocketlab); }
+.org-tab[data-org="ula"], .overview-tile[data-org="ula"] { --org-accent: var(--org-ula); }
+.org-tab[data-org="firefly"], .overview-tile[data-org="firefly"] { --org-accent: var(--org-firefly); }
+.overview-tile.is-saved { --org-accent: var(--org-saved); }
+
 .org-tab.is-active {
-  border-color: rgba(115, 182, 255, 0.55);
-  background: linear-gradient(135deg, rgba(115, 182, 255, 0.24), rgba(157, 125, 255, 0.22));
+  border-color: color-mix(in srgb, var(--org-accent, var(--accent)) 60%, transparent);
+  background: color-mix(in srgb, var(--org-accent, var(--accent)) 20%, transparent);
   color: #fff;
 }
 
-/* Smooth active-tab underline indicator. */
+/* Smooth active-tab underline indicator (uses the active org's accent). */
 .org-tab.is-active::after {
   content: "";
   position: absolute;
@@ -1173,7 +1231,7 @@ select optgroup {
   width: 22px;
   height: 3px;
   border-radius: var(--radius-pill);
-  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  background: var(--org-accent, var(--accent));
   transform: translateX(-50%) scaleX(1);
   transform-origin: center;
   transition: transform var(--motion-normal) var(--ease-out);
@@ -1322,14 +1380,21 @@ button.overview-tile:focus-visible {
   box-shadow: 0 0 0 4px rgba(115, 182, 255, 0.18);
 }
 
+/* A quiet per-org accent line on the left edge of every provider tile so they
+   stay distinguishable without becoming a rainbow wall. */
+.overview-tile.is-org {
+  border-left: 3px solid color-mix(in srgb, var(--org-accent, var(--accent)) 55%, transparent);
+}
+
 .overview-tile.is-org[aria-pressed="true"] {
-  border-color: rgba(115, 182, 255, 0.6);
-  background: linear-gradient(135deg, rgba(115, 182, 255, 0.2), rgba(157, 125, 255, 0.16));
+  border-color: color-mix(in srgb, var(--org-accent, var(--accent)) 60%, transparent);
+  border-left-color: var(--org-accent, var(--accent));
+  background: color-mix(in srgb, var(--org-accent, var(--accent)) 16%, transparent);
 }
 
 .overview-tile.is-showing {
-  background-color: rgba(115, 182, 255, 0.08);
-  border-color: rgba(115, 182, 255, 0.22);
+  background-color: color-mix(in srgb, var(--org-all) 12%, transparent);
+  border-color: color-mix(in srgb, var(--org-all) 28%, transparent);
 }
 
 /* Coverage note (shown only when an LL2 feed is truncated) --------------- */
@@ -1709,4 +1774,128 @@ button.overview-tile:focus-visible {
   .overview-tile:active {
     transform: translateY(1px);
   }
+}
+
+/* ===== v3.3.1 launch-stabilization polish ============================== */
+
+/* Long-text wrapping guards (prevent overflow without shrinking type). */
+.spotlight-title,
+.launch-card h3,
+.saved-card h3,
+.details-title,
+.card-facts dd,
+.spotlight-facts dd,
+.details-grid dd,
+.pad-map-place,
+.weather-grid dd {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+/* Flex/grid children must be allowed to shrink so nothing forces desktop width. */
+.hero-copy,
+.spotlight-copy,
+.launch-card-body,
+.overview-tile,
+.insight-chip,
+.field,
+.saved-card,
+.details-grid > div {
+  min-width: 0;
+}
+
+/* Organization-color customization panel --------------------------------- */
+.customize-intro {
+  margin: 0 0 var(--space-4);
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.customize-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.customize-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-bottom: var(--space-3);
+  border-bottom: var(--border-subtle);
+}
+.customize-row:last-child { border-bottom: 0; }
+
+.customize-row-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.customize-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: var(--radius-pill);
+  background: var(--swatch, var(--accent));
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  flex: 0 0 auto;
+}
+
+.customize-org { font-weight: 600; }
+
+.customize-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.swatch {
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-pill);
+  background: var(--swatch);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  cursor: pointer;
+  padding: 0;
+  transition: transform var(--motion-fast) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard);
+}
+@media (hover: hover) {
+  .swatch:hover { transform: scale(1.12); }
+}
+.swatch.is-selected {
+  border-color: #fff;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.5), 0 0 0 4px var(--swatch);
+}
+.swatch:focus-visible {
+  outline: none;
+  border-color: #fff;
+  box-shadow: 0 0 0 3px rgba(115, 182, 255, 0.4);
+}
+
+.swatch-custom {
+  display: inline-flex;
+  align-items: center;
+}
+.swatch-custom input[type="color"] {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 2px dashed var(--line-strong);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  cursor: pointer;
+}
+
+.customize-actions {
+  margin-top: var(--space-5);
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Overview labels wrap rather than clip; provider name is never cut off. */
+.overview-tile span {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.2;
 }

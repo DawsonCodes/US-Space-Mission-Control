@@ -1,5 +1,12 @@
 /* Breakpoints layered on the mobile-first base. Loaded last so these win. */
 
+/* Hard guard: nothing may force the document wider than the viewport. */
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
 /* Small phones: let the spotlight stack so the countdown isn't squeezed. */
 @media (max-width: 520px) {
   .spotlight-main {
@@ -7,6 +14,10 @@
   }
 
   .countdown-ring {
+    width: 100%;
+  }
+
+  .toolbar-actions {
     width: 100%;
   }
 
@@ -27,9 +38,26 @@
   .active-filters-clear {
     margin-left: 0;
   }
+
+  /* Hero stays comfortable: reduce panel padding, keep tap targets. */
+  .hero {
+    padding: 18px;
+  }
+
+  .footer-links {
+    gap: 6px 10px;
+  }
 }
 
-/* Modal/drawer become full-screen sheets on small screens. */
+/* Very small phones (≤360): overview tiles still read as two clean columns. */
+@media (max-width: 380px) {
+  .overview-tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+}
+
+/* Modal/drawer become full-height sheets on small screens (internal scroll). */
 @media (max-width: 600px) {
   .modal-overlay {
     padding: 0;
@@ -38,30 +66,43 @@
 
   .modal-panel {
     width: 100%;
-    height: 100%;
-    max-height: 100vh;
+    height: 100dvh;
+    max-height: 100dvh;
     border-radius: 0;
   }
 
   .drawer-panel {
-    width: 100%;
+    width: 100vw;
     border-radius: 0;
+  }
+
+  /* Keep the More menu inside the viewport on narrow screens. */
+  .more-menu-list {
+    left: auto;
+    right: 0;
+    max-width: calc(100vw - 24px);
   }
 }
 
-/* Tablet+: two cards per row; overview tiles flow into a balanced auto-fit grid
-   (handles the eight tiles without an excessively tall section). */
+/* Tablet+: two cards per row; overview tiles flow into a balanced grid. */
 @media (min-width: 640px) {
   .launch-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .overview-tiles {
-    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   }
 
   .insights-chips {
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+}
+
+/* Comfortable desktop: aim for a balanced four-per-row overview (4 × 2). */
+@media (min-width: 900px) {
+  .overview-tiles {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
@@ -78,21 +119,20 @@
   }
 }
 
-/* Wide desktop: three cards per row. The eight overview tiles flow on a single
-   row when there's room (auto-fit), otherwise wrap to a tidy second row. */
+/* Wide desktop: three cards per row. */
 @media (min-width: 1180px) {
   .launch-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
-
-  .overview-tiles {
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  }
 }
 
-/* Footer: side-by-side on desktop, stacked on mobile. */
+/* Footer: stacked on mobile, side-by-side on desktop; links always wrap. */
 .footer {
   flex-direction: column;
+}
+
+.footer-links {
+  flex-wrap: wrap;
 }
 
 @media (min-width: 720px) {

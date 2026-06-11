@@ -53,5 +53,26 @@ jobs:
       - name: Status-banner lifecycle tests
         run: node tests/status.test.mjs
 
+      - name: Organization-color theme tests
+        run: node tests/org-colors.test.mjs
+
+      - name: Search-hint (typewriter) lifecycle tests
+        run: node tests/search-hint.test.mjs
+
+      - name: API resilience (partial-failure) tests
+        run: node tests/api-resilience.test.mjs
+
+      - name: API no-cache retry flow
+        run: node tests/api-flow.test.mjs
+
+      - name: Stale-cache fallback flow
+        run: node tests/stale-cache.test.mjs
+
+      - name: Duplicate-refresh prevention
+        run: node tests/dup-refresh.test.mjs
+
+      - name: Responsive-safety audit
+        run: node tests/responsive-audit.test.mjs
+
       - name: Headless UI / render harness
         run: node tests/headless.test.mjs

@@ -20,6 +20,9 @@ import {
 import { applyFilters } from "./filters.js";
 import { fetchLiveLaunches } from "./api.js";
 import { ORG, ORG_LABELS } from "./organizations.js";
+import { applyOrgColors } from "./org-theme.js";
+import { buildColorCustomizerContent, wireColorCustomizer } from "./customize.js";
+import { setupSearchHint } from "./search-hint.js";
 import { buildICS, icsFilename } from "./calendar.js";
 import { buildMissionUrl, parseMissionId, stripMissionParam } from "./deeplink.js";
 import { setupStarfield } from "./starfield.js";
@@ -216,26 +219,41 @@ function startInitialLoad() {
   }
 }
 
+// Short conservative delay before a single automatic retry when the very first
+// (uncached) load fails transiently. Never retries endlessly.
+const STARTUP_RETRY_DELAY_MS = 2500;
+
+function partialCoverageMessage(failedFeeds) {
+  if (failedFeeds.includes("providers")) {
+    return "Showing partial live data — the provider launch feed didn't respond. Try Refresh for the full manifest.";
+  }
+  return "Showing partial live data — the NASA mission feed didn't respond, so some NASA overlaps may be missing.";
+}
+
 // Fetch fresh live data. `background` keeps current/cached content visible while
 // refreshing; otherwise skeletons are already showing. A new refresh aborts any
 // in-flight one (no duplicate loads); a superseded request resolves silently.
-async function refreshLive({ background = false, manual = false } = {}) {
+// `attempt` guards the one-time uncached-startup retry.
+async function refreshLive({ background = false, manual = false, attempt = 0 } = {}) {
   if (state.activeRequest) state.activeRequest.abort();
   const controller = new AbortController();
   state.activeRequest = controller;
 
   if (manual) setStatus("Refreshing live launch data…", "loading");
-  else if (!background) setStatus("Loading launch providers…", "loading");
+  else if (!background) setStatus(attempt > 0 ? "Retrying live launch data…" : "Loading launch providers…", "loading");
 
   try {
-    const { launches, truncated } = await fetchLiveLaunches({ signal: controller.signal });
+    const { launches, truncated, partial, failedFeeds = [] } = await fetchLiveLaunches({ signal: controller.signal });
     if (state.activeRequest !== controller) return; // superseded by a newer refresh
     const replacing = state.launches.length > 0 && state.dataSource !== "none";
     renderManifest(launches, truncated, "live", Date.now(), {
       preservePagination: replacing,
       entrance: replacing ? "fade" : "stagger"
     });
-    if (background || manual) {
+    if (partial) {
+      // Usable data arrived, but one feed failed — honest, non-destructive.
+      setStatus(partialCoverageMessage(failedFeeds), "warning");
+    } else if (background || manual) {
       setStatus("Updated with fresh live launch data.", "success");
     } else {
       const note = truncated ? " (partial list)" : "";
@@ -248,10 +266,19 @@ async function refreshLive({ background = false, manual = false } = {}) {
 
     const cache = getLaunchCache();
     if (isUsableCache(cache)) {
+      // Stale-but-usable cache stays visible with an honest, non-destructive note.
       if (state.dataSource !== "cache" || state.launches.length === 0) {
         renderManifest(cache.launches, cache.truncated, "cache", cache.savedAt, { entrance: "none" });
       }
       setStatus(`Showing cached launch data from ${cacheAgeLabel(cache.ageMs)} because the live refresh failed.`, "warning");
+    } else if (!background && !manual && attempt === 0) {
+      // No usable cache on first load: retry exactly once after a short delay.
+      setStatus("Live data didn't load. Retrying shortly…", "loading");
+      window.setTimeout(() => {
+        if (!state.usingDemo && state.launches.length === 0) {
+          refreshLive({ background: false, attempt: 1 });
+        }
+      }, STARTUP_RETRY_DELAY_MS);
     } else {
       setStatus("Live API failed. Try again or switch to demo data.", "error");
       if (state.launches.length === 0) renderLoadError();
@@ -389,6 +416,20 @@ function openAbout(opener) {
 function openLegend(opener) {
   els.legendModal.setAttribute("aria-labelledby", "legendTitle");
   openOverlay(els.legendModal, { returnFocusTo: opener || els.btnLegend });
+}
+
+let colorCustomizerWired = false;
+function openColorCustomizer(opener) {
+  if (!els.orgColorsModal || !els.orgColorsContent) return;
+  els.orgColorsContent.innerHTML = buildColorCustomizerContent();
+  if (!colorCustomizerWired) {
+    // Live preview happens automatically (changing the :root tokens restyles
+    // every badge/pill/tile); no dashboard re-render is required.
+    wireColorCustomizer(els.orgColorsContent);
+    colorCustomizerWired = true;
+  }
+  els.orgColorsModal.setAttribute("aria-labelledby", "orgColorsTitle");
+  openOverlay(els.orgColorsModal, { returnFocusTo: opener || els.btnCustomizeColors });
 }
 
 // ----- Calendar export & share links --------------------------------------
@@ -713,6 +754,8 @@ function attachEventListeners() {
       closeMoreMenu();
       openLegend(e.currentTarget);
     });
+  if (els.btnCustomizeColors)
+    els.btnCustomizeColors.addEventListener("click", (e) => openColorCustomizer(e.currentTarget));
 
   els.btnClearFilters.addEventListener("click", resetFilters);
   els.btnRandom.addEventListener("click", randomMission);
@@ -875,6 +918,7 @@ function attachEventListeners() {
 
 function init() {
   migrateLegacyStorage();
+  applyOrgColors(); // apply saved/default organization accents before first paint
   loadPreferences();
   loadFavorites();
   updateInputsFromState();
@@ -888,6 +932,7 @@ function init() {
   setupOrgTabs();
   setupMoreMenu();
   setupInsights();
+  setupSearchHint(els.keyword);
   window.addEventListener("popstate", onPopState);
   startCountdownTicker();
   setupStarfield();
