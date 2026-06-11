@@ -205,10 +205,14 @@ async function fetchFeed(url, signal) {
   return { results, count };
 }
 
-// Network-only fetch of BOTH feeds CONCURRENTLY (provider feed + NASA
-// mission-agency feed). Normalizes, merges, and de-duplicates by stable id,
-// then writes the fresh manifest to the cache. Returns { launches, truncated };
-// `truncated` is true when either feed reports more records than it returned.
+// Network fetch of BOTH feeds CONCURRENTLY (provider feed + NASA mission-agency
+// feed), tolerant of a single feed failing. Normalizes, merges, and de-dupes by
+// stable id, then writes the fresh manifest to the cache. Returns
+// { launches, truncated, partial, failedFeeds }:
+//   - partial is true when one feed failed but the other returned usable data
+//     (the UI shows an honest partial-coverage warning instead of an error).
+//   - throws only when BOTH feeds fail (or the request is aborted), so the
+//     caller can fall back to cache/demo/error.
 //
 // Cache-first orchestration (read cache, render, background refresh) lives in
 // main.js — this function always hits the network. A built-in timeout aborts a
@@ -226,10 +230,23 @@ export async function fetchLiveLaunches({ signal } = {}) {
   }
 
   try {
-    const [providers, nasa] = await Promise.all([
+    // allSettled so one provider feed failing temporarily can't destroy a load
+    // that otherwise has usable data.
+    const [providersR, nasaR] = await Promise.allSettled([
       fetchFeed(API_PROVIDERS, controller.signal),
       fetchFeed(API_NASA, controller.signal)
     ]);
+
+    const providersOk = providersR.status === "fulfilled";
+    const nasaOk = nasaR.status === "fulfilled";
+
+    // Total failure (including abort/timeout): surface the error to the caller.
+    if (!providersOk && !nasaOk) {
+      throw providersR.reason || nasaR.reason || new Error("Both launch feeds failed");
+    }
+
+    const providers = providersOk ? providersR.value : { results: [], count: 0 };
+    const nasa = nasaOk ? nasaR.value : { results: [], count: 0 };
 
     const launches = dedupeMerge(
       providers.results.map(simplifyLaunch),
@@ -238,8 +255,13 @@ export async function fetchLiveLaunches({ signal } = {}) {
     const truncated =
       providers.count > providers.results.length || nasa.count > nasa.results.length;
 
+    const failedFeeds = [];
+    if (!providersOk) failedFeeds.push("providers");
+    if (!nasaOk) failedFeeds.push("nasa");
+    const partial = failedFeeds.length > 0;
+
     saveLaunchCache({ launches, truncated });
-    return { launches, truncated };
+    return { launches, truncated, partial, failedFeeds };
   } finally {
     clearTimeout(timeout);
   }

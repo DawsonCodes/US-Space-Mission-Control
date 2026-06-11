@@ -113,6 +113,18 @@ NASA, SpaceX, Blue Origin, Rocket Lab, ULA, and Firefly.
 - **Responsive** layout: three cards per row on wide desktop, two on tablet, one
   on mobile.
 
+## What's new in v3.3.1 — launch stabilization
+
+A focused presentation pass before public release: a full mobile responsive
+repair (no horizontal overflow or forced zoom-out; hero, details modal, and
+saved drawer fit and scroll cleanly), a redesigned wrapping hero organization
+selector, a **distinct, customizable organization color system** (curated
+accessible swatches saved locally per device), a typewriter animated search
+hint (with a static reduced-motion fallback), a Mission Overview refresh, and
+hardened API startup — one launch feed can fail without breaking the dashboard,
+stale cache stays usable with an honest notice, and an uncached first failure
+retries exactly once.
+
 ## What's new in v3.3.0 — interface, motion & performance
 
 v3.3.0 is a polish release: same features, a more premium feel and a faster first
@@ -186,6 +198,9 @@ js/
   calendar.js         # Client-side .ics calendar generation
   deeplink.js         # Shareable ?mission=<id> URL helpers
   status-timer.js     # Pure status-banner countdown state machine (pause/resume)
+  org-theme.js        # Organization accent colours: defaults + saved customization
+  customize.js        # Organization-colour customization panel
+  search-hint.js      # Typewriter search-hint animation (reduced-motion aware)
   weather.js          # Open-Meteo fetch, nearest-hour, caching, formatting
   modal.js            # Accessible overlay mechanics (focus trap, ESC, scroll lock)
   render.js           # DOM references and all rendering (incl. overlay content)
@@ -200,6 +215,13 @@ tests/
   cache.test.mjs           # Cache freshness model, schema, malformed/quota guards
   cache-flow.test.mjs      # Cache-first render → background refresh integration
   status.test.mjs          # Status-timer duration / sync / pause / resume
+  org-colors.test.mjs      # Org-accent defaults / persistence / malformed storage
+  search-hint.test.mjs     # Typewriter lifecycle + reduced-motion fallback
+  api-resilience.test.mjs  # Partial-feed-failure handling
+  api-flow.test.mjs        # Uncached single-retry (bounded, no loop)
+  stale-cache.test.mjs     # Stale-cache fallback on refresh failure
+  dup-refresh.test.mjs     # Duplicate-refresh prevention
+  responsive-audit.test.mjs# Static responsive-safety guards
   headless.test.mjs        # DOM-shim boot + render + UI-state harness
 .github/
   workflows/validate.yml   # GitHub Actions: plain-Node validation (no npm)

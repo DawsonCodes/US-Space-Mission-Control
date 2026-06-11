@@ -19,13 +19,18 @@
   --warning: #ffd166;
   --danger: #ff808e;
 
-  /* Provider accent tokens (single source of truth; used by badges + edges). */
-  --org-nasa: #ff808e;
-  --org-spacex: #73b6ff;
-  --org-blueorigin: #78c8ff;
-  --org-rocketlab: #62d7a3;
-  --org-ula: #ffb86c;
-  --org-firefly: #ff915a;
+  /* Organization accent tokens — the single source of truth for badges, pills,
+     overview tiles, and card edges. Chosen as DISTINCT visual families so every
+     organization is recognizable at a glance; overridable per-user via
+     js/org-theme.js (which rewrites these custom properties on :root). */
+  --org-nasa: #ff7a90;        /* rose / coral */
+  --org-spacex: #5aa0ff;      /* blue */
+  --org-blueorigin: #ffcf5c;  /* gold / amber */
+  --org-rocketlab: #51d8a8;   /* teal / green */
+  --org-ula: #b69bff;         /* violet / purple */
+  --org-firefly: #ff8a4c;     /* orange */
+  --org-all: #8aa0d8;         /* neutral indigo / slate */
+  --org-saved: #9fb3c8;       /* neutral (distinct from providers) */
 
   /* Spacing scale. */
   --space-1: 4px;

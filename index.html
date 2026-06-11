@@ -28,14 +28,20 @@
             and saved missions.
           </p>
 
-          <div class="org-tabs" id="orgTabs" role="tablist" aria-label="Organization filter">
-            <button class="org-tab is-active" role="tab" type="button" data-org="all" aria-selected="true">All tracked missions</button>
-            <button class="org-tab" role="tab" type="button" data-org="nasa" aria-selected="false" tabindex="-1">NASA</button>
-            <button class="org-tab" role="tab" type="button" data-org="spacex" aria-selected="false" tabindex="-1">SpaceX</button>
-            <button class="org-tab" role="tab" type="button" data-org="blue-origin" aria-selected="false" tabindex="-1">Blue Origin</button>
-            <button class="org-tab" role="tab" type="button" data-org="rocket-lab" aria-selected="false" tabindex="-1">Rocket Lab</button>
-            <button class="org-tab" role="tab" type="button" data-org="ula" aria-selected="false" tabindex="-1">ULA</button>
-            <button class="org-tab" role="tab" type="button" data-org="firefly" aria-selected="false" tabindex="-1">Firefly</button>
+          <div class="org-selector">
+            <div class="org-tabs" id="orgTabs" role="tablist" aria-label="Organization filter">
+              <button class="org-tab is-active" role="tab" type="button" data-org="all" aria-selected="true">All tracked missions</button>
+              <button class="org-tab" role="tab" type="button" data-org="nasa" aria-selected="false" tabindex="-1">NASA</button>
+              <button class="org-tab" role="tab" type="button" data-org="spacex" aria-selected="false" tabindex="-1">SpaceX</button>
+              <button class="org-tab" role="tab" type="button" data-org="blue-origin" aria-selected="false" tabindex="-1">Blue Origin</button>
+              <button class="org-tab" role="tab" type="button" data-org="rocket-lab" aria-selected="false" tabindex="-1">Rocket Lab</button>
+              <button class="org-tab" role="tab" type="button" data-org="ula" aria-selected="false" tabindex="-1">ULA</button>
+              <button class="org-tab" role="tab" type="button" data-org="firefly" aria-selected="false" tabindex="-1">Firefly</button>
+            </div>
+            <button id="btnCustomizeColors" class="customize-colors-btn" type="button" aria-haspopup="dialog" aria-label="Customize organization colors">
+              <span class="customize-colors-icon" aria-hidden="true">🎨</span>
+              <span class="customize-colors-text">Customize colors</span>
+            </button>
           </div>
           <p class="org-scope-note">
             Tracks NASA missions plus SpaceX, Blue Origin, Rocket Lab, ULA, and Firefly
@@ -113,11 +119,12 @@
       <section class="toolbar panel" aria-label="Schedule controls">
         <div class="toolbar-row">
           <label class="field field-search">
-            <span class="sr-only">Search launches</span>
+            <span class="sr-only">Search missions</span>
             <input
               id="keyword"
               type="search"
-              placeholder="Search Starlink, Dragon, Electron, Florida…"
+              aria-label="Search missions"
+              placeholder="Search missions…"
               autocomplete="off"
             />
             <button
@@ -341,6 +348,22 @@
       <div class="overlay-panel modal-panel" data-overlay-panel tabindex="-1">
         <button class="icon-btn modal-close" data-overlay-close type="button" aria-label="Close about this data">✕</button>
         <div id="aboutContent" class="details-content"></div>
+      </div>
+    </div>
+
+    <!-- Organization-color customization modal -->
+    <div
+      id="orgColorsModal"
+      class="overlay modal-overlay"
+      aria-hidden="true"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="orgColorsTitle"
+    >
+      <div class="overlay-backdrop" data-overlay-backdrop></div>
+      <div class="overlay-panel modal-panel" data-overlay-panel tabindex="-1">
+        <button class="icon-btn modal-close" data-overlay-close type="button" aria-label="Close color customization">✕</button>
+        <div id="orgColorsContent" class="details-content"></div>
       </div>
     </div>
 
