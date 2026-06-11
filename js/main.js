@@ -11,7 +11,11 @@ import {
   loadFavorites,
   saveFavorites,
   savePreferences,
-  isFavorite
+  isFavorite,
+  getLaunchCache,
+  isUsableCache,
+  clearLaunchCache,
+  cacheAgeLabel
 } from "./storage.js";
 import { applyFilters } from "./filters.js";
 import { fetchLiveLaunches } from "./api.js";
@@ -25,6 +29,7 @@ import {
   els,
   setStatus,
   dismissStatus,
+  setupStatusBanner,
   updateInputsFromState,
   updateResetState,
   syncSearchClear,
@@ -164,55 +169,127 @@ function renderResultsAndOverview() {
   renderAll();
 }
 
-async function loadLaunches(forceRefresh = false) {
-  setLoadingState();
-  setStatus(
-    forceRefresh ? "Refreshing live launch data…" : "Loading the U.S. spaceflight manifest…",
-    "loading"
-  );
-
-  try {
-    const { launches, truncated } = await fetchLiveLaunches(forceRefresh);
-    state.launches = launches;
-    state.truncated = truncated;
-    state.usingDemo = false;
-    state.lastUpdated = Date.now();
-    state.visibleCount = DEFAULT_VISIBLE;
-    applyFilters();
-    state.nextLaunch = state.filteredLaunches[0] || null;
-    renderAll();
+// Apply a normalized manifest to state + the UI. `source` is live | cache |
+// demo; `dataTime` is when the data was actually fetched (cache uses its saved
+// time so "last refresh" stays honest). On a background replacement we preserve
+// pagination so the user's revealed cards don't collapse (no layout jump).
+function renderManifest(launches, truncated, source, dataTime, { preservePagination = false, entrance = "none" } = {}) {
+  state.launches = Array.isArray(launches) ? launches : [];
+  state.truncated = Boolean(truncated);
+  state.usingDemo = source === "demo";
+  state.dataSource = source;
+  state.lastUpdated = dataTime || Date.now();
+  if (!preservePagination) state.visibleCount = DEFAULT_VISIBLE;
+  applyFilters();
+  state.visibleCount = Math.min(state.visibleCount, Math.max(DEFAULT_VISIBLE, state.filteredLaunches.length));
+  const nextId = state.filteredLaunches[0]?.id || null;
+  const heroChanged = nextId !== (state.nextLaunch?.id || null);
+  state.nextLaunch = state.filteredLaunches[0] || null;
+  renderAll({ resultsEntrance: entrance });
+  if (heroChanged) {
     heroWeather = null;
     loadHeroWeather();
-    const suffix = state.dataSource === "cache" ? "from cache." : "from the live API.";
-    const note = truncated ? " (partial list)" : "";
-    setStatus(`Loaded ${state.launches.length} upcoming launches ${suffix}${note}`, "success");
-    openMissionFromUrl();
-  } catch (error) {
-    if (error.name === "AbortError") return;
-    setStatus("Live API failed. Try again or switch to demo data.", "error");
-    if (state.launches.length === 0) renderLoadError();
-  } finally {
-    state.activeRequest = null;
+  } else {
+    paintHeroWeather();
   }
 }
 
+// Cache-first initial load: render usable cached data instantly, then refresh in
+// the background; otherwise show skeletons and load fresh.
+function startInitialLoad() {
+  const cache = getLaunchCache();
+  if (isUsableCache(cache)) {
+    renderManifest(cache.launches, cache.truncated, "cache", cache.savedAt, { entrance: "none" });
+    if (cache.freshness === "fresh") {
+      setStatus("Showing cached launch data while refreshing…", "info");
+    } else {
+      setStatus(`Showing cached launch data from ${cacheAgeLabel(cache.ageMs)} while refreshing…`, "warning");
+    }
+    refreshLive({ background: true });
+  } else {
+    if (cache && cache.freshness === "expired") {
+      clearLaunchCache();
+      setStatus("Cached launch data expired. Loading fresh data…", "loading");
+    }
+    setLoadingState();
+    refreshLive({ background: false });
+  }
+}
+
+// Fetch fresh live data. `background` keeps current/cached content visible while
+// refreshing; otherwise skeletons are already showing. A new refresh aborts any
+// in-flight one (no duplicate loads); a superseded request resolves silently.
+async function refreshLive({ background = false, manual = false } = {}) {
+  if (state.activeRequest) state.activeRequest.abort();
+  const controller = new AbortController();
+  state.activeRequest = controller;
+
+  if (manual) setStatus("Refreshing live launch data…", "loading");
+  else if (!background) setStatus("Loading launch providers…", "loading");
+
+  try {
+    const { launches, truncated } = await fetchLiveLaunches({ signal: controller.signal });
+    if (state.activeRequest !== controller) return; // superseded by a newer refresh
+    const replacing = state.launches.length > 0 && state.dataSource !== "none";
+    renderManifest(launches, truncated, "live", Date.now(), {
+      preservePagination: replacing,
+      entrance: replacing ? "fade" : "stagger"
+    });
+    if (background || manual) {
+      setStatus("Updated with fresh live launch data.", "success");
+    } else {
+      const note = truncated ? " (partial list)" : "";
+      setStatus(`Loaded ${launches.length} upcoming launches.${note}`, "success");
+    }
+    openMissionFromUrl();
+  } catch (error) {
+    // A request we deliberately aborted because a newer one started: ignore.
+    if (error?.name === "AbortError" && controller.signal.aborted) return;
+
+    const cache = getLaunchCache();
+    if (isUsableCache(cache)) {
+      if (state.dataSource !== "cache" || state.launches.length === 0) {
+        renderManifest(cache.launches, cache.truncated, "cache", cache.savedAt, { entrance: "none" });
+      }
+      setStatus(`Showing cached launch data from ${cacheAgeLabel(cache.ageMs)} because the live refresh failed.`, "warning");
+    } else {
+      setStatus("Live API failed. Try again or switch to demo data.", "error");
+      if (state.launches.length === 0) renderLoadError();
+    }
+  } finally {
+    if (state.activeRequest === controller) state.activeRequest = null;
+  }
+}
+
+// Manual "Reload live data" / Refresh: force a network refresh, keeping the
+// current content visible as a temporary fallback.
+function loadLaunches(forceRefresh = false) {
+  if (forceRefresh) refreshLive({ background: true, manual: true });
+  else startInitialLoad();
+}
+
 function useDemoData() {
-  state.launches = getDemoLaunches();
-  state.truncated = false;
-  state.usingDemo = true;
-  state.dataSource = "demo";
-  state.lastUpdated = Date.now();
-  state.visibleCount = DEFAULT_VISIBLE;
-  applyFilters();
-  state.nextLaunch = state.filteredLaunches[0] || null;
-  renderAll();
-  heroWeather = null;
-  loadHeroWeather();
+  // Demo must never overwrite the live cache or be clobbered by a late live
+  // response, so cancel any in-flight refresh first. renderManifest does not
+  // write the cache for non-live sources.
+  if (state.activeRequest) {
+    state.activeRequest.abort();
+    state.activeRequest = null;
+  }
+  renderManifest(getDemoLaunches(), false, "demo", Date.now(), { entrance: "stagger" });
   setStatus(`Demo mode active with ${state.launches.length} missions.`, "warning");
   openMissionFromUrl();
 }
 
 // ----- Organization tabs / tiles ------------------------------------------
+
+// Scroll the active organization tab into view on narrow (scrollable) layouts.
+function scrollActiveTabIntoView() {
+  const active = els.orgTabs?.querySelector('[data-org][aria-selected="true"]');
+  if (active && typeof active.scrollIntoView === "function") {
+    active.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
+  }
+}
 
 function setActiveOrg(org, { announce = false } = {}) {
   state.activeOrg = org;
@@ -220,9 +297,10 @@ function setActiveOrg(org, { announce = false } = {}) {
   applyFilters();
   renderOverview();
   renderOrgControls();
-  renderResults();
+  renderResults({ entrance: "fade" });
   updateHeroSpotlight();
   updateResetState();
+  scrollActiveTabIntoView();
   savePreferences();
   if (announce) {
     const label = ORG_LABELS[org] || "all tracked missions";
@@ -240,7 +318,7 @@ function toggleOrg(org) {
 function onFilterChange() {
   state.visibleCount = DEFAULT_VISIBLE; // reset reveal whenever the result set changes
   applyFilters();
-  renderResults();
+  renderResults({ entrance: "fade" }); // quick container fade, no per-card replay
   renderOverview();
   renderOrgControls();
   updateHeroSpotlight();
@@ -258,7 +336,7 @@ function resetFilters() {
   state.sortMode = "soonest";
   state.visibleCount = DEFAULT_VISIBLE;
   applyFilters();
-  renderResults();
+  renderResults({ entrance: "fade" });
   renderOverview();
   renderOrgControls();
   updateHeroSpotlight();
@@ -287,7 +365,7 @@ function randomMission() {
   const index = pool.findIndex((l) => l.id === pick.id);
   if (index >= state.visibleCount) {
     state.visibleCount = index + 1;
-    renderResults();
+    renderResults({ append: true });
     renderOverview();
   }
 
@@ -641,15 +719,15 @@ function attachEventListeners() {
   els.btnSaved.addEventListener("click", (e) => openSavedDrawer(e.currentTarget));
   els.btnClearFavorites.addEventListener("click", clearFavorites);
   els.btnLoadMore.addEventListener("click", () => {
-    // Increment by 10, clamped to the filtered total; renderResults hides both
-    // controls as soon as the final page is visible.
+    // Increment by 10, clamped to the filtered total. Append only the new cards
+    // so existing cards (and scroll position) stay stable; only new ones animate.
     state.visibleCount = Math.min(state.visibleCount + LOAD_MORE_STEP, state.filteredLaunches.length);
-    renderResults();
+    renderResults({ append: true });
     renderOverview();
   });
   els.btnShowAll.addEventListener("click", () => {
     state.visibleCount = state.filteredLaunches.length;
-    renderResults();
+    renderResults({ append: true });
     renderOverview();
   });
 
@@ -663,7 +741,7 @@ function attachEventListeners() {
       state.keyword = "";
       state.visibleCount = DEFAULT_VISIBLE;
       applyFilters();
-      renderResults();
+      renderResults({ entrance: "fade" });
       renderOverview();
       updateHeroSpotlight();
       updateInputsFromState();
@@ -739,6 +817,13 @@ function attachEventListeners() {
       return;
     }
 
+    // "Clear all" affordance inside the active-filter summary.
+    const clearFiltersBtn = event.target.closest("[data-clear-filters]");
+    if (clearFiltersBtn) {
+      resetFilters();
+      return;
+    }
+
     // Overview tiles: Showing returns to All, org tiles toggle, Saved opens
     // the drawer.
     const showingTile = event.target.closest('.overview-tile[data-action="showing"]');
@@ -797,6 +882,7 @@ function init() {
   state.nextLaunch = state.filteredLaunches[0] || null;
   renderAll();
   attachEventListeners();
+  setupStatusBanner();
   setupImageFallback();
   setupSelectArrows();
   setupOrgTabs();

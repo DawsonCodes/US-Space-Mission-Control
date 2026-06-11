@@ -67,13 +67,6 @@
   margin-top: 18px;
 }
 
-/* Stats strip ------------------------------------------------------------ */
-.stats-strip {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-
 /* Toolbar ---------------------------------------------------------------- */
 .toolbar {
   padding: 16px;
@@ -89,7 +82,8 @@
 .field {
   display: grid;
   gap: 6px;
-  flex: 1 1 160px;
+  flex: 1 1 150px;
+  min-width: 140px;
 }
 
 .field-search {

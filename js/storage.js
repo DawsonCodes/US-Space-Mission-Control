@@ -2,7 +2,13 @@
 // API response cache in sessionStorage. Every parse is guarded so corrupt
 // storage never crashes the app. This module is intentionally render-free.
 
-import { STORAGE_KEYS, LEGACY_STORAGE_KEYS, CACHE_TTL_MS } from "./config.js";
+import {
+  STORAGE_KEYS,
+  LEGACY_STORAGE_KEYS,
+  MANIFEST_CACHE_SCHEMA,
+  CACHE_FRESH_MS,
+  CACHE_STALE_MS
+} from "./config.js";
 import { state } from "./state.js";
 
 const ORG_VALUES = new Set(["all", "nasa", "spacex", "blue-origin", "rocket-lab", "ula", "firefly"]);
@@ -101,31 +107,97 @@ export function isFavorite(id) {
   return state.favorites.some((launch) => launch.id === id);
 }
 
-// The launch cache stores a normalized, merged payload: { launches, truncated }.
-export function getLaunchCache() {
+// ---- Cache-first manifest cache (localStorage, schema-versioned) ---------
+// Stores the last successful normalized live manifest so a repeat visit can
+// render instantly while a background refresh runs. Pure helpers below are
+// unit-tested without touching storage.
+
+// Classify an age in ms into the freshness model (fresh | stale | expired).
+// Negative ages (clock skew) are treated as fresh rather than discarded.
+export function classifyCacheAge(ageMs) {
+  if (!Number.isFinite(ageMs) || ageMs < 0) return "fresh";
+  if (ageMs < CACHE_FRESH_MS) return "fresh";
+  if (ageMs < CACHE_STALE_MS) return "stale";
+  return "expired";
+}
+
+// Human "N ago" wording for cache-age status messages.
+export function cacheAgeLabel(ageMs) {
+  const ms = Number.isFinite(ageMs) && ageMs > 0 ? ageMs : 0;
+  const minutes = Math.floor(ms / 60000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes} minute${minutes === 1 ? "" : "s"} ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  const days = Math.floor(hours / 24);
+  return `${days} day${days === 1 ? "" : "s"} ago`;
+}
+
+// Read + validate the cached manifest. Returns an info object:
+//   { launches, truncated, savedAt, ageMs, freshness }
+// or null when there is no cache, a schema mismatch, or malformed data (those
+// are removed safely). Expired entries are returned with freshness "expired" so
+// the loader can message + reload rather than silently presenting stale data.
+export function getLaunchCache(now = Date.now()) {
+  let raw;
   try {
-    const raw = sessionStorage.getItem(STORAGE_KEYS.cache);
-    if (!raw) return null;
-
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== "object") return null;
-
-    const age = Date.now() - Number(parsed.savedAt || 0);
-    if (age > CACHE_TTL_MS) return null;
-
-    const payload = parsed.payload;
-    if (!payload || !Array.isArray(payload.launches)) return null;
-    return payload;
+    raw = localStorage.getItem(STORAGE_KEYS.manifest);
   } catch {
     return null;
   }
+  if (!raw) return null;
+
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    clearLaunchCache();
+    return null;
+  }
+
+  if (
+    !parsed ||
+    typeof parsed !== "object" ||
+    parsed.schema !== MANIFEST_CACHE_SCHEMA ||
+    !parsed.payload ||
+    !Array.isArray(parsed.payload.launches)
+  ) {
+    clearLaunchCache();
+    return null;
+  }
+
+  const savedAt = Number(parsed.savedAt || 0);
+  const ageMs = Math.max(0, now - savedAt);
+  return {
+    launches: parsed.payload.launches,
+    truncated: Boolean(parsed.payload.truncated),
+    savedAt,
+    ageMs,
+    freshness: classifyCacheAge(ageMs)
+  };
 }
 
-export function saveLaunchCache(payload) {
-  const wrapper = {
-    savedAt: Date.now(),
-    payload
-  };
+// A cache entry usable for immediate rendering (fresh or stale, never expired).
+export function isUsableCache(info) {
+  return Boolean(info) && (info.freshness === "fresh" || info.freshness === "stale");
+}
 
-  sessionStorage.setItem(STORAGE_KEYS.cache, JSON.stringify(wrapper));
+// Persist a fresh normalized manifest. Guarded against quota / serialization
+// failures so a full localStorage never breaks the app. Returns success.
+export function saveLaunchCache(payload, now = Date.now()) {
+  try {
+    const wrapper = { schema: MANIFEST_CACHE_SCHEMA, savedAt: now, payload };
+    localStorage.setItem(STORAGE_KEYS.manifest, JSON.stringify(wrapper));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function clearLaunchCache() {
+  try {
+    localStorage.removeItem(STORAGE_KEYS.manifest);
+  } catch {
+    // ignore
+  }
 }

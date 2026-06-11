@@ -255,26 +255,6 @@ select optgroup {
   font-size: 0.82rem;
 }
 
-/* Stats strip ------------------------------------------------------------ */
-.stat-chip {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 12px 14px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--line);
-  background-color: var(--panel-soft);
-}
-
-.stat-chip strong {
-  font-size: 1.3rem;
-}
-
-.stat-chip span {
-  color: var(--muted);
-  font-size: 0.8rem;
-}
-
 /* Next-launch spotlight -------------------------------------------------- */
 .next-launch-card {
   position: relative;
@@ -484,15 +464,49 @@ select optgroup {
     rgba(11, 17, 31, 0.82);
   display: flex;
   flex-direction: column;
-  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
-  animation: fadeSlideUp 0.35s ease both;
-  animation-delay: calc(var(--card-index, 0) * 25ms);
+  box-shadow: var(--shadow-card);
+  /* Entrance is opt-in via the .motion-card-enter class (added only for fresh /
+     newly-paginated cards) so cached cards appear instantly with no replay. */
+  transition:
+    transform var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-normal) var(--ease-standard),
+    box-shadow var(--motion-normal) var(--ease-standard);
 }
 
-.launch-card:hover {
-  transform: translateY(-4px);
-  border-color: rgba(115, 182, 255, 0.4);
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.4);
+/* Thin provider-accent edge (single accent per card; no rainbow). */
+.launch-card[data-accent="nasa"] { --card-accent: var(--org-nasa); }
+.launch-card[data-accent="spacex"] { --card-accent: var(--org-spacex); }
+.launch-card[data-accent="blue-origin"] { --card-accent: var(--org-blueorigin); }
+.launch-card[data-accent="rocket-lab"] { --card-accent: var(--org-rocketlab); }
+.launch-card[data-accent="ula"] { --card-accent: var(--org-ula); }
+.launch-card[data-accent="firefly"] { --card-accent: var(--org-firefly); }
+
+.launch-card[data-accent]::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+  background: var(--card-accent, transparent);
+  opacity: 0.55;
+  pointer-events: none;
+  z-index: 1;
+  transition: opacity var(--motion-normal) var(--ease-standard);
+}
+
+/* Hover lift only on pointer-capable devices (never on touch). */
+@media (hover: hover) {
+  .launch-card:hover {
+    transform: translateY(-4px);
+    border-color: color-mix(in srgb, var(--card-accent, var(--accent)) 45%, transparent);
+    box-shadow: var(--shadow-card-hover);
+  }
+
+  .launch-card:hover[data-accent]::before { opacity: 0.9; }
+}
+
+.launch-card:focus-within {
+  border-color: color-mix(in srgb, var(--card-accent, var(--accent)) 55%, transparent);
 }
 
 .launch-card-media {
@@ -511,11 +525,14 @@ select optgroup {
   height: 100%;
   object-fit: cover;
   opacity: 0.9;
-  transition: transform 0.4s ease;
+  transition: transform var(--motion-slow) var(--ease-standard);
 }
 
-.launch-card:hover .launch-card-media img {
-  transform: scale(1.06);
+/* Gentle image zoom only on pointer-capable devices. */
+@media (hover: hover) {
+  .launch-card:hover .launch-card-media img {
+    transform: scale(1.05);
+  }
 }
 
 /* Neutral no-image placeholder: quiet centered text over the card's existing
@@ -1091,38 +1108,75 @@ select optgroup {
 .org-tabs {
   display: flex;
   flex-wrap: nowrap;
-  gap: 8px;
-  margin-top: 16px;
-  padding: 4px 2px;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  padding: var(--space-1) 2px;
   overflow-x: auto;
   overscroll-behavior-x: contain;
   scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
   -webkit-overflow-scrolling: touch;
+  /* Subtle edge-fade hints that the strip is scrollable on narrow screens. */
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 14px, #000 calc(100% - 14px), transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 14px, #000 calc(100% - 14px), transparent);
+}
+
+.org-tabs::-webkit-scrollbar {
+  height: 6px;
+}
+.org-tabs::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: var(--radius-pill);
+}
+.org-tabs::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .org-tab {
   cursor: pointer;
+  position: relative;
   flex: 0 0 auto;
   white-space: nowrap;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   border: 1px solid var(--line);
   background-color: rgba(255, 255, 255, 0.04);
   color: var(--muted);
-  padding: 8px 16px;
+  padding: var(--space-2) var(--space-4);
+  min-height: 38px;
   font-weight: 500;
-  transition: border-color 0.18s ease, background-color 0.18s ease, color 0.18s ease;
+  transition:
+    border-color var(--motion-normal) var(--ease-standard),
+    background-color var(--motion-normal) var(--ease-standard),
+    color var(--motion-normal) var(--ease-standard);
 }
 
-.org-tab:hover {
-  border-color: var(--line-strong);
-  background-color: rgba(255, 255, 255, 0.08);
-  color: var(--text);
+@media (hover: hover) {
+  .org-tab:hover {
+    border-color: var(--line-strong);
+    background-color: rgba(255, 255, 255, 0.08);
+    color: var(--text);
+  }
 }
 
 .org-tab.is-active {
   border-color: rgba(115, 182, 255, 0.55);
   background: linear-gradient(135deg, rgba(115, 182, 255, 0.24), rgba(157, 125, 255, 0.22));
   color: #fff;
+}
+
+/* Smooth active-tab underline indicator. */
+.org-tab.is-active::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -5px;
+  width: 22px;
+  height: 3px;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  transform: translateX(-50%) scaleX(1);
+  transform-origin: center;
+  transition: transform var(--motion-normal) var(--ease-out);
 }
 
 .org-tab:focus-visible {
@@ -1507,4 +1561,152 @@ button.overview-tile:focus-visible {
   margin: 14px 0 0;
   color: var(--muted);
   font-size: 0.78rem;
+}
+
+/* ===== v3.3 interface & motion polish ==================================== */
+
+/* Active-filter summary --------------------------------------------------- */
+.active-filters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-subtle);
+  border-radius: var(--radius-md);
+  background-color: rgba(115, 182, 255, 0.06);
+  animation: motionRiseIn var(--motion-fast) var(--ease-out) both;
+}
+.active-filters[hidden] { display: none; }
+
+.active-filters-count {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.active-filters-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.active-filter-chip {
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  border: var(--border-subtle);
+  background-color: rgba(255, 255, 255, 0.05);
+  color: var(--muted);
+  font-size: 0.76rem;
+  white-space: nowrap;
+}
+
+.active-filters-clear {
+  margin-left: auto;
+  cursor: pointer;
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(255, 128, 142, 0.5);
+  background-color: rgba(255, 128, 142, 0.08);
+  color: #ffc1c9;
+  font-size: 0.76rem;
+  transition: background-color var(--motion-fast) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard);
+}
+.active-filters-clear:hover {
+  background-color: rgba(255, 128, 142, 0.16);
+  border-color: rgba(255, 128, 142, 0.75);
+}
+.active-filters-clear:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(255, 128, 142, 0.28);
+}
+
+/* Skeleton loading states ------------------------------------------------- */
+.placeholder-media {
+  height: 150px;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  background: linear-gradient(90deg, rgba(255,255,255,0.04), rgba(255,255,255,0.1), rgba(255,255,255,0.04));
+  background-size: 220% 100%;
+  animation: shimmer 1.6s linear infinite;
+  margin: -18px -18px 4px;
+}
+
+.placeholder-block {
+  height: 56px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(90deg, rgba(255,255,255,0.04), rgba(255,255,255,0.1), rgba(255,255,255,0.04));
+  background-size: 220% 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+
+.spotlight-skeleton { min-height: 280px; gap: var(--space-3); }
+
+.overview-tile.is-skeleton,
+.insight-chip.is-skeleton {
+  pointer-events: none;
+}
+.overview-tile.is-skeleton .skeleton-num,
+.overview-tile.is-skeleton .skeleton-label,
+.insight-chip.is-skeleton {
+  display: block;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(90deg, rgba(255,255,255,0.04), rgba(255,255,255,0.1), rgba(255,255,255,0.04));
+  background-size: 220% 100%;
+  animation: shimmer 1.6s linear infinite;
+}
+.overview-tile.is-skeleton .skeleton-num { width: 40%; height: 1.3rem; margin-bottom: 6px; }
+.overview-tile.is-skeleton .skeleton-label { width: 80%; height: 0.7rem; }
+.insight-chip.is-skeleton { height: 38px; }
+
+/* Reduced-motion: static skeleton blocks (no shimmer movement). */
+@media (prefers-reduced-motion: reduce) {
+  .placeholder-line,
+  .placeholder-pill,
+  .placeholder-media,
+  .placeholder-block,
+  .overview-tile.is-skeleton .skeleton-num,
+  .overview-tile.is-skeleton .skeleton-label,
+  .insight-chip.is-skeleton {
+    animation: none !important;
+    background: rgba(255, 255, 255, 0.06) !important;
+  }
+}
+
+/* Featured-mission emphasis ---------------------------------------------- */
+/* Restrained final-hour countdown emphasis (gentle pulse, not a strobe). */
+@keyframes finalHourPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 209, 102, 0); }
+  50% { box-shadow: 0 0 0 4px rgba(255, 209, 102, 0.18); }
+}
+.countdown-ring.is-final-hour {
+  border-color: rgba(255, 209, 102, 0.5);
+  animation: finalHourPulse 2.6s var(--ease-standard) infinite;
+}
+
+/* Subtle "Go for Launch" emphasis on the spotlight status badge. */
+.badge.status-go-emphasis {
+  border-color: rgba(98, 215, 163, 0.5);
+  box-shadow: 0 0 0 1px rgba(98, 215, 163, 0.25);
+}
+
+/* Provider-accent edge on the featured-mission card. */
+.next-launch-card[data-accent="nasa"] { --card-accent: var(--org-nasa); }
+.next-launch-card[data-accent="spacex"] { --card-accent: var(--org-spacex); }
+.next-launch-card[data-accent="blue-origin"] { --card-accent: var(--org-blueorigin); }
+.next-launch-card[data-accent="rocket-lab"] { --card-accent: var(--org-rocketlab); }
+.next-launch-card[data-accent="ula"] { --card-accent: var(--org-ula); }
+.next-launch-card[data-accent="firefly"] { --card-accent: var(--org-firefly); }
+.next-launch-card[data-accent] {
+  border-top: 2px solid color-mix(in srgb, var(--card-accent, var(--accent)) 60%, transparent);
+}
+
+/* Button press feedback (pointer devices). */
+@media (hover: hover) {
+  .btn:active,
+  .card-link:active,
+  .favorite-btn:active,
+  .overview-tile:active {
+    transform: translateY(1px);
+  }
 }

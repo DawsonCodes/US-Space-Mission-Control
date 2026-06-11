@@ -4,9 +4,8 @@
 // a conservative field-level merge. Request cancellation and a short
 // sessionStorage cache keep us well inside LL2's 15-requests/hour budget.
 
-import { API_PROVIDERS, API_NASA } from "./config.js";
-import { state } from "./state.js";
-import { getLaunchCache, saveLaunchCache } from "./storage.js";
+import { API_PROVIDERS, API_NASA, NETWORK_TIMEOUT_MS } from "./config.js";
+import { saveLaunchCache } from "./storage.js";
 import { isPublicMissionUrl } from "./utils.js";
 
 // Coerce a Launch Library latitude/longitude (often a numeric string) into a
@@ -206,38 +205,42 @@ async function fetchFeed(url, signal) {
   return { results, count };
 }
 
-// Fetch + normalize + merge both feeds. Returns { launches, truncated }.
-// `truncated` is true when either feed reports more total records (count) than
-// it returned, so the UI can show an honest "showing the next N" coverage note.
-export async function fetchLiveLaunches(forceRefresh = false) {
-  if (state.activeRequest) {
-    state.activeRequest.abort();
-  }
-
-  if (!forceRefresh) {
-    const cached = getLaunchCache();
-    if (cached && Array.isArray(cached.launches)) {
-      state.dataSource = "cache";
-      return { launches: cached.launches, truncated: Boolean(cached.truncated) };
-    }
-  }
-
+// Network-only fetch of BOTH feeds CONCURRENTLY (provider feed + NASA
+// mission-agency feed). Normalizes, merges, and de-duplicates by stable id,
+// then writes the fresh manifest to the cache. Returns { launches, truncated };
+// `truncated` is true when either feed reports more records than it returned.
+//
+// Cache-first orchestration (read cache, render, background refresh) lives in
+// main.js — this function always hits the network. A built-in timeout aborts a
+// hung request; an optional external `signal` lets the caller cancel a refresh
+// when a newer one supersedes it (so there are never duplicate in-flight loads).
+export async function fetchLiveLaunches({ signal } = {}) {
   const controller = new AbortController();
-  state.activeRequest = controller;
+  const timeout = setTimeout(() => {
+    controller.abort(new DOMException("Network timeout", "AbortError"));
+  }, NETWORK_TIMEOUT_MS);
 
-  const [providers, nasa] = await Promise.all([
-    fetchFeed(API_PROVIDERS, controller.signal),
-    fetchFeed(API_NASA, controller.signal)
-  ]);
+  if (signal) {
+    if (signal.aborted) controller.abort();
+    else signal.addEventListener("abort", () => controller.abort(), { once: true });
+  }
 
-  const providerLaunches = providers.results.map(simplifyLaunch);
-  const nasaLaunches = nasa.results.map(simplifyLaunch);
-  const launches = dedupeMerge(providerLaunches, nasaLaunches);
+  try {
+    const [providers, nasa] = await Promise.all([
+      fetchFeed(API_PROVIDERS, controller.signal),
+      fetchFeed(API_NASA, controller.signal)
+    ]);
 
-  const truncated =
-    providers.count > providers.results.length || nasa.count > nasa.results.length;
+    const launches = dedupeMerge(
+      providers.results.map(simplifyLaunch),
+      nasa.results.map(simplifyLaunch)
+    );
+    const truncated =
+      providers.count > providers.results.length || nasa.count > nasa.results.length;
 
-  saveLaunchCache({ launches, truncated });
-  state.dataSource = "live";
-  return { launches, truncated };
+    saveLaunchCache({ launches, truncated });
+    return { launches, truncated };
+  } finally {
+    clearTimeout(timeout);
+  }
 }

@@ -30,11 +30,14 @@ import {
   MISSION_TYPE_LABELS,
   flightType,
   FLIGHT_TYPE_LABELS,
+  ORBIT_LABELS,
+  LAUNCH_SITE_LABELS,
   normalizeStatus,
   statusBadgeClass
 } from "./organizations.js";
 import { resolveLaunchImage, launchImageAlt } from "./images.js";
 import { weatherCodeLabel, formatTemperature } from "./weather.js";
+import { createStatusTimer, STATUS_DURATION_MS } from "./status-timer.js";
 
 export const els = {
   status: document.getElementById("status"),
@@ -49,6 +52,7 @@ export const els = {
   results: document.getElementById("results"),
   resultsMeta: document.getElementById("resultsMeta"),
   coverageNote: document.getElementById("coverageNote"),
+  activeFilters: document.getElementById("activeFilters"),
   overviewTiles: document.getElementById("overviewTiles"),
   insightsToggle: document.getElementById("insightsToggle"),
   insightsBody: document.getElementById("insightsBody"),
@@ -85,17 +89,18 @@ export const els = {
 
 // ----- Status banner lifecycle -------------------------------------------
 // Temporary, dismissible status messages. Ordinary tones (success/info/warning/
-// removed) auto-dismiss after EXACTLY 10s, driven by a single deadline
-// timestamp: both the visible seconds and the progress-bar width are derived
-// from the same remaining-time value every tick, so they can never desync.
-// There is NO hover/focus pausing. "loading" and "error" persist (no countdown)
-// until replaced or dismissed.
+// removed) auto-dismiss after EXACTLY 10s. A single pure timer (status-timer.js)
+// is the one source of truth: both the visible seconds and the progress-bar
+// width are derived from the SAME remaining value every tick, so they can never
+// desync, and the wall-clock deadline means a hidden/backgrounded tab can't
+// corrupt the timing. Hovering or keyboard-focusing the banner pauses it and
+// preserves the exact remaining time; leaving resumes. "loading" and "error"
+// persist (no countdown) until replaced or dismissed.
 
-const STATUS_DURATION_MS = 10000;
-const STATUS_TICK_MS = 250;
+const STATUS_TICK_MS = 200;
 const PERSISTENT_TONES = new Set(["loading", "error"]);
+const statusTimer = createStatusTimer(STATUS_DURATION_MS);
 let statusInterval = null;
-let statusDeadline = 0;
 
 function clearStatusInterval() {
   if (statusInterval) {
@@ -111,21 +116,19 @@ function statusHasCountdown(tone) {
 function paintStatusCountdown() {
   const el = els.status;
   if (!el) return;
-  const remaining = Math.max(0, statusDeadline - Date.now());
-  const secs = Math.ceil(remaining / 1000);
   const count = el.querySelector("[data-status-count]");
-  if (count) count.textContent = `${secs}s`;
+  if (count) count.textContent = `${statusTimer.seconds()}s`;
   const bar = el.querySelector("[data-status-progress]");
-  if (bar) bar.style.width = `${(remaining / STATUS_DURATION_MS) * 100}%`;
+  if (bar) bar.style.width = `${statusTimer.progress() * 100}%`;
 }
 
 function runStatusCountdown() {
   clearStatusInterval();
-  statusDeadline = Date.now() + STATUS_DURATION_MS;
+  statusTimer.start();
   paintStatusCountdown();
   statusInterval = window.setInterval(() => {
     paintStatusCountdown();
-    if (Date.now() >= statusDeadline) dismissStatus();
+    if (statusTimer.isExpired()) dismissStatus();
   }, STATUS_TICK_MS);
 }
 
@@ -135,6 +138,7 @@ function prefersReducedMotion() {
 
 export function dismissStatus() {
   clearStatusInterval();
+  statusTimer.stop();
   const el = els.status;
   if (!el || el.hidden) return;
 
@@ -157,6 +161,7 @@ export function setStatus(message, tone = "info") {
   const el = els.status;
   if (!el) return;
   clearStatusInterval();
+  statusTimer.stop();
   el.classList.remove("is-leaving");
   el.hidden = false;
   el.dataset.tone = tone;
@@ -178,6 +183,27 @@ export function setStatus(message, tone = "info") {
     progress;
 
   if (withCountdown) runStatusCountdown();
+}
+
+// Pause the auto-dismiss countdown while the banner is hovered or keyboard-
+// focused; resume (preserving remaining time) when the pointer/focus leaves.
+// Wired once at boot.
+export function setupStatusBanner() {
+  const el = els.status;
+  if (!el) return;
+  const pause = () => {
+    if (statusTimer.isActive()) statusTimer.pause();
+  };
+  const resume = () => {
+    if (statusTimer.isActive() && statusTimer.isPaused()) {
+      statusTimer.resume();
+      paintStatusCountdown();
+    }
+  };
+  el.addEventListener("mouseenter", pause);
+  el.addEventListener("mouseleave", resume);
+  el.addEventListener("focusin", pause);
+  el.addEventListener("focusout", resume);
 }
 
 // Format a launch date explicitly in local or UTC, independent of the global
@@ -328,16 +354,46 @@ export function renderSavedCount() {
   if (els.drawerCount) els.drawerCount.textContent = String(n);
 }
 
+// Polished full-page loading state used only when no usable cached manifest is
+// available: hero spotlight skeleton, overview tile skeletons, an insights
+// placeholder, and ten launch-card skeletons. Shimmer is CSS-driven and removed
+// for reduced-motion users. Real content replaces all of it cleanly.
 export function setLoadingState() {
+  if (els.nextLaunchCard) {
+    els.nextLaunchCard.innerHTML = `
+      <div class="placeholder-card spotlight-skeleton" aria-hidden="true">
+        <div class="placeholder-line placeholder-line-lg"></div>
+        <div class="placeholder-pills">
+          <span class="placeholder-pill"></span>
+          <span class="placeholder-pill"></span>
+        </div>
+        <div class="placeholder-line"></div>
+        <div class="placeholder-line"></div>
+        <div class="placeholder-block"></div>
+      </div>`;
+  }
+
+  if (els.overviewTiles) {
+    els.overviewTiles.innerHTML = Array.from({ length: 8 })
+      .map(() => `<div class="overview-tile is-skeleton" aria-hidden="true"><span class="skeleton-num"></span><span class="skeleton-label"></span></div>`)
+      .join("");
+  }
+  if (els.insightsChips) {
+    els.insightsChips.innerHTML = Array.from({ length: 6 })
+      .map(() => `<div class="insight-chip is-skeleton" aria-hidden="true"></div>`)
+      .join("");
+  }
+
   els.results.innerHTML = "";
   const fragment = document.createDocumentFragment();
-  for (let i = 0; i < 6; i += 1) {
+  for (let i = 0; i < 10; i += 1) {
     const card = document.createElement("article");
     card.className = "placeholder-card";
     card.setAttribute("aria-hidden", "true");
+    card.style.setProperty("--card-index", String(Math.min(i, 6)));
     card.innerHTML = `
+      <div class="placeholder-media"></div>
       <div class="placeholder-line placeholder-line-lg"></div>
-      <div class="placeholder-line"></div>
       <div class="placeholder-line"></div>
       <div class="placeholder-pills">
         <span class="placeholder-pill"></span>
@@ -347,7 +403,7 @@ export function setLoadingState() {
     fragment.appendChild(card);
   }
   els.results.appendChild(fragment);
-  els.resultsMeta.textContent = "Loading launch schedule...";
+  els.resultsMeta.textContent = "Loading launch schedule…";
   if (els.btnLoadMore) els.btnLoadMore.hidden = true;
   if (els.btnShowAll) els.btnShowAll.hidden = true;
 }
@@ -370,20 +426,45 @@ export function renderHeroMeta() {
   }
 }
 
+let lastHeroId = null;
+
+// Replay a restrained content transition when the featured mission changes.
+function triggerSpotlightEnter() {
+  const el = els.nextLaunchCard;
+  if (!el) return;
+  el.classList.remove("motion-spotlight-enter");
+  void el.offsetWidth; // restart
+  el.classList.add("motion-spotlight-enter");
+}
+
 export function renderHero() {
   const launch = state.nextLaunch;
 
   if (!launch) {
     els.nextLaunchCard.innerHTML = `
-      <div class="empty-state">
+      <div class="empty-state motion-fade-in">
         <strong>No matching mission</strong>
         <span>Adjust the organization tab or filters, load live data, or switch to demo mode.</span>
       </div>
     `;
+    if (lastHeroId !== null) {
+      lastHeroId = null;
+      triggerSpotlightEnter();
+    }
     return;
   }
 
   const locationLabel = [launch.padName, launch.location].filter(Boolean).join(" • ");
+  const tags = orgTags(launch);
+  const accent = tags.find((t) => t !== "nasa") || tags[0] || "";
+  const status = normalizeStatus(launch);
+  const isGo = status.key === "go";
+  // Restrained final-hour emphasis (no aggressive flashing; reduced-motion safe).
+  const ms = new Date(launch.net).getTime() - Date.now();
+  const isFinalHour = Number.isFinite(ms) && ms > 0 && ms <= 60 * 60 * 1000;
+  const ringClass = `countdown-ring${isFinalHour ? " is-final-hour" : ""}`;
+
+  els.nextLaunchCard.dataset.accent = accent;
 
   els.nextLaunchCard.innerHTML = `
     <div class="spotlight-head">
@@ -397,7 +478,7 @@ export function renderHero() {
         <div class="badge-row">
           ${missionTypeBadgeHtml(launch)}
           ${flightTypeBadgeHtml(launch)}
-          ${statusBadgeHtml(launch)}
+          <span class="badge ${statusBadgeClass(launch)}${isGo ? " status-go-emphasis" : ""}">${escapeHtml(status.label)}</span>
         </div>
         <dl class="spotlight-facts">
           <div><dt>Rocket</dt><dd>${escapeHtml(launch.rocket || "Unknown rocket")}</dd></div>
@@ -405,7 +486,7 @@ export function renderHero() {
           <div><dt>Launch time</dt><dd>${escapeHtml(formatDate(launch.net, launch.tzId))}</dd></div>
         </dl>
       </div>
-      <div class="countdown-ring">
+      <div class="${ringClass}">
         <strong data-countdown="${escapeHtml(launch.net)}">${escapeHtml(getCountdownText(launch.net))}</strong>
         <span>Countdown</span>
       </div>
@@ -419,6 +500,11 @@ export function renderHero() {
       ${webcastActionHtml(launch)}
     </div>
   `;
+
+  if ((launch.id || null) !== lastHeroId) {
+    lastHeroId = launch.id || null;
+    triggerSpotlightEnter();
+  }
 }
 
 // ----- Mission overview ---------------------------------------------------
@@ -451,7 +537,7 @@ export function renderOverview() {
     const value = base.filter(ORG_MATCHERS[org]).length;
     const activeAttr = state.activeOrg === org ? "true" : "false";
     return `
-      <button class="overview-tile is-org" data-org="${org}" type="button" aria-pressed="${activeAttr}">
+      <button class="overview-tile is-org" data-org="${org}" data-count-key="${org}" data-count="${value}" type="button" aria-pressed="${activeAttr}">
         <strong>${escapeHtml(value)}</strong>
         <span>${escapeHtml(ORG_TILE_LABELS[org])}</span>
       </button>`;
@@ -465,13 +551,107 @@ export function renderOverview() {
       <span aria-hidden="true">Showing</span>
     </button>
     ${orgOrder.map(orgTile).join("")}
-    <button class="overview-tile is-saved" data-action="saved" type="button" aria-label="Open saved missions (${saved})">
+    <button class="overview-tile is-saved" data-action="saved" data-count-key="saved" data-count="${saved}" type="button" aria-label="Open saved missions (${saved})">
       <strong>${escapeHtml(saved)}</strong>
       <span>Saved</span>
     </button>
   `;
 
+  animateOverviewNumbers();
+  renderActiveFilters();
   renderInsights();
+}
+
+// Animate single-number tile values from their previous value to the new one.
+// Skips the first render (so cached values never animate up from zero), respects
+// reduced-motion, and clamps very large jumps. The final value is already in the
+// markup, so screen-reader / non-animated reads are accurate immediately.
+let prevOverviewCounts = {};
+
+function animateOverviewNumbers() {
+  if (!els.overviewTiles) return;
+  const reduce = prefersReducedMotion();
+  els.overviewTiles.querySelectorAll("[data-count-key]").forEach((tile) => {
+    const key = tile.getAttribute("data-count-key");
+    const to = Number(tile.getAttribute("data-count"));
+    const from = prevOverviewCounts[key];
+    prevOverviewCounts[key] = to;
+    const strong = tile.querySelector("strong");
+    if (!strong) return;
+    if (reduce || from === undefined || from === to || Math.abs(to - from) > 200) {
+      strong.textContent = String(to);
+      return;
+    }
+    countUp(strong, from, to);
+  });
+}
+
+function nowMs() {
+  return typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
+}
+
+function countUp(el, from, to) {
+  const raf = window.requestAnimationFrame ? window.requestAnimationFrame.bind(window) : (cb) => setTimeout(() => cb(nowMs()), 16);
+  const duration = 320;
+  const start = nowMs();
+  const step = () => {
+    const t = Math.min(1, (nowMs() - start) / duration);
+    const eased = 1 - Math.pow(1 - t, 3);
+    el.textContent = String(Math.round(from + (to - from) * eased));
+    if (t < 1) raf(step);
+    else el.textContent = String(to);
+  };
+  raf(step);
+}
+
+// Reset the count-animation memory (e.g. before a skeleton load) so the first
+// real render shows final values without animating up from zero.
+export function resetOverviewCountMemory() {
+  prevOverviewCounts = {};
+}
+
+// ----- Active-filter summary ----------------------------------------------
+// A compact summary shown only while non-default filters are active, with a
+// Clear all affordance. Updates on every filter/org change (called from
+// renderOverview).
+
+const DATE_RANGE_LABELS = {
+  "24h": "Next 24 hours",
+  "7d": "Next 7 days",
+  "30d": "Next 30 days",
+  year: "This year"
+};
+const SORT_LABELS = {
+  latest: "Latest first",
+  name: "Name A–Z",
+  probability: "Highest probability",
+  updated: "Recently updated"
+};
+
+export function renderActiveFilters() {
+  if (!els.activeFilters) return;
+  const chips = [];
+  if (state.activeOrg !== "all") chips.push(ORG_LABELS[state.activeOrg] || state.activeOrg);
+  if (state.keyword.trim()) chips.push(`Search: “${state.keyword.trim()}”`);
+  if (state.missionType !== "all") chips.push(MISSION_TYPE_LABELS[state.missionType] || state.missionType);
+  if (state.flightType !== "all") chips.push(FLIGHT_TYPE_LABELS[state.flightType] || state.flightType);
+  if (state.dateRange !== "all") chips.push(DATE_RANGE_LABELS[state.dateRange] || state.dateRange);
+  if (state.launchSite !== "all") chips.push(LAUNCH_SITE_LABELS[state.launchSite] || state.launchSite);
+  if (state.orbit !== "all") chips.push(ORBIT_LABELS[state.orbit] || state.orbit);
+  if (state.sortMode !== "soonest") chips.push(SORT_LABELS[state.sortMode] || state.sortMode);
+
+  if (chips.length === 0) {
+    els.activeFilters.hidden = true;
+    els.activeFilters.innerHTML = "";
+    return;
+  }
+
+  els.activeFilters.hidden = false;
+  els.activeFilters.innerHTML = `
+    <span class="active-filters-count">${chips.length} active filter${chips.length === 1 ? "" : "s"}</span>
+    <span class="active-filters-list">${chips.map((c) => `<span class="active-filter-chip">${escapeHtml(c)}</span>`).join("")}</span>
+    <button type="button" class="active-filters-clear" data-clear-filters aria-label="Clear all active filters">Clear all</button>
+  `;
 }
 
 // ----- Mission insights ----------------------------------------------------
@@ -561,9 +741,13 @@ export function renderCoverageNote() {
 
 // ----- Schedule cards -----------------------------------------------------
 
-function buildLaunchCard(launch, index) {
+function buildLaunchCard(launch, index, { enter = false } = {}) {
   const image = resolveLaunchImage(launch);
-  const stagger = Math.min(index, 10);
+  const stagger = Math.min(index, 8); // cap stagger so many cards stay fast
+
+  // Subtle single provider accent (prefer the provider over the NASA overlay).
+  const tags = orgTags(launch);
+  const accent = tags.find((t) => t !== "nasa") || tags[0] || "";
 
   // No usable LL2 image (or a malformed URL) → quiet neutral placeholder that
   // preserves the card's media dimensions. Broken loads fall back to the same
@@ -572,8 +756,10 @@ function buildLaunchCard(launch, index) {
     ? `<img src="${escapeHtml(image.src)}" alt="${escapeHtml(launchImageAlt(launch))}" loading="lazy" />`
     : `<div class="media-fallback">No mission image available</div>`;
 
+  const enterClass = enter ? " motion-card-enter" : "";
+
   return `
-    <article class="launch-card" data-launch-id="${escapeHtml(launch.id)}" style="--card-index:${stagger}">
+    <article class="launch-card${enterClass}" data-launch-id="${escapeHtml(launch.id)}" data-accent="${escapeHtml(accent)}" style="--card-index:${stagger}">
       <div class="launch-card-media">
         ${media}
         <div class="badge-row badge-float">${orgBadgesHtml(launch)}</div>
@@ -609,10 +795,14 @@ function buildLaunchCard(launch, index) {
   `;
 }
 
-export function renderResults() {
+// entrance: "stagger" (per-card rise, capped) | "fade" (quick container fade,
+// e.g. filter changes) | "none" (instant, e.g. cached render). append:true adds
+// only the newly revealed cards (Load 10 more / Show all) so existing cards stay
+// stable and only new ones animate in.
+export function renderResults({ append = false, entrance = "none" } = {}) {
   if (state.launches.length === 0) {
     els.results.innerHTML = `
-      <div class="empty-state">
+      <div class="empty-state motion-fade-in">
         <strong>No launches loaded yet</strong>
         <span>Use Refresh to bring the tracker to life, or try demo data.</span>
       </div>
@@ -627,7 +817,7 @@ export function renderResults() {
 
   if (total === 0) {
     els.results.innerHTML = `
-      <div class="empty-state">
+      <div class="empty-state motion-fade-in">
         <strong>No launches match your filters</strong>
         <span>Try a different organization, search, or reset the filters.</span>
       </div>
@@ -639,14 +829,40 @@ export function renderResults() {
   }
 
   const visible = Math.min(state.visibleCount, total);
-  els.results.innerHTML = state.filteredLaunches
-    .slice(0, visible)
-    .map((launch, i) => buildLaunchCard(launch, i))
-    .join("");
+
+  if (append) {
+    // Append only the cards that aren't on the page yet; existing cards (and
+    // scroll position / focus) stay untouched. New cards animate in.
+    const current = els.results.querySelectorAll(".launch-card").length;
+    if (visible > current) {
+      const html = state.filteredLaunches
+        .slice(current, visible)
+        .map((launch, i) => buildLaunchCard(launch, current + i, { enter: true }))
+        .join("");
+      els.results.insertAdjacentHTML("beforeend", html);
+    }
+  } else {
+    const stagger = entrance === "stagger";
+    els.results.innerHTML = state.filteredLaunches
+      .slice(0, visible)
+      .map((launch, i) => buildLaunchCard(launch, i, { enter: stagger }))
+      .join("");
+    if (entrance === "fade") pulseResults();
+  }
 
   els.resultsMeta.textContent = `Showing ${visible} of ${total} launch${total === 1 ? "" : "es"}`;
   els.btnLoadMore.hidden = visible >= total;
   els.btnShowAll.hidden = visible >= total;
+}
+
+// A quick one-shot container fade for filter/replacement changes (no per-card
+// entrance replay). Self-clears; reduced-motion makes it effectively instant.
+function pulseResults() {
+  const el = els.results;
+  if (!el) return;
+  el.classList.remove("motion-fade-in");
+  void el.offsetWidth; // restart the animation
+  el.classList.add("motion-fade-in");
 }
 
 // ----- Saved drawer -------------------------------------------------------
@@ -929,11 +1145,11 @@ export function refreshFooterMeta() {
   els.footerMeta.textContent = pieces.join(" • ");
 }
 
-export function renderAll() {
+export function renderAll({ resultsEntrance = "none" } = {}) {
   renderHeroMeta();
   renderHero();
   renderOverview();
-  renderResults();
+  renderResults({ entrance: resultsEntrance });
   renderDrawer();
   renderOrgControls();
   renderCoverageNote();
