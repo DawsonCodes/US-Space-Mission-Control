@@ -40,26 +40,39 @@ export const API_NASA =
 // Open-Meteo free, keyless forecast endpoint (no signup, no API key).
 export const OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast";
 
-// Keys used for localStorage (prefs, favorites) and sessionStorage (caches).
-// Renamed for the U.S. Space Mission Control rebrand; a one-time migration in
-// storage.js copies data forward from the old spacex-mission-control-* keys.
+// Keys used for localStorage (prefs, favorites, manifest cache) and
+// sessionStorage (weather cache). Renamed for the U.S. Space Mission Control
+// rebrand; a one-time migration in storage.js copies data forward from the old
+// spacex-mission-control-* keys.
 export const STORAGE_KEYS = {
   favorites: "us-space-mission-control-favorites",
   prefs: "us-space-mission-control-prefs",
-  cache: "us-space-mission-control-cache-v3",
+  // v3.3: the normalized live manifest is cached in localStorage (cross-visit,
+  // schema-versioned) for cache-first rendering.
+  manifest: "us-space-mission-control-manifest",
   weather: "us-space-mission-control-weather-v1"
 };
+
+// Schema version for the cached manifest payload. Bump when the normalized
+// launch shape changes so old caches are ignored safely.
+export const MANIFEST_CACHE_SCHEMA = 1;
+
+// Cache-first freshness model:
+//   fresh   : < 15 min  — render immediately, refresh quietly in the background
+//   stale   : 15 min – 24 h — render immediately with an honest "from N ago" note
+//   expired : > 24 h    — never presented as current; reload fresh first
+export const CACHE_FRESH_MS = 1000 * 60 * 15;
+export const CACHE_STALE_MS = 1000 * 60 * 60 * 24;
+
+// Abort a live request that takes longer than this so the UI can fall back to
+// cache/demo instead of hanging.
+export const NETWORK_TIMEOUT_MS = 1000 * 15;
 
 // Legacy keys to migrate from (read once, never written back).
 export const LEGACY_STORAGE_KEYS = {
   favorites: "spacex-mission-control-favorites",
   prefs: "spacex-mission-control-prefs"
 };
-
-// How long a cached launch API response stays fresh (10 minutes). Slightly
-// longer than v2 so the two-feed refresh stays comfortably inside LL2's
-// 15-requests/hour budget even with manual refreshes.
-export const CACHE_TTL_MS = 1000 * 60 * 10;
 
 // How long a cached weather response stays fresh (~15 minutes).
 export const WEATHER_TTL_MS = 1000 * 60 * 15;

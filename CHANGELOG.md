@@ -3,6 +3,21 @@
 All notable changes to U.S. Space Mission Control are documented here. Dates use
 the release ordering; the project follows a simple semantic-style versioning.
 
+## v3.3.0 — Interface, Motion & Performance Polish
+
+- Premium visual refresh across the hero, overview, filters, cards, overlays, drawer, More menu, and footer
+- Centralized CSS motion system with reduced-motion support
+- Animated organization tabs, overview counts, Mission Insights, featured missions, result cards, and saved states
+- Cache-first launch-data rendering with honest stale-data fallback
+- Background live-data refresh
+- Improved initial loading experience with skeleton states and progressive status messaging
+- Status-banner synchronization hardening
+- Responsive-layout audit for desktop, tablet, and mobile
+- Accessibility polish
+- CSS token cleanup
+- Careful dead-code and unused-asset cleanup
+- Expanded plain-Node GitHub Actions validation
+
 ## v3.2.0 — Provider Expansion & Mission Tools
 - ULA (United Launch Alliance) support — tab, overview tile, badges, filters, demo data, tests
 - Firefly Aerospace support — tab, overview tile, badges, filters, demo data, tests

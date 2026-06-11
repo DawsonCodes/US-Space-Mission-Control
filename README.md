@@ -113,6 +113,43 @@ NASA, SpaceX, Blue Origin, Rocket Lab, ULA, and Firefly.
 - **Responsive** layout: three cards per row on wide desktop, two on tablet, one
   on mobile.
 
+## What's new in v3.3.0 — interface, motion & performance
+
+v3.3.0 is a polish release: same features, a more premium feel and a faster first
+paint.
+
+- **Interface refresh** across the hero, Mission Overview, filter toolbar, launch
+  cards, overlays, saved drawer, More menu, and footer — restrained, readable, and
+  data-focused (no flashy effects).
+- **Centralized motion system** — a small set of CSS motion tokens
+  (`--motion-fast/normal/slow/emphasis`, easings, `--stagger-step`) and reusable
+  motion classes drive every animation, so timings stay consistent.
+- **Reduced-motion support** — every animation honors
+  `prefers-reduced-motion: reduce` (no stagger, no shimmer movement, no number
+  counting — instant updates instead).
+- **Card & overlay polish** — subtle provider-accent edges, gentle hover lift and
+  image zoom (pointer devices only), a featured-mission content transition, an
+  animated active-tab indicator with scrollable edge-fade hints, animated overview
+  counts, and refined modal/drawer transitions.
+- **Cache-first launch data** — a schema-versioned manifest is cached in
+  `localStorage` so a repeat visit renders **instantly** from cache, then a live
+  refresh runs in the background and replaces it. Freshness is honest:
+  `< 15 min` is fresh, `15 min–24 h` shows a "from N ago" notice, and anything
+  older is reloaded before display. If a live refresh fails, usable cached data
+  stays visible with its age clearly stated; demo data never overwrites the cache.
+- **Improved initial load** — when there's no usable cache, polished skeleton
+  states (hero, overview, insights, ten cards) appear immediately with a concise,
+  progressive loading status. The provider and NASA requests run **concurrently**
+  with a network timeout and clean abort/retry handling.
+- **Status-banner hardening** — a single pure timer is the source of truth, so the
+  countdown number and progress bar stay perfectly in sync; hover/keyboard-focus
+  pauses preserve the remaining time, and a hidden tab can't corrupt timing.
+- **Active-filter summary** — a compact "N active filters" strip with a Clear all
+  action appears only while filters are active.
+- **Repository cleanup** — removed dead CSS (old stats-strip / unused keyframe),
+  consolidated design tokens, and expanded the plain-Node CI validation
+  (cache, status-lifecycle, and UI-state harnesses).
+
 ## Tech stack
 
 - **Vanilla JavaScript** organized as native **ES modules** — no framework, no
@@ -137,29 +174,33 @@ styles/
   components.css      # Buttons, selects, tabs, tiles, cards, badges, overlays, status
   responsive.css      # Breakpoints (1/2/3 columns, sticky toolbar, mobile sheets)
 js/
-  config.js           # Constants (LL2 URLs + provider IDs, storage keys, TTLs)
+  config.js           # Constants (LL2 URLs + provider IDs, storage keys, cache TTLs)
   state.js            # Shared application state
   demo-data.js        # Offline/demo missions (always future-dated)
-  storage.js          # Preferences, favorites, API cache + one-time key migration
+  storage.js          # Prefs, favorites, cache-first manifest cache + migration
   utils.js            # Escaping, URL safety, date/countdown/timezone formatting
-  api.js              # Two-feed fetch + normalize + conservative merge/dedupe
+  api.js              # Concurrent two-feed fetch + normalize + merge/dedupe + timeout
   organizations.js    # Org / mission-type / flight-type / orbit / site / status
   images.js           # Launch-image resolver (LL2 first, then neutral placeholder)
   filters.js          # Keyword, date-range, launch-site, orbit, sorting pipeline
   calendar.js         # Client-side .ics calendar generation
   deeplink.js         # Shareable ?mission=<id> URL helpers
+  status-timer.js     # Pure status-banner countdown state machine (pause/resume)
   weather.js          # Open-Meteo fetch, nearest-hour, caching, formatting
   modal.js            # Accessible overlay mechanics (focus trap, ESC, scroll lock)
   render.js           # DOM references and all rendering (incl. overlay content)
   starfield.js        # Animated canvas background
-  main.js             # Composition root: wires events and boots the app
+  main.js             # Composition root: cache-first loading, events, boot
 tests/
   check-project.mjs        # Import resolution + relative-path / no-build audit
   classification.test.mjs  # Org / mission-type / flight-type / orbit / site rules
   merge.test.mjs           # Conservative two-feed merge / dedupe
   calendar.test.mjs        # .ics escaping, UTC stamps, UID, filename, content
   deeplink.test.mjs        # Mission deep-link build / parse / strip (subpath-safe)
-  headless.test.mjs        # DOM-shim boot + render pipeline harness
+  cache.test.mjs           # Cache freshness model, schema, malformed/quota guards
+  cache-flow.test.mjs      # Cache-first render → background refresh integration
+  status.test.mjs          # Status-timer duration / sync / pause / resume
+  headless.test.mjs        # DOM-shim boot + render + UI-state harness
 .github/
   workflows/validate.yml   # GitHub Actions: plain-Node validation (no npm)
 ```
@@ -190,6 +231,9 @@ node tests/classification.test.mjs
 node tests/merge.test.mjs
 node tests/calendar.test.mjs
 node tests/deeplink.test.mjs
+node tests/cache.test.mjs
+node tests/cache-flow.test.mjs
+node tests/status.test.mjs
 node tests/headless.test.mjs
 ```
 
@@ -206,7 +250,10 @@ repository root.
 - Upcoming launch data is provided by the
   [Launch Library 2](https://thespacedevs.com/llapi) API by The Space Devs.
   SpaceX + Blue Origin + Rocket Lab + ULA + Firefly launches and NASA-tagged
-  missions are fetched as two feeds and merged by stable launch id.
+  missions are fetched as two **concurrent** feeds and merged by stable launch id.
+  The normalized manifest is cached in `localStorage` (schema-versioned) so repeat
+  visits render instantly while a fresh copy loads in the background; the cache is
+  never presented as current once it is more than 24 hours old.
 - The local weather outlook is provided by the free, keyless
   [Open-Meteo](https://open-meteo.com/) forecast API. Weather is fetched only for
   the featured-mission spotlight and the open mission-details view (never for

@@ -238,6 +238,8 @@
           </div>
         </div>
 
+        <div id="activeFilters" class="active-filters" aria-label="Active filters" hidden></div>
+
         <div id="status" class="status" role="status" aria-live="polite">
           <span class="status-text">Ready. Refresh to load launches, or use demo data.</span>
         </div>
@@ -265,16 +267,20 @@
         <div class="footer-main">
           <strong class="footer-title">U.S. Space Mission Control</strong>
           <span>Built by <a href="https://github.com/DawsonCodes" target="_blank" rel="noopener">DawsonCodes</a></span>
-          <span>
+          <span class="footer-sources">
             Launch data from
-            <a href="https://thespacedevs.com/llapi" target="_blank" rel="noopener">Launch Library 2</a>.
-            Local weather from
-            <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>.
+            <a href="https://thespacedevs.com/llapi" target="_blank" rel="noopener">Launch Library 2</a>,
+            local weather from
+            <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>,
+            launch-pad maps from
+            <a href="https://www.openstreetmap.org/" target="_blank" rel="noopener">OpenStreetMap</a>.
           </span>
           <nav class="footer-links" aria-label="Project links">
             <a href="https://github.com/DawsonCodes/US-Space-Mission-Control" target="_blank" rel="noopener">GitHub</a>
             <span aria-hidden="true">•</span>
             <a href="https://github.com/DawsonCodes/US-Space-Mission-Control/releases" target="_blank" rel="noopener">Releases</a>
+            <span aria-hidden="true">•</span>
+            <a href="CHANGELOG.md" target="_blank" rel="noopener">Changelog</a>
             <span aria-hidden="true">•</span>
             <a href="LICENSE" target="_blank" rel="noopener">MIT License</a>
             <span aria-hidden="true">•</span>

@@ -13,6 +13,20 @@
   .toolbar-actions > .btn {
     flex: 1 1 auto;
   }
+
+  /* Keep the search prominent; filters drop to two readable columns. */
+  .field-search {
+    flex: 1 1 100%;
+  }
+
+  .field {
+    flex: 1 1 calc(50% - 12px);
+    min-width: 0;
+  }
+
+  .active-filters-clear {
+    margin-left: 0;
+  }
 }
 
 /* Modal/drawer become full-screen sheets on small screens. */

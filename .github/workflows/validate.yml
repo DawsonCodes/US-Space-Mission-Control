@@ -19,7 +19,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
 
       - name: Syntax-check every JavaScript module
         run: |
@@ -32,7 +32,7 @@ jobs:
       - name: Project audit (imports, relative paths, no build artifacts)
         run: node tests/check-project.mjs
 
-      - name: Classification tests (incl. ULA + Firefly)
+      - name: Classification tests (incl. ULA + Firefly, orbit, launch site)
         run: node tests/classification.test.mjs
 
       - name: Merge / deduplication tests
@@ -43,6 +43,15 @@ jobs:
 
       - name: Deep-link tests
         run: node tests/deeplink.test.mjs
+
+      - name: Cache freshness + schema tests
+        run: node tests/cache.test.mjs
+
+      - name: Cache-first flow integration
+        run: node tests/cache-flow.test.mjs
+
+      - name: Status-banner lifecycle tests
+        run: node tests/status.test.mjs
 
       - name: Headless UI / render harness
         run: node tests/headless.test.mjs
