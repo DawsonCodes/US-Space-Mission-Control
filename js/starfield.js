@@ -44,29 +44,33 @@ export function setupStarfield() {
   }
 
   function spawnShootingStar() {
+    // Gentler, slightly slower streaks than before for a more elegant feel.
     shootingStars.push({
-      x: Math.random() * width * 0.8,
-      y: Math.random() * height * 0.35,
-      vx: Math.random() * 500 + 900,
-      vy: Math.random() * 180 + 160,
+      x: Math.random() * width * 0.85,
+      y: Math.random() * height * 0.3,
+      vx: Math.random() * 360 + 620,
+      vy: Math.random() * 130 + 120,
       life: 0,
-      maxLife: Math.random() * 0.6 + 0.5
+      maxLife: Math.random() * 0.7 + 0.6,
+      len: Math.random() * 60 + 120
     });
   }
 
   function drawFrame() {
     context.clearRect(0, 0, width, height);
 
+    // Faint charcoal/cool-gray glow (no blue/purple wash) that drifts subtly
+    // with the pointer for depth without dominating the content.
     const glow = context.createRadialGradient(
-      width * 0.2 + pointerX * 18,
-      height * 0.2 + pointerY * 12,
+      width * 0.5 + pointerX * 16,
+      height * 0.12 + pointerY * 10,
       20,
-      width * 0.2 + pointerX * 18,
-      height * 0.2 + pointerY * 12,
-      Math.max(width, height) * 0.75
+      width * 0.5 + pointerX * 16,
+      height * 0.12 + pointerY * 10,
+      Math.max(width, height) * 0.8
     );
-    glow.addColorStop(0, "rgba(115, 182, 255, 0.12)");
-    glow.addColorStop(0.45, "rgba(157, 125, 255, 0.08)");
+    glow.addColorStop(0, "rgba(150, 160, 180, 0.05)");
+    glow.addColorStop(0.5, "rgba(120, 130, 150, 0.03)");
     glow.addColorStop(1, "rgba(0, 0, 0, 0)");
     context.fillStyle = glow;
     context.fillRect(0, 0, width, height);
@@ -75,12 +79,15 @@ export function setupStarfield() {
       star.phase += reducedMotion ? 0 : star.twinkleSpeed;
       const twinkle = (Math.sin(star.phase) + 1) * 0.5;
       context.beginPath();
-      context.fillStyle = `rgba(255,255,255,${star.alpha * (0.55 + twinkle * 0.45)})`;
+      // Soft gray-white star points.
+      context.fillStyle = `rgba(226,230,238,${star.alpha * (0.5 + twinkle * 0.45)})`;
       context.arc(star.x + pointerX * star.depth * 10, star.y + pointerY * star.depth * 8, star.radius, 0, Math.PI * 2);
       context.fill();
     }
 
-    if (!reducedMotion && shootingStars.length < 2 && Math.random() < 0.015) {
+    // Infrequent, elegant streaks (and never under reduced motion). Only one at
+    // a time, with a low spawn chance (~0.4/sec at 60fps).
+    if (!reducedMotion && shootingStars.length < 1 && Math.random() < 0.006) {
       spawnShootingStar();
     }
 
@@ -91,16 +98,23 @@ export function setupStarfield() {
       star.y += star.vy * 0.016;
 
       const progress = star.life / star.maxLife;
-      const alpha = 1 - progress;
+      const alpha = (1 - progress) * 0.5; // fainter than before
+      const angle = Math.atan2(star.vy, star.vx);
+      const tailX = star.x - Math.cos(angle) * star.len;
+      const tailY = star.y - Math.sin(angle) * star.len;
 
-      context.strokeStyle = `rgba(255,255,255,${alpha * 0.7})`;
-      context.lineWidth = 2;
+      // Fade the streak along its length with a gradient for a softer look.
+      const streak = context.createLinearGradient(star.x, star.y, tailX, tailY);
+      streak.addColorStop(0, `rgba(235,238,245,${alpha})`);
+      streak.addColorStop(1, "rgba(235,238,245,0)");
+      context.strokeStyle = streak;
+      context.lineWidth = 1.6;
       context.beginPath();
       context.moveTo(star.x, star.y);
-      context.lineTo(star.x - 140, star.y - 36);
+      context.lineTo(tailX, tailY);
       context.stroke();
 
-      if (progress >= 1 || star.x > width + 160 || star.y > height + 120) {
+      if (progress >= 1 || star.x > width + 200 || star.y > height + 160) {
         shootingStars.splice(i, 1);
       }
     }

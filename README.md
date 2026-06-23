@@ -106,7 +106,9 @@ NASA, SpaceX, Blue Origin, Rocket Lab, ULA, and Firefly.
   graceful degradation.
 - **Smart caching** of launch and weather responses (sessionStorage) with request
   cancellation, comfortably inside Launch Library 2's request budget.
-- **Cinematic starfield** background, polished animations, and full
+- **Cinematic black / charcoal starfield** background with subtle gray stars and
+  rare, elegant shooting-star streaks (static under reduced motion), polished
+  animations, and full
   `prefers-reduced-motion` support.
 - **Accessible** overlays (focus trap, Escape/backdrop close, focus restoration),
   ARIA-labelled tabs/tiles, and keyboard navigation.
@@ -222,6 +224,8 @@ tests/
   stale-cache.test.mjs     # Stale-cache fallback on refresh failure
   dup-refresh.test.mjs     # Duplicate-refresh prevention
   responsive-audit.test.mjs# Static responsive-safety guards
+  pagination.test.mjs      # Pagination-control visibility (+ the .btn[hidden] fix)
+  theme.test.mjs           # Charcoal theme, input-clip fix, reduced-motion checks
   headless.test.mjs        # DOM-shim boot + render + UI-state harness
 .github/
   workflows/validate.yml   # GitHub Actions: plain-Node validation (no npm)

@@ -86,6 +86,14 @@
   box-shadow: none;
 }
 
+/* The HTML `hidden` attribute must win over `.btn { display: inline-flex }`
+   (equal specificity, author rule otherwise wins on source order). Without this,
+   the paginated "Load 10 more" / "Show all" buttons stayed visible even when JS
+   set them hidden — the long-standing pagination-visibility bug. */
+.btn[hidden] {
+  display: none !important;
+}
+
 .btn-primary {
   background: linear-gradient(135deg, rgba(115, 182, 255, 0.26), rgba(157, 125, 255, 0.24));
   border-color: rgba(115, 182, 255, 0.4);
@@ -114,24 +122,37 @@
 }
 
 /* Inputs & dark native selects ------------------------------------------ */
+/* An explicit line-height + min-height (rather than relying on padding alone)
+   guarantees typed text and placeholder/typewriter text are never vertically
+   clipped, and keeps a comfortable ~44px tap target across browsers. */
 input,
 select {
   width: 100%;
   min-width: 0;
+  height: 44px;
+  line-height: 1.4;
   border-radius: var(--radius-md);
   border: 1px solid var(--line);
   background-color: rgba(255, 255, 255, 0.045);
   color: var(--text);
   color-scheme: dark;
-  padding: 11px 14px;
+  padding: 0 14px;
   transition:
     border-color 0.18s ease,
     background-color 0.18s ease,
     box-shadow 0.18s ease;
 }
 
+/* Normalize the search input so no native chrome clips the text/placeholder. */
+input[type="search"] {
+  -webkit-appearance: none;
+  appearance: none;
+  text-overflow: ellipsis;
+}
+
 select {
   appearance: none;
+  height: 44px;
   padding-right: 34px;
 }
 
@@ -265,9 +286,11 @@ select optgroup {
   flex-direction: column;
   gap: 16px;
   min-height: 300px;
+  /* Charcoal spotlight; a faint provider-accent wash on the active org only
+     (set via --card-accent below) keeps it from reading as a blue block. */
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 36%),
-    radial-gradient(circle at top right, rgba(115, 182, 255, 0.16), transparent 42%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 36%),
+    radial-gradient(circle at top right, color-mix(in srgb, var(--card-accent, #8aa0d8) 12%, transparent), transparent 46%),
     var(--panel-strong);
   border: 1px solid var(--line);
 }
@@ -514,10 +537,11 @@ select optgroup {
   height: 150px;
   overflow: hidden;
   border-bottom: 1px solid var(--line);
+  /* Neutral charcoal media backdrop (shown behind the no-image placeholder). */
   background:
-    linear-gradient(180deg, rgba(9, 16, 29, 0.1), rgba(9, 16, 29, 0.72)),
-    radial-gradient(circle at top right, rgba(115, 182, 255, 0.24), transparent 40%),
-    linear-gradient(120deg, rgba(115, 182, 255, 0.12), rgba(157, 125, 255, 0.12));
+    linear-gradient(180deg, rgba(10, 11, 14, 0.2), rgba(8, 9, 12, 0.78)),
+    radial-gradient(circle at top right, rgba(150, 160, 180, 0.1), transparent 45%),
+    var(--bg-2);
 }
 
 .launch-card-media img {

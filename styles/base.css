@@ -3,17 +3,18 @@
 
 :root {
   color-scheme: dark;
-  --bg-0: #09101d;
-  --bg-1: #0f1729;
-  --bg-2: #111f38;
-  --panel: rgba(13, 20, 36, 0.72);
-  --panel-strong: rgba(15, 24, 44, 0.92);
+  /* v3.4 charcoal/graphite space theme — near-black base, low blue wash. */
+  --bg-0: #07090d;  /* near-black */
+  --bg-1: #0d0f14;  /* charcoal */
+  --bg-2: #14171d;  /* graphite */
+  --panel: rgba(22, 24, 30, 0.72);
+  --panel-strong: rgba(18, 20, 26, 0.92);
   --panel-soft: rgba(255, 255, 255, 0.045);
-  --text: #e8edf8;
-  --muted: #98a8c7;
-  --line: rgba(255, 255, 255, 0.1);
+  --text: #eef1f6;
+  --muted: #9aa1ad;       /* neutral gray (was blue-gray) */
+  --line: rgba(255, 255, 255, 0.09);
   --line-strong: rgba(255, 255, 255, 0.16);
-  --accent: #73b6ff;
+  --accent: #73b6ff;      /* focal accent (focus rings, links) — not a wash */
   --accent-2: #9d7dff;
   --success: #62d7a3;
   --warning: #ffd166;
@@ -81,10 +82,11 @@ body {
   margin: 0;
   color: var(--text);
   font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  /* Charcoal space gradient with only the faintest cool tint near the top, so
+     the page reads as black/graphite rather than a blue wash. */
   background:
-    radial-gradient(circle at top left, rgba(115, 182, 255, 0.16), transparent 32%),
-    radial-gradient(circle at top right, rgba(157, 125, 255, 0.14), transparent 28%),
-    linear-gradient(180deg, var(--bg-0), var(--bg-1) 55%, #0b1323);
+    radial-gradient(120% 80% at 50% -10%, rgba(120, 130, 150, 0.08), transparent 60%),
+    linear-gradient(180deg, var(--bg-0), var(--bg-1) 55%, #06070a);
   overflow-x: hidden;
 }
 
