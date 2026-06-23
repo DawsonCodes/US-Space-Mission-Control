@@ -74,5 +74,11 @@ jobs:
       - name: Responsive-safety audit
         run: node tests/responsive-audit.test.mjs
 
+      - name: Pagination-control visibility tests
+        run: node tests/pagination.test.mjs
+
+      - name: Theme + input-clipping + reduced-motion checks
+        run: node tests/theme.test.mjs
+
       - name: Headless UI / render harness
         run: node tests/headless.test.mjs

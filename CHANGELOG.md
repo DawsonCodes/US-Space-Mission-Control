@@ -3,6 +3,21 @@
 All notable changes to U.S. Space Mission Control are documented here. Dates use
 the release ordering; the project follows a simple semantic-style versioning.
 
+## v3.4.0 — Theme Polish
+
+- Reworked the background into a cleaner black / charcoal / graphite space theme
+  with much less blue wash (panels, cards, and the spotlight tuned toward
+  charcoal while keeping content contrast strong)
+- Subtler, neutral-gray starfield with infrequent, elegant gradient
+  shooting-star streaks (frozen/disabled under reduced motion)
+- Fixed search/input text clipping with an explicit line-height + fixed input
+  height and normalized search-field appearance
+- Fixed the long-standing pagination bug: "Load 10 more" / "Show all" now hide
+  correctly (an HTML `hidden` attribute was being overridden by `.btn`'s
+  `display`); the empty pagination row also collapses
+- Added pagination-visibility and theme/input-clipping test suites
+- Bug audit: no unrelated bugs found that warranted a fix in this patch
+
 ## v3.3.1 — Launch Stabilization
 
 - Full mobile responsive repair: no page-level horizontal overflow or forced
