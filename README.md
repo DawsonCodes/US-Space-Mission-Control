@@ -294,7 +294,7 @@ repository root.
 
 ## Project background
 
-This project began as an **AP Computer Science Principles** semester final
+This project began as an **AP Computer Science** semester final
 project, where it earned a **100/100**. It has since grown from a SpaceX-only
 tracker into a broader, recruiter-facing portfolio dashboard covering U.S.
 spaceflight (NASA, SpaceX, Blue Origin, Rocket Lab, ULA, and Firefly) —
