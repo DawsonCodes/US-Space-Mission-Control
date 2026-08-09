@@ -17,7 +17,7 @@ the source with the same id, and listed here.
 
 | # | Name | Where | Trigger | Duration / easing | Reduced motion |
 |---|------|-------|---------|-------------------|----------------|
-| **ANIM-01** | Boot: shimmer → Loading → hand-off | `js/boot.js`, `.boot` | First load in a tab | 420ms in · ≥3s shimmer+loading · 620ms FLIP | Skipped entirely |
+| **ANIM-01** | Boot: shimmer → Loading → Loaded → hand-off | `js/boot.js`, `.boot` | First load in a tab | 420ms in · ≥3s shimmer+loading · 700ms Loaded · 620ms FLIP | Skipped entirely |
 | **ANIM-02** | Section reveal stagger | `.is-booted .shell > *` | After the boot hand-off | `--motion-slow`, 70ms steps (capped 280ms) | No animation |
 | **ANIM-03** | Launch-card entrance | `.motion-card-enter` | Fresh load & newly paginated cards | `--motion-normal`, `--stagger-step` (capped at 8) | No animation |
 | **ANIM-04** | Card hover lift | `.launch-card:hover` | Pointer hover | `--motion-fast` | Instant state change |
@@ -61,11 +61,21 @@ the source with the same id, and listed here.
 4. The overlay holds until **both** ≥3s has elapsed **and** the app has called
    `signalBootReady()` (fired on first paint, and on load failure so a dead API
    can't trap anyone). A 9s cap bounds the wait.
-5. The loading row fades out and the title **FLIPs** home: the hero's computed
+5. The row confirms with a check and **Loaded**, holds ~700ms, then fades.
+6. The title **FLIPs** home: the hero's computed
    font-size/width/alignment are copied onto the boot title first, so the glyph
    geometry matches and it lands pixel-accurately by pure translation — no
    width-ratio scaling, which distorted when the two wrapped differently.
-6. `.is-booted` triggers the section reveal (ANIM-02).
+7. `.is-booted` triggers the section reveal (ANIM-02).
+
+The overlay draws no background slab of its own — only a soft vignette — so the
+page's real gradient and the live starfield show straight through.
+
+A small **gate script in `<head>`** applies the pre-boot state synchronously,
+before the body paints. Without it the dashboard rendered for a frame and the
+overlay visibly "popped" over it. The gate mirrors the same skip rules, and
+carries its own failsafe release so a module that never loads can't leave the
+page blank.
 
 It is skipped for reduced motion, for `?mission=` deep links, and after the
 first play in a tab (`sessionStorage`). It is click/key skippable, has a hard

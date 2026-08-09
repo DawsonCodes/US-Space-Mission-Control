@@ -298,6 +298,8 @@ export function normalizeStatus(launch) {
   let key = "tbd";
   if (/go for launch|^go$/.test(lower)) key = "go";
   else if (/hold/.test(lower)) key = "hold";
+  // "Partial Failure" contains "failure", so it must be tested FIRST.
+  else if (/partial/.test(lower)) key = "partial";
   else if (/success/.test(lower)) key = "success";
   else if (/failure/.test(lower)) key = "failure";
   else if (/in flight|in-flight/.test(lower)) key = "inflight";
@@ -309,4 +311,42 @@ export function normalizeStatus(launch) {
 
 export function statusBadgeClass(launch) {
   return `status-${normalizeStatus(launch).key}`;
+}
+
+
+// ---- Launch outcome (previous launches) ----------------------------------
+// LL2 status ids: 3 = Success, 4 = Failure, 7 = Partial Failure. We match on the
+// id when present and fall back to the status name, so the panel still labels
+// correctly if the id is missing from a partial payload.
+export const OUTCOME_LABELS = {
+  success: "Success",
+  partial: "Partial failure",
+  failure: "Failure",
+  unknown: "Outcome unknown"
+};
+
+// Plain-language explanation of what each outcome means, so a visitor doesn't
+// have to know spaceflight conventions.
+export const OUTCOME_MEANING = {
+  success: "The mission met its objectives.",
+  partial: "It flew, but not everything went to plan — some objectives were missed.",
+  failure: "The mission did not achieve its objectives.",
+  unknown: "No confirmed outcome has been published yet."
+};
+
+export function launchOutcome(launch) {
+  const id = Number(launch?.statusId);
+  if (id === 3) return "success";
+  if (id === 7) return "partial";
+  if (id === 4) return "failure";
+
+  const lower = String(launch?.statusName || "").toLowerCase();
+  if (/partial/.test(lower)) return "partial";
+  if (/success/.test(lower)) return "success";
+  if (/failure/.test(lower)) return "failure";
+  return "unknown";
+}
+
+export function outcomeBadgeClass(outcome) {
+  return `outcome-${outcome}`;
 }

@@ -154,11 +154,34 @@ check("boot shimmer tiles its gradient so the text never goes transparent", () =
   assert.ok(!/no-repeat/.test(block[0]), "no-repeat leaves glyphs unpainted");
 });
 
-check("boot shows a Loading row with a spinner", () => {
+check("boot shows a Loading row with a spinner, then a Loaded confirmation", () => {
   const html = readFileSync("index.html", "utf8");
   assert.match(html, /id="bootLoading"/);
   assert.match(html, /class="boot-spinner"/);
+  assert.match(html, /id="bootLoadingText"/);
+  assert.match(html, /class="boot-check"/);
   assert.match(css, /\.boot-spinner \{/);
+  assert.match(css, /\.boot-loading\.is-loaded \.boot-check/);
+  const boot = readFileSync("js/boot.js", "utf8");
+  assert.match(boot, /textContent = "Loaded"/, "the row confirms the load");
+});
+
+check("a head gate hides the page before first paint (no pre-boot flash)", () => {
+  const html = readFileSync("index.html", "utf8");
+  const head = html.split("</head>")[0];
+  assert.match(head, /is-booting/, "gate runs in <head>");
+  assert.match(head, /prefers-reduced-motion/, "gate mirrors the skip rules");
+  assert.match(head, /us-space-mission-control-booted/);
+  assert.match(head, /mission=/, "deep links skip the overlay");
+  assert.match(head, /setTimeout/, "gate has a failsafe release");
+  assert.match(css, /html\.is-booting \.boot\[hidden\]/, "overlay shows from the gate");
+});
+
+check("the boot overlay lets the real space background through", () => {
+  const block = css.match(/\n\.boot \{[^}]*\}/s);
+  assert.ok(block, ".boot rule present");
+  assert.ok(!/linear-gradient\(180deg, var\(--bg-0\)/.test(block[0]), "no opaque slab of its own");
+  assert.match(block[0], /transparent/, "vignette lets the starfield show");
 });
 
 check("save button uses a separate star element that turns gold when saved", () => {
