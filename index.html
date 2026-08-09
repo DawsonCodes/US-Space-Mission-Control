@@ -21,7 +21,13 @@
          by js/boot.js, which also skips it for reduced-motion, deep links, and
          repeat visits in the same tab. -->
     <div id="bootScreen" class="boot" role="presentation" aria-hidden="true" hidden>
-      <span id="bootTitle" class="boot-title">U.S. Space Mission Control</span>
+      <div class="boot-inner">
+        <span id="bootTitle" class="boot-title">U.S. Space Mission Control</span>
+        <div id="bootLoading" class="boot-loading">
+          <span class="boot-spinner"></span>
+          <span class="boot-loading-text">Loading</span>
+        </div>
+      </div>
     </div>
 
     <div class="shell">

@@ -169,7 +169,6 @@ select {
 input[type="search"] {
   -webkit-appearance: none;
   appearance: none;
-  text-overflow: ellipsis;
 }
 
 select {
@@ -2047,29 +2046,81 @@ button.overview-tile:focus-visible {
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-/* Phase 2: the "thinking" shimmer — a bright band sweeps across the glyphs via
-   a clipped moving gradient (text stays selectable/readable throughout). */
+/* Phase 2: the "thinking" shimmer — the letters stay fully visible in a dimmed
+   tone and a BRIGHT band travels across them.
+   BUGFIX: this previously used `background-repeat: no-repeat` with an offset
+   position, so most of the text sat outside the gradient box and — because the
+   glyphs are painted from that background — went transparent. Tiling the
+   gradient guarantees every glyph always has paint under it. */
 .boot-title.is-shimmering {
   background-image: linear-gradient(
     100deg,
-    var(--text) 0%,
-    var(--text) 38%,
+    #8b94a3 0%,
+    #8b94a3 35%,
     #ffffff 50%,
-    var(--text) 62%,
-    var(--text) 100%
+    #8b94a3 65%,
+    #8b94a3 100%
   );
-  background-size: 280% 100%;
-  background-repeat: no-repeat;
+  background-size: 200% 100%;
+  background-repeat: repeat;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
   color: transparent;
-  animation: bootShimmer 1150ms var(--ease-standard) infinite;
+  animation: bootShimmer 1600ms linear infinite;
 }
 
 @keyframes bootShimmer {
-  from { background-position: 180% 0; }
-  to   { background-position: -80% 0; }
+  from { background-position: 100% 0; }
+  to   { background-position: -100% 0; }
+}
+
+/* Engines without text background-clip keep solid, readable text. */
+@supports not ((-webkit-background-clip: text) or (background-clip: text)) {
+  .boot-title.is-shimmering {
+    -webkit-text-fill-color: currentColor;
+    color: var(--text);
+    animation: none;
+  }
+}
+
+/* Loading row: spinner + label, revealed just after the title. */
+.boot-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-5);
+  max-width: 100%;
+}
+
+.boot-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  opacity: 0;
+  transform: translateY(6px);
+  transition:
+    opacity var(--motion-normal) var(--ease-out),
+    transform var(--motion-normal) var(--ease-out);
+}
+
+.boot-loading.is-visible { opacity: 1; transform: translateY(0); }
+.boot-loading.is-leaving { opacity: 0; transform: translateY(-4px); }
+
+.boot-spinner {
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-pill);
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  border-top-color: var(--text);
+  animation: refreshSpin 720ms linear infinite;
+}
+
+.boot-loading-text {
+  color: var(--muted);
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 /* Phase 4: the dashboard sections reveal in a short, capped stagger. */
@@ -2137,7 +2188,9 @@ button.overview-tile:focus-visible {
   .card-link:hover::after,
   .favorite-btn:hover::after {
     opacity: 1;
-    animation: sheenSweep var(--motion-emphasis) var(--ease-out);
+    /* `forwards` leaves the highlight parked at the left edge instead of
+       snapping back to its start position on the right when the sweep ends. */
+    animation: sheenSweep var(--motion-emphasis) var(--ease-out) forwards;
   }
 }
 
@@ -2217,15 +2270,47 @@ button.overview-tile:focus-visible {
 .insights-body.is-revealing .insight-chip:nth-child(5)  { animation-delay: 120ms; }
 .insights-body.is-revealing .insight-chip:nth-child(n + 6) { animation-delay: 150ms; }
 
-/* ANIM-16 — Save pop. The star scales up and settles when a mission is saved. */
-@keyframes savePop {
-  0%   { transform: scale(1); }
-  45%  { transform: scale(1.18); }
-  100% { transform: scale(1); }
+/* ANIM-16 — Save confetti. The button no longer jumps; a small burst of
+   particles fires out of the (now gold) star instead. */
+.fav-star {
+  position: relative;
+  display: inline-block;
+  margin-right: 6px;
+  line-height: 1;
 }
 
-.favorite-btn.is-just-saved {
-  animation: savePop var(--motion-normal) var(--ease-spring);
+/* Saved = green pill, gold star. */
+.favorite-btn.is-active .fav-star { color: #ffcf5c; }
+
+.favorite-btn.is-bursting { overflow: visible; }
+
+.confetti-bit {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  border-radius: 1px;
+  pointer-events: none;
+  opacity: 0;
+  animation: confettiFly 640ms var(--ease-out) var(--delay, 0ms) forwards;
+}
+
+.confetti-bit[data-tone="0"] { background: #ffcf5c; }
+.confetti-bit[data-tone="1"] { background: var(--success); }
+.confetti-bit[data-tone="2"] { background: #ffffff; }
+.confetti-bit[data-tone="3"] { background: #ffa94d; }
+
+@keyframes confettiFly {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) translate(0, 0) scale(0.6) rotate(0deg);
+  }
+  70% { opacity: 1; }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) translate(var(--dx, 0), var(--dy, 0)) scale(1) rotate(var(--spin, 90deg));
+  }
 }
 
 /* ANIM-17 — Remove collapse. A saved card shrinks and fades before it goes, so
@@ -2341,3 +2426,27 @@ button.overview-tile:focus-visible {
   .cd-value { font-size: 1.2rem; }
   .countdown-units { gap: 2px; }
 }
+
+/* Compact segmented countdown used on launch cards + the saved drawer. */
+.countdown-units.is-compact { gap: 3px; }
+.countdown-units.is-compact .cd-value { font-size: 0.95rem; font-weight: 600; }
+.countdown-units.is-compact .cd-label { font-size: 0.5rem; margin-top: 1px; }
+.countdown-units.is-compact .cd-sep { font-size: 0.85rem; }
+.countdown-flat.is-compact { font-size: 0.9rem; }
+
+/* The card status row now pairs the status badge with the live countdown. */
+.card-status-row { flex-wrap: wrap; row-gap: 6px; }
+.card-status-row .countdown-units { margin-left: auto; }
+
+/* Saved-drawer cards get the compact countdown under the location line. */
+.saved-card .countdown-units { align-self: flex-start; }
+
+/* The details modal reuses the full-size segmented countdown. */
+.details-countdown .countdown-units { justify-content: flex-start; }
+
+/* FIX: "All mission types" and similar long option labels were clipped because
+   the select fields were too narrow once the 34px arrow gutter was reserved.
+   Give the control fields room to fit their longest label, and let the search
+   field take a bigger share so the typewriter hint is never truncated. */
+.field { min-width: 168px; }
+.field-search { flex: 3 1 300px; min-width: 260px; }

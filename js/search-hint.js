@@ -6,13 +6,15 @@
 // the animated placeholder is purely decorative. No dependencies; timers are
 // always cleaned up.
 
+// Kept deliberately short so the hint always fits the field at every width
+// (long prompts were being truncated to an unreadable "Search NASA, Dragon, Flo…").
 const PROMPTS = [
-  "Search SpaceX, Starship, Artemis...",
-  "Search Rocket Lab, Electron, Wallops...",
-  "Search NASA, Dragon, Florida...",
-  "Search Blue Origin, New Glenn...",
-  "Search ULA, Vulcan, Cape Canaveral...",
-  "Search Firefly, Alpha, Vandenberg..."
+  "Search Starship…",
+  "Search Electron…",
+  "Search NASA…",
+  "Search New Glenn…",
+  "Search Vulcan…",
+  "Search Firefly…"
 ];
 const STATIC_PLACEHOLDER = "Search missions…";
 

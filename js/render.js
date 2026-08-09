@@ -307,12 +307,18 @@ function webcastActionHtml(launch) {
   return `<a class="${cls}" href="${w.url}" target="_blank" rel="noopener noreferrer" aria-label="${escapeHtml(`${w.label} for ${launch.name}`)}">${escapeHtml(w.label)}</a>`;
 }
 
+// Inner markup for a save/saved button. The star is its own element so it can
+// be tinted gold while the rest of the pill stays green (and so the confetti
+// burst has something to originate from).
+export function favoriteButtonInner(active) {
+  return `<span class="fav-star" aria-hidden="true">${active ? "★" : "☆"}</span><span class="fav-label">${active ? "Saved" : "Save"}</span>`;
+}
+
 function favoriteButtonHtml(launch, { variant = "grid" } = {}) {
   const active = isFavorite(launch.id);
   const cls = variant === "hero" ? "favorite-btn" : "favorite-btn btn-small";
-  const label = active ? "★ Saved" : "☆ Save";
   const aria = active ? `Remove ${launch.name} from saved` : `Save ${launch.name}`;
-  return `<button class="${cls} ${active ? "is-active" : ""}" data-favorite-id="${escapeHtml(launch.id)}" type="button" aria-pressed="${active}" aria-label="${escapeHtml(aria)}">${label}</button>`;
+  return `<button class="${cls} ${active ? "is-active" : ""}" data-favorite-id="${escapeHtml(launch.id)}" type="button" aria-pressed="${active}" aria-label="${escapeHtml(aria)}">${favoriteButtonInner(active)}</button>`;
 }
 
 // ----- Reset / inputs -----------------------------------------------------
@@ -347,7 +353,7 @@ export function syncGridFavorite(id) {
     .forEach((btn) => {
       btn.classList.toggle("is-active", fav);
       btn.setAttribute("aria-pressed", String(fav));
-      btn.textContent = fav ? "★ Saved" : "☆ Save";
+      btn.innerHTML = favoriteButtonInner(fav);
     });
 }
 
@@ -450,12 +456,12 @@ function pad2(n) {
   return String(Math.max(0, n)).padStart(2, "0");
 }
 
-function countdownUnitsHtml(net) {
+function countdownUnitsHtml(net, { compact = false } = {}) {
   const parts = getCountdownParts(net);
   const label = getCountdownText(net);
 
   if (!parts || parts.passed) {
-    return `<strong class="countdown-flat" data-countdown="${escapeHtml(net)}">${escapeHtml(label)}</strong>`;
+    return `<strong class="countdown-flat${compact ? " is-compact" : ""}" data-countdown="${escapeHtml(net)}">${escapeHtml(label)}</strong>`;
   }
 
   const cells = CD_UNITS.map(
@@ -468,7 +474,7 @@ function countdownUnitsHtml(net) {
 
   return `
     <span class="sr-only" data-countdown="${escapeHtml(net)}">${escapeHtml(label)}</span>
-    <span class="countdown-units" data-countdown-parts="${escapeHtml(net)}" aria-hidden="true">${cells}</span>`;
+    <span class="countdown-units${compact ? " is-compact" : ""}" data-countdown-parts="${escapeHtml(net)}" aria-hidden="true">${cells}</span>`;
 }
 
 let lastHeroId = null;
@@ -623,7 +629,9 @@ function animateOverviewNumbers() {
     prevOverviewCounts[key] = to;
     const strong = tile.querySelector("strong");
     if (!strong) return;
-    if (reduce || from === undefined || from === to || Math.abs(to - from) > 200) {
+    // The Saved tile updates instantly — a rolling count there reads as noise
+    // rather than feedback when you save or remove a mission.
+    if (key === "saved" || reduce || from === undefined || from === to || Math.abs(to - from) > 200) {
       strong.textContent = String(to);
       return;
     }
@@ -817,13 +825,11 @@ function buildLaunchCard(launch, index, { enter = false } = {}) {
       <div class="launch-card-body">
         <div class="card-status-row">
           ${statusBadgeHtml(launch)}
-          <span class="card-relative">${escapeHtml(getRelativeLabel(launch.net))}</span>
+          ${countdownUnitsHtml(launch.net, { compact: true })}
         </div>
 
         <h3>${escapeHtml(launch.name)}</h3>
-        <div class="card-meta">
-          ${escapeHtml(formatDate(launch.net, launch.tzId))} • <span data-countdown="${escapeHtml(launch.net)}">${escapeHtml(getCountdownText(launch.net))}</span>
-        </div>
+        <div class="card-meta">${escapeHtml(formatDate(launch.net, launch.tzId))}</div>
 
         <div class="badge-row card-types">
           ${missionTypeBadgeHtml(launch)}
@@ -939,7 +945,8 @@ export function renderDrawer() {
             <span class="badge">${escapeHtml(formatCompactDate(launch.net))}</span>
           </div>
           <h3>${escapeHtml(launch.name)}</h3>
-          <p>${escapeHtml(concise(launch))} • ${escapeHtml(getRelativeLabel(launch.net))}</p>
+          <p>${escapeHtml(concise(launch))}</p>
+          ${countdownUnitsHtml(launch.net, { compact: true })}
           <div class="card-actions">
             <button class="btn btn-small btn-details" data-details-id="${escapeHtml(launch.id)}" type="button">Details</button>
             <button class="favorite-btn btn-small is-remove" data-favorite-id="${escapeHtml(launch.id)}" type="button" aria-label="Remove ${escapeHtml(launch.name)} from saved">× Remove</button>
@@ -1025,7 +1032,7 @@ export function buildDetailsContent(launch) {
     </div>
 
     <div class="details-countdown">
-      <strong data-countdown="${escapeHtml(launch.net)}">${escapeHtml(getCountdownText(launch.net))}</strong>
+      ${countdownUnitsHtml(launch.net)}
       <span>Countdown</span>
     </div>
 
