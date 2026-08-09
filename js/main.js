@@ -160,6 +160,28 @@ function burstConfetti(id) {
   }
 }
 
+// Shared reduced-motion probe for the JS-driven animation hooks.
+function prefersReducedMotionUI() {
+  try {
+    return Boolean(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  } catch {
+    return false;
+  }
+}
+
+// ANIM-16 — replay the save pop on every button bound to this mission.
+function popSavedButtons(id) {
+  try {
+    document.querySelectorAll(`[data-favorite-id=${JSON.stringify(id)}]`).forEach((btn) => {
+      btn.classList?.remove("is-just-saved");
+      void btn.offsetWidth;
+      btn.classList?.add("is-just-saved");
+    });
+  } catch {
+    /* decorative only */
+  }
+}
+
 function afterFavoriteChange(id) {
   saveFavorites();
   refreshHero();
