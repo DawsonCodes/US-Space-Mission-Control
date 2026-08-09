@@ -950,7 +950,7 @@ select optgroup {
 }
 
 .modal-panel {
-  width: min(640px, calc(100vw - 24px));
+  width: min(920px, calc(100vw - 48px));
   max-height: 90vh;
   max-height: 90dvh; /* progressive: avoids mobile browser-chrome clipping */
   overflow: auto;
@@ -2008,6 +2008,9 @@ button.overview-tile:focus-visible {
 .is-booting .shell { opacity: 0; }
 .is-booting .hero-copy h1 { opacity: 0; }
 
+/* The overlay sits ON the real page background: the body gradient and the live
+   starfield canvas show straight through, so the startup screen is the same
+   space scene the dashboard uses — only a soft vignette is added for focus. */
 .boot {
   position: fixed;
   inset: 0;
@@ -2016,13 +2019,15 @@ button.overview-tile:focus-visible {
   place-items: center;
   padding: var(--space-5);
   text-align: center;
-  background:
-    radial-gradient(120% 80% at 50% 40%, rgba(120, 130, 150, 0.1), transparent 60%),
-    linear-gradient(180deg, var(--bg-0), var(--bg-1));
+  background: radial-gradient(120% 80% at 50% 45%, transparent 30%, rgba(6, 7, 10, 0.55) 100%);
   transition: opacity var(--motion-slow) var(--ease-out);
 }
 
 .boot[hidden] { display: none; }
+
+/* The head gate adds .is-booting before first paint, so the overlay must be
+   visible from that moment — before js/boot.js has even parsed. */
+html.is-booting .boot[hidden] { display: grid; }
 
 /* The backdrop fades while the title is still travelling to the hero. */
 .boot.is-lifting { opacity: 0; }
@@ -2115,6 +2120,19 @@ button.overview-tile:focus-visible {
   border-top-color: var(--text);
   animation: refreshSpin 720ms linear infinite;
 }
+
+/* "Loaded" beat: the spinner swaps for a check before the title flies home. */
+.boot-check {
+  display: none;
+  color: var(--success);
+  font-size: 1.05rem;
+  line-height: 1;
+  animation: motionScaleIn var(--motion-normal) var(--ease-spring) both;
+}
+
+.boot-loading.is-loaded .boot-spinner { display: none; }
+.boot-loading.is-loaded .boot-check { display: inline-block; }
+.boot-loading.is-loaded .boot-loading-text { color: var(--text); }
 
 .boot-loading-text {
   color: var(--muted);
@@ -2450,3 +2468,99 @@ button.overview-tile:focus-visible {
    field take a bigger share so the typewriter hint is never truncated. */
 .field { min-width: 168px; }
 .field-search { flex: 3 1 300px; min-width: 260px; }
+
+/* ===== Previous launches panel ========================================== */
+.previous-note {
+  margin: 0 0 var(--space-4);
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+.previous-note.is-error { color: #ffc1c9; }
+
+.previous-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.previous-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: var(--border-subtle);
+  border-radius: var(--radius-md);
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
+.previous-name {
+  margin: 0;
+  font-size: 1.02rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.previous-meta {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+  overflow-wrap: anywhere;
+}
+
+.previous-meaning {
+  margin: 0;
+  font-size: 0.86rem;
+  color: var(--text);
+  opacity: 0.85;
+}
+
+.previous-cause {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-left: 3px solid var(--danger);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background-color: rgba(255, 128, 142, 0.08);
+  font-size: 0.86rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.previous-nowatch {
+  align-self: center;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+/* Outcome badges — green / amber / red, matching the status language. */
+.badge.outcome-success {
+  background-color: rgba(98, 215, 163, 0.2);
+  border-color: transparent;
+  color: #c9ffe6;
+}
+.badge.outcome-partial {
+  background-color: rgba(255, 209, 102, 0.22);
+  border-color: transparent;
+  color: #ffe7a5;
+}
+.badge.outcome-failure {
+  background-color: rgba(255, 128, 142, 0.22);
+  border-color: transparent;
+  color: #ffc1c9;
+}
+.badge.outcome-unknown {
+  background-color: rgba(255, 255, 255, 0.06);
+  color: var(--muted);
+}
+
+/* Partial-failure status badge on regular cards (LL2 status id 7). */
+.badge.status-partial {
+  background-color: rgba(255, 209, 102, 0.22);
+  border-color: transparent;
+  color: #ffe7a5;
+}
+
+/* The wider desktop modal can afford a two-column detail grid. */
+@media (min-width: 900px) {
+  .details-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}

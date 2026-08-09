@@ -32,6 +32,17 @@ the release ordering; the project follows a simple semantic-style versioning.
 - Button hover sheen parks at the left instead of snapping back to the right
 - Fixed long select labels ("All mission types") clipping, and the typewriter
   search hint being truncated to an unreadable "…"
+- Startup no longer flashes the dashboard before the overlay appears (a head
+  gate applies the pre-boot state before first paint), the overlay now shows the
+  real starfield background, and the sequence confirms with "Loaded" before the
+  title flies into the hero
+- New **Previous launches** panel (More menu): recently completed launches from
+  the tracked providers with an honest Success / Partial failure / Failure
+  outcome, the published cause when something went wrong, and a link to watch
+  the launch back. Lazily fetched and cached, so it costs nothing on a normal
+  visit
+- Detail modals are noticeably wider on desktop (mobile keeps its full-screen
+  sheet)
 
 ## v3.4.0 — Theme Polish
 

@@ -83,5 +83,8 @@ jobs:
       - name: Animation catalog + boot sequence tests
         run: node tests/animations.test.mjs
 
+      - name: Previous-launches outcome + panel tests
+        run: node tests/previous.test.mjs
+
       - name: Headless UI / render harness
         run: node tests/headless.test.mjs
