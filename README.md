@@ -77,6 +77,10 @@ NASA, SpaceX, Blue Origin, Rocket Lab, ULA, and Firefly.
   agencies, orbit, rocket, pad, description, weather, launch probability, a pad
   map, Add to calendar, Copy mission link, and validated Webcast / Official page
   / Wiki links.
+- **Previous launches** — the More menu opens a panel of recently completed
+  launches with an honest outcome (Success / Partial failure / Failure), a plain-
+  language explanation, the published cause when a launch failed, and a link to
+  watch it back. Fetched lazily and cached, so it adds no cost to a normal visit.
 - **About this data & status legend** — the **More** menu opens a compact About
   panel (sources, loaded/filtered counts, refresh time, data status, tracked
   organizations) and a plain-language mission status legend.
@@ -232,6 +236,7 @@ tests/
   dup-refresh.test.mjs     # Duplicate-refresh prevention
   responsive-audit.test.mjs# Static responsive-safety guards
   animations.test.mjs      # Boot sequence, countdown parts, animation catalog
+  previous.test.mjs        # Launch outcomes, failure cause, watch links
   pagination.test.mjs      # Pagination-control visibility (+ the .btn[hidden] fix)
   theme.test.mjs           # Charcoal theme, input-clip fix, reduced-motion checks
   headless.test.mjs        # DOM-shim boot + render + UI-state harness

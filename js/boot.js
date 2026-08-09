@@ -8,7 +8,7 @@
 //        * at least MIN_PHASE_MS (3s) has elapsed, and
 //        * the app has signalled that its first render is on screen.
 //      A hard cap stops a hanging network from trapping anyone.
-//   4. The loading row fades out.
+//   4. The row flips to "Loaded" with a check, holds briefly, then fades out.
 //   5. The title FLIPs into the exact position of the real hero <h1>.
 //   6. The overlay clears and the dashboard sections reveal in a stagger.
 //
@@ -27,6 +27,7 @@ const TITLE_IN_MS = 420;       // title fade/rise
 const LOADING_IN_MS = 520;     // when the Loading row appears
 const MIN_PHASE_MS = 3000;     // the shimmer+loading phase never runs shorter
 const MAX_PHASE_MS = 9000;     // ...and never longer, even if data stalls
+const LOADED_HOLD_MS = 700;    // how long the "Loaded" confirmation shows
 const LOADING_OUT_MS = 240;    // loading row fade-out before the hand-off
 const FLIP_MS = 620;           // title travel to the hero heading
 
@@ -122,10 +123,13 @@ export function setupBoot() {
   const overlay = document.getElementById("bootScreen");
   const title = document.getElementById("bootTitle");
   const loading = document.getElementById("bootLoading");
+  const loadingText = document.getElementById("bootLoadingText");
   const heroTitle = document.querySelector(".hero-copy h1");
   const root = document.documentElement;
 
   if (shouldSkip(overlay, title, heroTitle)) {
+    // The head gate may already have hidden the page; always release it.
+    root?.classList?.remove?.("is-booting");
     overlay?.remove?.();
     markBooted();
     return;
@@ -163,10 +167,15 @@ export function setupBoot() {
     if (handingOff || finished) return;
     handingOff = true;
 
-    loading?.classList?.add("is-leaving");
+    // Confirm the load before anything moves, so the sequence reads
+    // Loading -> Loaded -> hand-off rather than just cutting away.
     title.classList.remove("is-shimmering");
+    if (loadingText) loadingText.textContent = "Loaded";
+    loading?.classList?.add("is-loaded");
 
-    after(LOADING_OUT_MS, () => {
+    after(LOADED_HOLD_MS, () => loading?.classList?.add("is-leaving"));
+
+    after(LOADED_HOLD_MS + LOADING_OUT_MS, () => {
       let flipped = false;
       try {
         flipped = flipTitleToHero(title, heroTitle);
@@ -193,5 +202,5 @@ export function setupBoot() {
   after(MAX_PHASE_MS, handOff);
 
   // Absolute failsafe: never leave the dashboard covered, whatever happens.
-  after(MAX_PHASE_MS + LOADING_OUT_MS + FLIP_MS + 900, finish);
+  after(MAX_PHASE_MS + LOADED_HOLD_MS + LOADING_OUT_MS + FLIP_MS + 900, finish);
 }

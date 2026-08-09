@@ -18,7 +18,7 @@ import {
   cacheAgeLabel
 } from "./storage.js";
 import { applyFilters } from "./filters.js";
-import { fetchLiveLaunches } from "./api.js";
+import { fetchLiveLaunches, fetchPreviousLaunches } from "./api.js";
 import { ORG, ORG_LABELS } from "./organizations.js";
 import { applyOrgColors } from "./org-theme.js";
 import { buildColorCustomizerContent, wireColorCustomizer } from "./customize.js";
@@ -48,6 +48,7 @@ import {
   renderSavedCount,
   buildDetailsContent,
   buildAboutContent,
+  buildPreviousContent,
   favoriteButtonInner,
   renderWeatherInto,
   updateCountdownNodes,
@@ -474,6 +475,49 @@ function openLegend(opener) {
   openOverlay(els.legendModal, { returnFocusTo: opener || els.btnLegend });
 }
 
+// ----- Previous launches (lazy) -------------------------------------------
+// The list is fetched the first time the panel is opened and then cached, so a
+// normal visit never spends an LL2 request on it.
+let previousRequest = null;
+
+async function loadPreviousInto({ force = false } = {}) {
+  if (!els.previousContent) return;
+  els.previousContent.innerHTML = buildPreviousContent([], { state: "loading" });
+
+  if (previousRequest) previousRequest.abort();
+  const controller = new AbortController();
+  previousRequest = controller;
+
+  try {
+    const launches = await fetchPreviousLaunches({ signal: controller.signal, force });
+    if (previousRequest !== controller) return; // superseded
+    els.previousContent.innerHTML = buildPreviousContent(launches);
+  } catch (error) {
+    if (error?.name === "AbortError" && controller.signal.aborted) return;
+    els.previousContent.innerHTML = buildPreviousContent([], {
+      state: "error",
+      message: "Couldn't load previous launches. The launch API may be busy — try again."
+    });
+  } finally {
+    if (previousRequest === controller) previousRequest = null;
+  }
+}
+
+function openPrevious(opener) {
+  if (!els.previousModal || !els.previousContent) return;
+  els.previousModal.setAttribute("aria-labelledby", "previousTitle");
+  openOverlay(els.previousModal, {
+    returnFocusTo: opener || els.btnPrevious,
+    onClose: () => {
+      if (previousRequest) {
+        previousRequest.abort();
+        previousRequest = null;
+      }
+    }
+  });
+  loadPreviousInto();
+}
+
 let colorCustomizerWired = false;
 function openColorCustomizer(opener) {
   if (!els.orgColorsModal || !els.orgColorsContent) return;
@@ -821,6 +865,11 @@ function attachEventListeners() {
       closeMoreMenu();
       openLegend(e.currentTarget);
     });
+  if (els.btnPrevious)
+    els.btnPrevious.addEventListener("click", (e) => {
+      closeMoreMenu();
+      openPrevious(e.currentTarget);
+    });
   if (els.btnCustomizeColors)
     els.btnCustomizeColors.addEventListener("click", (e) => openColorCustomizer(e.currentTarget));
 
@@ -924,6 +973,12 @@ function attachEventListeners() {
     const retry = event.target.closest("[data-retry]");
     if (retry) {
       loadLaunches(true);
+      return;
+    }
+
+    const previousRetry = event.target.closest("[data-previous-retry]");
+    if (previousRetry) {
+      loadPreviousInto({ force: true });
       return;
     }
 

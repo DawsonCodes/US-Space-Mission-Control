@@ -31,6 +31,17 @@ export const API_PROVIDERS =
   `${LL2_UPCOMING}?lsp__id=${PROVIDER_IDS.join(",")}` +
   "&include_suborbital=true&mode=detailed&limit=100&ordering=net&hide_recent_previous=true";
 
+// Feed C (lazy) — recently completed launches from the tracked providers, used
+// by the "Previous launches" panel. Only requested when the user opens that
+// panel, so it costs nothing on a normal visit and stays inside LL2's budget.
+export const LL2_PREVIOUS = "https://ll.thespacedevs.com/2.3.0/launches/previous/";
+export const API_PREVIOUS =
+  `${LL2_PREVIOUS}?lsp__id=${PROVIDER_IDS.join(",")}` +
+  "&include_suborbital=true&mode=detailed&limit=20&ordering=-net";
+
+// How long the previous-launch list stays fresh in sessionStorage (30 min).
+export const PREVIOUS_TTL_MS = 1000 * 60 * 30;
+
 // Feed B — NASA-tagged missions (may fly on providers other than the tracked
 // ones; that provider is shown only as secondary metadata, never as a tab).
 export const API_NASA =
@@ -50,7 +61,8 @@ export const STORAGE_KEYS = {
   // v3.3: the normalized live manifest is cached in localStorage (cross-visit,
   // schema-versioned) for cache-first rendering.
   manifest: "us-space-mission-control-manifest",
-  weather: "us-space-mission-control-weather-v1"
+  weather: "us-space-mission-control-weather-v1",
+  previous: "us-space-mission-control-previous-v1"
 };
 
 // Schema version for the cached manifest payload. Bump when the normalized

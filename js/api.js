@@ -4,7 +4,14 @@
 // a conservative field-level merge. Request cancellation and a short
 // sessionStorage cache keep us well inside LL2's 15-requests/hour budget.
 
-import { API_PROVIDERS, API_NASA, NETWORK_TIMEOUT_MS } from "./config.js";
+import {
+  API_PROVIDERS,
+  API_NASA,
+  API_PREVIOUS,
+  PREVIOUS_TTL_MS,
+  STORAGE_KEYS,
+  NETWORK_TIMEOUT_MS
+} from "./config.js";
 import { saveLaunchCache } from "./storage.js";
 import { isPublicMissionUrl } from "./utils.js";
 
@@ -69,6 +76,16 @@ export function simplifyLaunch(raw) {
     program: nameOf(Array.isArray(raw?.program) ? raw.program[0] : raw?.program),
     details: mission?.description || raw?.details || "",
     statusName: nameOf(raw?.status) || (raw?.upcoming ? "Upcoming" : "Completed"),
+    statusId: raw?.status?.id ?? null,
+    statusAbbrev: raw?.status?.abbrev || "",
+    // Why a launch failed. LL2 exposes this as `failreason` on the launch, but
+    // older/other shapes nest it; take the first non-empty candidate.
+    failReason:
+      raw?.failreason ||
+      raw?.fail_reason ||
+      raw?.failure?.reason ||
+      raw?.status?.description ||
+      "",
     probability: typeof raw?.probability === "number" ? raw.probability : null,
     // Provider (launch service provider). `provider` kept for back-compat.
     provider: lsp?.name || "",
@@ -153,6 +170,9 @@ export function mergeLaunch(a, b) {
     missionName: nonEmpty(a.missionName, b.missionName),
     missionType: nonEmpty(a.missionType, b.missionType),
     statusName: nonEmpty(a.statusName, b.statusName),
+    statusId: a.statusId ?? b.statusId,
+    statusAbbrev: nonEmpty(a.statusAbbrev, b.statusAbbrev),
+    failReason: richerText(a.failReason, b.failReason),
     probability: a.probability ?? b.probability,
     provider: nonEmpty(a.provider, b.provider),
     providerName: nonEmpty(a.providerName, b.providerName),
@@ -262,6 +282,57 @@ export async function fetchLiveLaunches({ signal } = {}) {
 
     saveLaunchCache({ launches, truncated });
     return { launches, truncated, partial, failedFeeds };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+
+// ---- Previous launches (lazy) --------------------------------------------
+// Fetched only when the user opens the Previous launches panel, then cached in
+// sessionStorage so reopening it costs no extra LL2 request.
+
+function readPreviousCache(now = Date.now()) {
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEYS.previous);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || !Array.isArray(parsed.launches)) return null;
+    if (now - Number(parsed.savedAt || 0) > PREVIOUS_TTL_MS) return null;
+    return parsed.launches;
+  } catch {
+    return null;
+  }
+}
+
+function writePreviousCache(launches, now = Date.now()) {
+  try {
+    sessionStorage.setItem(STORAGE_KEYS.previous, JSON.stringify({ savedAt: now, launches }));
+  } catch {
+    /* quota/serialization — the panel simply refetches next time */
+  }
+}
+
+export async function fetchPreviousLaunches({ signal, force = false } = {}) {
+  if (!force) {
+    const cached = readPreviousCache();
+    if (cached) return cached;
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => {
+    controller.abort(new DOMException("Network timeout", "AbortError"));
+  }, NETWORK_TIMEOUT_MS);
+  if (signal) {
+    if (signal.aborted) controller.abort();
+    else signal.addEventListener("abort", () => controller.abort(), { once: true });
+  }
+
+  try {
+    const { results } = await fetchFeed(API_PREVIOUS, controller.signal);
+    const launches = results.map(simplifyLaunch);
+    writePreviousCache(launches);
+    return launches;
   } finally {
     clearTimeout(timeout);
   }

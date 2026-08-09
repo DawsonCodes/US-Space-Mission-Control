@@ -3,6 +3,27 @@
 All notable changes to U.S. Space Mission Control are documented here. Dates use
 the release ordering; the project follows a simple semantic-style versioning.
 
+## v3.4.2 — Startup Polish & Previous Launches
+
+- Startup no longer flashes the dashboard before the overlay appears (a
+  synchronous head gate applies the pre-boot state before first paint), so the
+  title screen is genuinely the first thing on screen
+- The boot overlay now shows the real charcoal starfield background instead of a
+  flat panel, so it reads as part of the same space theme
+- The sequence confirms with "Loaded" under the title, then flies the title into
+  its dashboard position
+- New **Previous launches** panel (More menu): recently completed launches from
+  the tracked providers with an honest Success / Partial failure / Failure
+  outcome, the published cause when something went wrong, and a link to watch
+  the launch back. Lazily fetched and cached, so it costs nothing on a normal
+  visit
+- "Partial Failure" is no longer misread as a plain failure (the label contains
+  the word "failure", so it is now matched first)
+- Detail modals are noticeably wider on desktop, with a three-column detail grid
+  from 900px up (mobile keeps its full-screen sheet)
+- Added a previous-launches test suite (outcome mapping, cause extraction, watch
+  links, unsafe-URL rejection, feed shape)
+
 ## v3.4.1 — Controls, Motion & Startup
 
 - Buttons are now a solid graphite system (no gradients or blue tints); primary

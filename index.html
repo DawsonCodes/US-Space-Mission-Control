@@ -13,6 +13,27 @@
     <link rel="stylesheet" href="styles/layout.css" />
     <link rel="stylesheet" href="styles/components.css" />
     <link rel="stylesheet" href="styles/responsive.css" />
+    <script>
+      // Startup gate (ANIM-01). This runs synchronously in <head> so the
+      // dashboard is hidden BEFORE the first paint — otherwise the page shows
+      // for a frame and the overlay "pops" over it. Mirrors the skip rules in
+      // js/boot.js; anything unexpected falls through to showing the dashboard.
+      (function () {
+        try {
+          var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+          var booted = false;
+          try { booted = sessionStorage.getItem("us-space-mission-control-booted") === "1"; } catch (e) {}
+          var deepLink = /[?&]mission=/.test(window.location.search);
+          if (reduce || booted || deepLink) return;
+          var root = document.documentElement;
+          root.classList.add("is-booting");
+          // Failsafe: if the module never loads, never leave the page blank.
+          window.setTimeout(function () { root.classList.remove("is-booting"); }, 12000);
+        } catch (e) {
+          document.documentElement.classList.remove("is-booting");
+        }
+      })();
+    </script>
   </head>
   <body>
     <canvas id="starfield" aria-hidden="true"></canvas>
@@ -25,7 +46,8 @@
         <span id="bootTitle" class="boot-title">U.S. Space Mission Control</span>
         <div id="bootLoading" class="boot-loading">
           <span class="boot-spinner"></span>
-          <span class="boot-loading-text">Loading</span>
+          <span class="boot-check" aria-hidden="true">✓</span>
+          <span class="boot-loading-text" id="bootLoadingText">Loading</span>
         </div>
       </div>
     </div>
@@ -76,6 +98,7 @@
                 <button id="btnResetMenu" class="more-menu-item" type="button" role="menuitem">Reset filters</button>
                 <button id="btnUseDemo" class="more-menu-item" type="button" role="menuitem">Use demo data</button>
                 <button id="btnAbout" class="more-menu-item" type="button" role="menuitem">About this data</button>
+                <button id="btnPrevious" class="more-menu-item" type="button" role="menuitem">Previous launches</button>
                 <button id="btnLegend" class="more-menu-item" type="button" role="menuitem">Mission status legend</button>
               </div>
             </details>
@@ -377,6 +400,22 @@
       <div class="overlay-panel modal-panel" data-overlay-panel tabindex="-1">
         <button class="icon-btn modal-close" data-overlay-close type="button" aria-label="Close color customization">✕</button>
         <div id="orgColorsContent" class="details-content"></div>
+      </div>
+    </div>
+
+    <!-- Previous launches modal (lazy-loaded) -->
+    <div
+      id="previousModal"
+      class="overlay modal-overlay"
+      aria-hidden="true"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="previousTitle"
+    >
+      <div class="overlay-backdrop" data-overlay-backdrop></div>
+      <div class="overlay-panel modal-panel" data-overlay-panel tabindex="-1">
+        <button class="icon-btn modal-close" data-overlay-close type="button" aria-label="Close previous launches">✕</button>
+        <div id="previousContent" class="details-content"></div>
       </div>
     </div>
 

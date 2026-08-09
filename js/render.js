@@ -34,7 +34,11 @@ import {
   ORBIT_LABELS,
   LAUNCH_SITE_LABELS,
   normalizeStatus,
-  statusBadgeClass
+  statusBadgeClass,
+  launchOutcome,
+  outcomeBadgeClass,
+  OUTCOME_LABELS,
+  OUTCOME_MEANING
 } from "./organizations.js";
 import { resolveLaunchImage, launchImageAlt } from "./images.js";
 import { weatherCodeLabel, formatTemperature } from "./weather.js";
@@ -76,6 +80,9 @@ export const els = {
   aboutModal: document.getElementById("aboutModal"),
   aboutContent: document.getElementById("aboutContent"),
   legendModal: document.getElementById("legendModal"),
+  btnPrevious: document.getElementById("btnPrevious"),
+  previousModal: document.getElementById("previousModal"),
+  previousContent: document.getElementById("previousContent"),
   btnClearFilters: document.getElementById("btnClearFilters"),
   btnRandom: document.getElementById("btnRandom"),
   btnSaved: document.getElementById("btnSaved"),
@@ -1241,4 +1248,75 @@ export function renderAll({ resultsEntrance = "none" } = {}) {
   renderCoverageNote();
   updateCountdownNodes();
   refreshFooterMeta();
+}
+
+
+// ----- Previous launches --------------------------------------------------
+// A lazy, self-contained panel listing recently completed launches from the
+// tracked providers, with an honest outcome label, the published cause when a
+// launch failed, and a link to watch the launch back.
+
+export function buildPreviousContent(launches, { state: viewState = "ok", message = "" } = {}) {
+  const head = `<h2 id="previousTitle" class="details-title">Previous launches</h2>`;
+
+  if (viewState === "loading") {
+    return `${head}<p class="previous-note">Loading recent launches…</p>`;
+  }
+  if (viewState === "error") {
+    return `${head}
+      <p class="previous-note is-error">${escapeHtml(message || "Couldn't load previous launches.")}</p>
+      <button class="btn" type="button" data-previous-retry>Try again</button>`;
+  }
+  if (!Array.isArray(launches) || launches.length === 0) {
+    return `${head}<p class="previous-note">No recent launches were returned for the tracked providers.</p>`;
+  }
+
+  const rows = launches
+    .map((launch) => {
+      const outcome = launchOutcome(launch);
+      const replay = safeUrl(launch.webcast);
+      const article = launch.official;
+
+      // Only failure/partial get a cause line, and we never invent one.
+      const cause =
+        outcome === "failure" || outcome === "partial"
+          ? `<p class="previous-cause">
+               <strong>What went wrong:</strong>
+               ${escapeHtml(launch.failReason || "No official cause has been published.")}
+             </p>`
+          : "";
+
+      const watch = replay
+        ? `<a class="card-link btn-small" href="${replay}" target="_blank" rel="noopener noreferrer" aria-label="${escapeHtml(`Watch ${launch.name}`)}">▶ Watch launch</a>`
+        : `<span class="previous-nowatch">No video available</span>`;
+
+      const readMore = article
+        ? `<a class="card-link btn-small" href="${article}" target="_blank" rel="noopener noreferrer">Mission page</a>`
+        : "";
+
+      return `
+        <article class="previous-item">
+          <div class="badge-row">
+            ${orgBadgesHtml(launch)}
+            <span class="badge ${outcomeBadgeClass(outcome)}">${escapeHtml(OUTCOME_LABELS[outcome])}</span>
+          </div>
+          <h3 class="previous-name">${escapeHtml(launch.name)}</h3>
+          <p class="previous-meta">
+            ${escapeHtml(formatDate(launch.net, launch.tzId))}
+            ${launch.rocket ? ` • ${escapeHtml(launch.rocket)}` : ""}
+            ${launch.location ? ` • ${escapeHtml(launch.location)}` : ""}
+          </p>
+          <p class="previous-meaning">${escapeHtml(OUTCOME_MEANING[outcome])}</p>
+          ${cause}
+          <div class="card-actions">${watch}${readMore}</div>
+        </article>`;
+    })
+    .join("");
+
+  return `${head}
+    <p class="previous-note">
+      The ${launches.length} most recent completed launches from the tracked providers.
+      Outcomes and any published failure cause come from Launch Library 2.
+    </p>
+    <div class="previous-list">${rows}</div>`;
 }
