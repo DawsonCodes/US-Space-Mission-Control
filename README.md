@@ -39,8 +39,8 @@ NASA, SpaceX, Blue Origin, Rocket Lab, ULA, and Firefly.
 
 - **Organization tabs** — *All tracked missions · NASA · SpaceX · Blue Origin ·
   Rocket Lab · ULA · Firefly*, the primary organization filter, kept in sync with
-  the clickable overview tiles. The tab strip scrolls horizontally on narrow
-  screens instead of wrapping.
+  the clickable overview tiles. The tab strip wraps onto multiple rows on narrow
+  screens so no organization is ever clipped.
 - **Featured-mission spotlight** — the next matching mission for the active
   organization + filters, with organization, mission-type, and orbital/suborbital
   badges, a live countdown, rocket/pad, launch-site weather, and quick actions.
@@ -164,6 +164,13 @@ paint.
   consolidated design tokens, and expanded the plain-Node CI validation
   (cache, status-lifecycle, and UI-state harnesses).
 
+## Motion
+
+Every animation is numbered, tagged in the source, and documented in
+[ANIMATIONS.md](ANIMATIONS.md) — including the startup title shimmer, the
+segmented countdown roll, and how each one behaves under
+`prefers-reduced-motion`.
+
 ## Tech stack
 
 - **Vanilla JavaScript** organized as native **ES modules** — no framework, no
@@ -224,6 +231,7 @@ tests/
   stale-cache.test.mjs     # Stale-cache fallback on refresh failure
   dup-refresh.test.mjs     # Duplicate-refresh prevention
   responsive-audit.test.mjs# Static responsive-safety guards
+  animations.test.mjs      # Boot sequence, countdown parts, animation catalog
   pagination.test.mjs      # Pagination-control visibility (+ the .btn[hidden] fix)
   theme.test.mjs           # Charcoal theme, input-clip fix, reduced-motion checks
   headless.test.mjs        # DOM-shim boot + render + UI-state harness

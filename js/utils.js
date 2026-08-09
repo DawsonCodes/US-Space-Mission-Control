@@ -152,9 +152,36 @@ export function getCountdownText(dateString) {
 
   const minutes = Math.floor(diff / minuteMs);
 
-  if (days > 0) return `${days}d ${hours}h ${minutes}m`;
-  if (hours > 0) return `${hours}h ${minutes}m`;
-  return `${minutes}m`;
+  const seconds = Math.floor((diff - minutes * minuteMs) / 1000);
+
+  if (days > 0) return `${days}d ${hours}h ${minutes}m ${seconds}s`;
+  if (hours > 0) return `${hours}h ${minutes}m ${seconds}s`;
+  if (minutes > 0) return `${minutes}m ${seconds}s`;
+  return `${seconds}s`;
+}
+
+// Structured countdown for the segmented hero display (ANIM-29). Returns null
+// for an unparseable date, and { passed: true } once the NET has gone by.
+export function getCountdownParts(dateString) {
+  const target = new Date(dateString);
+  if (Number.isNaN(target.getTime())) return null;
+
+  let diff = target.getTime() - Date.now();
+  if (diff <= 0) return { passed: true, days: 0, hours: 0, minutes: 0, seconds: 0 };
+
+  const dayMs = 1000 * 60 * 60 * 24;
+  const hourMs = 1000 * 60 * 60;
+  const minuteMs = 1000 * 60;
+
+  const days = Math.floor(diff / dayMs);
+  diff -= days * dayMs;
+  const hours = Math.floor(diff / hourMs);
+  diff -= hours * hourMs;
+  const minutes = Math.floor(diff / minuteMs);
+  diff -= minutes * minuteMs;
+  const seconds = Math.floor(diff / 1000);
+
+  return { passed: false, days, hours, minutes, seconds };
 }
 
 // Mission/organization classification now lives in organizations.js.

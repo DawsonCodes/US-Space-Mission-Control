@@ -12,6 +12,7 @@ import {
   formatCompactDate,
   getRelativeLabel,
   getCountdownText,
+  getCountdownParts,
   validTimeZone
 } from "./utils.js";
 import { isFavorite } from "./storage.js";
@@ -362,6 +363,11 @@ export function renderSavedCount() {
 // placeholder, and ten launch-card skeletons. Shimmer is CSS-driven and removed
 // for reduced-motion users. Real content replaces all of it cleanly.
 export function setLoadingState() {
+  // Counts are about to be replaced by a fresh dataset — drop the remembered
+  // values so the first real render shows finals instead of animating up from
+  // the previous manifest's numbers.
+  resetOverviewCountMemory();
+
   if (els.nextLaunchCard) {
     els.nextLaunchCard.innerHTML = `
       <div class="placeholder-card spotlight-skeleton" aria-hidden="true">
@@ -429,6 +435,42 @@ export function renderHeroMeta() {
   }
 }
 
+// ANIM-29 — Segmented countdown (days / hours / minutes / seconds). The visible
+// digits are decorative and aria-hidden; a .sr-only text copy carries the value
+// for assistive tech WITHOUT an aria-live region (which would otherwise announce
+// every single second).
+const CD_UNITS = [
+  ["days", "Days"],
+  ["hours", "Hrs"],
+  ["minutes", "Min"],
+  ["seconds", "Sec"]
+];
+
+function pad2(n) {
+  return String(Math.max(0, n)).padStart(2, "0");
+}
+
+function countdownUnitsHtml(net) {
+  const parts = getCountdownParts(net);
+  const label = getCountdownText(net);
+
+  if (!parts || parts.passed) {
+    return `<strong class="countdown-flat" data-countdown="${escapeHtml(net)}">${escapeHtml(label)}</strong>`;
+  }
+
+  const cells = CD_UNITS.map(
+    ([key, short]) => `
+      <span class="cd-unit">
+        <b class="cd-value" data-cd="${key}">${escapeHtml(key === "days" ? String(parts.days) : pad2(parts[key]))}</b>
+        <i class="cd-label">${escapeHtml(short)}</i>
+      </span>`
+  ).join('<span class="cd-sep" aria-hidden="true">:</span>');
+
+  return `
+    <span class="sr-only" data-countdown="${escapeHtml(net)}">${escapeHtml(label)}</span>
+    <span class="countdown-units" data-countdown-parts="${escapeHtml(net)}" aria-hidden="true">${cells}</span>`;
+}
+
 let lastHeroId = null;
 
 // Replay a restrained content transition when the featured mission changes.
@@ -490,7 +532,7 @@ export function renderHero() {
         </dl>
       </div>
       <div class="${ringClass}">
-        <strong data-countdown="${escapeHtml(launch.net)}">${escapeHtml(getCountdownText(launch.net))}</strong>
+        ${countdownUnitsHtml(launch.net)}
         <span>Countdown</span>
       </div>
     </div>
@@ -586,6 +628,10 @@ function animateOverviewNumbers() {
       return;
     }
     countUp(strong, from, to);
+    // ANIM-12: pop the digits so a changed count is felt, not just read.
+    strong.classList.remove("is-bumped");
+    void strong.offsetWidth; // restart the animation
+    strong.classList.add("is-bumped");
   });
 }
 
@@ -1136,7 +1182,37 @@ export function renderWeatherInto(container, result, options = {}) {
 
 export function updateCountdownNodes() {
   document.querySelectorAll("[data-countdown]").forEach((node) => {
-    node.textContent = getCountdownText(node.getAttribute("data-countdown"));
+    const next = getCountdownText(node.getAttribute("data-countdown"));
+    if (node.textContent === next) return; // no DOM write when nothing changed
+    node.textContent = next;
+    // ANIM-08: the details-modal countdown breathes on a real change; the hero
+    // uses the richer segmented roll below.
+    if (node.parentElement?.classList?.contains("details-countdown")) {
+      node.classList.remove("is-ticking");
+      void node.offsetWidth;
+      node.classList.add("is-ticking");
+    }
+  });
+
+  updateCountdownUnits();
+}
+
+// ANIM-29 — tick the segmented hero countdown, rolling only the digits whose
+// value actually changed (so the seconds roll every tick but days sit still).
+function updateCountdownUnits() {
+  document.querySelectorAll("[data-countdown-parts]").forEach((box) => {
+    const parts = getCountdownParts(box.getAttribute("data-countdown-parts"));
+    if (!parts) return;
+    for (const [key] of CD_UNITS) {
+      const cell = box.querySelector(`[data-cd="${key}"]`);
+      if (!cell) continue;
+      const next = key === "days" ? String(parts.days) : pad2(parts[key]);
+      if (cell.textContent === next) continue;
+      cell.textContent = next;
+      cell.classList.remove("is-rolling");
+      void cell.offsetWidth;
+      cell.classList.add("is-rolling");
+    }
   });
 }
 

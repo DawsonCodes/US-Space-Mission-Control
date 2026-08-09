@@ -3,6 +3,25 @@
 All notable changes to U.S. Space Mission Control are documented here. Dates use
 the release ordering; the project follows a simple semantic-style versioning.
 
+## v3.4.1 — Controls, Motion & Startup
+
+- Buttons are now a solid graphite system (no gradients or blue tints); primary
+  keeps its hierarchy through a lighter step of the same gray, and focus rings
+  are neutral
+- Organization tiles blend their accent into the charcoal with a soft gradient
+  instead of filling with flat colour (NASA reads as a light rose wash, not a
+  red block)
+- New startup sequence: the product title shimmers, flies into the hero, and the
+  dashboard reveals in a stagger (skipped for reduced motion, deep links, and
+  repeat visits in a tab)
+- Countdown now shows days / hours / minutes / seconds with per-digit roll
+  animations
+- Full animation pass — 29 documented animations, catalogued in ANIMATIONS.md
+- Fixed launch-card image distortion on hover (nested transforms forced bitmap
+  resampling; the image now gets its own compositor layer)
+- Fixed Mission Insights chips replaying their entrance on every keystroke
+- Fixed overview counts animating from a stale previous dataset after a reload
+
 ## v3.4.0 — Theme Polish
 
 - Reworked the background into a cleaner black / charcoal / graphite space theme
