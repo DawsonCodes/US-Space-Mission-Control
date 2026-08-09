@@ -24,11 +24,27 @@ Release history for U.S. Space Mission Control, newest first.
   200 upcoming launches instead of 100
 - Coverage messages now say how many launches are shown rather than just calling
   the list partial
+- Stopped refreshing launch data on every tab open when the cache is less than
+  15 minutes old. Launch Library allows about 15 requests an hour and the app
+  was spending that allowance re-fetching launches that had not moved, which is
+  what left the live API failing on reopen. Refresh data is still one click away
+- The app now recognises being rate limited and says so, with how long is left,
+  instead of showing a generic failure. It stops asking until the limit clears,
+  keeps showing cached launches and the stored previous window, and hides the
+  retry button when retrying cannot help
+- A failed extra page no longer discards the page already fetched
+- Mission details and previous-launch details now show the mission or rocket
+  image, filling the empty space in the modal
+- Fixed the split accent edge rendering as one colour. The solid single-colour
+  rule out-specified the gradient, so a shared mission never showed its split
+- Fixed the back button in previous-launch details stretching the full width of
+  the panel and running under the close button
 - Cut duplicated and low-value text from the dashboard, including the
   organization note that repeated the tab strip directly above it
 - Rewrote the README and this changelog to be shorter and plainer
-- Added four test suites for feed paging, the rolling store, accent edges and
-  the saved drawer
+- Added seven test suites covering feed paging, the rolling store, accent edges,
+  the saved drawer, the fresh-cache request budget, rate-limit handling and the
+  stylesheet rule that the accent bug slipped past
 
 ## v3.4.2 — Startup Polish & Previous Launches
 

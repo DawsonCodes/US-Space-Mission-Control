@@ -168,5 +168,80 @@ check("the forecast wording is untouched by the recorded mode", () => {
   assert.match(html, /Loading local weather/);
 });
 
+// ---------- stylesheet contract --------------------------------------------
+// The split gradient lives in CSS, so the markup tests above cannot see it.
+// This bug shipped once: the solid single-colour rule was written with a class
+// plus an attribute, the split rule with a bare attribute, so the solid colour
+// out-specified the gradient and every shared mission rendered one colour.
+const cssSource = await import("node:fs").then((fs) =>
+  fs.readFileSync(new URL("../styles/components.css", import.meta.url), "utf8")
+);
+// Comments carry dots and brackets of their own, which would be counted as
+// selector weight below.
+const css = cssSource.replace(/\/\*[\s\S]*?\*\//g, "");
+
+// Rough specificity for the simple selectors used here: (classes, attributes).
+function weight(selector) {
+  return (selector.match(/\./g) || []).length + (selector.match(/\[/g) || []).length;
+}
+
+function selectorsSettingStripeBackground(pattern) {
+  return css
+    .split("}")
+    .filter((block) => pattern.test(block) && /background:/.test(block))
+    .flatMap((block) => block.split("{")[0].split(",").map((s) => s.trim()))
+    .filter((s) => s.includes("::before"));
+}
+
+check("the split gradient out-specifies the solid single-colour stripe", () => {
+  const solid = selectorsSettingStripeBackground(/background:\s*var\(--accent-1/);
+  const split = selectorsSettingStripeBackground(/background:\s*linear-gradient\(\s*\n?\s*180deg,\s*\n?\s*var\(--accent-1\)\s+0\s+50%/);
+
+  assert.ok(solid.length > 0, "no solid stripe rule found");
+  assert.ok(split.length > 0, "no split stripe rule found");
+
+  const strongestSolid = Math.max(...solid.map(weight));
+  for (const selector of split) {
+    assert.ok(
+      weight(selector) >= strongestSolid,
+      `"${selector}" (${weight(selector)}) is weaker than the solid rule (${strongestSolid}); the split would never render`
+    );
+  }
+});
+
+check("every element type that can carry a stripe can also carry a split one", () => {
+  for (const cls of ["launch-card", "previous-item", "saved-card"]) {
+    assert.ok(
+      cssSource.includes(`.${cls}[data-accent-bands="2"]::before`),
+      `${cls} has no two-band rule`
+    );
+  }
+});
+
+check("the stripe bands use hard stops rather than a blend", () => {
+  // A gradient without repeated stops fades between colours; the design calls
+  // for a clean division at the midpoint.
+  assert.match(css, /var\(--accent-1\)\s+0\s+50%,\s*\n?\s*var\(--accent-2\)\s+50%\s+100%/);
+});
+
+// ---------- detail imagery -------------------------------------------------
+check("both detail views show mission imagery", () => {
+  const html = buildPreviousDetail({ ...flown, image: "https://example.com/rocket.jpg" });
+  assert.match(html, /details-media/);
+  assert.match(html, /example\.com\/rocket\.jpg/);
+});
+
+check("a launch with no usable image gets the neutral placeholder, not a broken img", () => {
+  const html = buildPreviousDetail({ ...flown, image: "", missionImage: "", rocketImage: "" });
+  assert.match(html, /details-media is-empty/);
+  assert.ok(!/<img/.test(html.split("details-actions")[0]));
+});
+
+check("an unsafe image URL is rejected rather than rendered", () => {
+  const html = buildPreviousDetail({ ...flown, image: "javascript:alert(1)", missionImage: "", rocketImage: "" });
+  assert.ok(!/javascript:/.test(html));
+  assert.match(html, /details-media is-empty/);
+});
+
 if (failures > 0) { console.error(`\n${failures} accent/detail test(s) failed.`); process.exit(1); }
 console.log("\nAll accent + previous-detail tests passed.");

@@ -544,8 +544,13 @@ select optgroup {
   transition: opacity var(--motion-normal) var(--ease-standard);
 }
 
-/* Hard stops, not a blend: each organization owns an exact share of the edge. */
-[data-accent-bands="2"]::before {
+/* Hard stops, not a blend: each organization owns an exact share of the edge.
+   These selectors must carry at least the specificity of the solid-colour rule
+   above, or the single-colour background wins and the split never renders. */
+.launch-card[data-accent-bands="2"]::before,
+.previous-item[data-accent-bands="2"]::before,
+.saved-card[data-accent-bands="2"]::before,
+.previous-detail-head[data-accent-bands="2"]::before {
   background: linear-gradient(
     180deg,
     var(--accent-1) 0 50%,
@@ -553,7 +558,10 @@ select optgroup {
   );
 }
 
-[data-accent-bands="3"]::before {
+.launch-card[data-accent-bands="3"]::before,
+.previous-item[data-accent-bands="3"]::before,
+.saved-card[data-accent-bands="3"]::before,
+.previous-detail-head[data-accent-bands="3"]::before {
   background: linear-gradient(
     180deg,
     var(--accent-1) 0 33.34%,
@@ -570,7 +578,7 @@ select optgroup {
 .saved-card[data-accent-bands="2"]::before,
 .saved-card[data-accent-bands="3"]::before {
   width: 4px;
-  opacity: 0.75;
+  opacity: 0.8;
 }
 
 /* Hover lift only on pointer-capable devices (never on touch). */
@@ -1052,11 +1060,67 @@ select optgroup {
   z-index: 2;
 }
 
+/* Mission imagery in the detail views ------------------------------------ */
+.details-media {
+  position: relative;
+  margin: 0;
+  height: 200px;
+  overflow: hidden;
+  isolation: isolate;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background:
+    linear-gradient(180deg, rgba(10, 11, 14, 0.2), rgba(8, 9, 12, 0.78)),
+    var(--bg-2);
+}
+
+.details-media img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* Own compositor layer, so the bitmap is never resampled mid-transition. */
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.details-media figcaption {
+  position: absolute;
+  inset: auto 0 0 0;
+  padding: 6px 10px;
+  background: linear-gradient(180deg, transparent, rgba(8, 9, 12, 0.85));
+  color: var(--muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+}
+
+.details-media.is-empty {
+  display: grid;
+  place-items: center;
+  height: 120px;
+  border-style: dashed;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
 /* Details content -------------------------------------------------------- */
 .details-content {
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+/* A flex column stretches its children, which turned standalone buttons into
+   full-width bars that ran under the absolutely-positioned close control. */
+.details-content > .btn {
+  align-self: flex-start;
+  max-width: calc(100% - 52px);
+}
+
+/* Keep the top-right corner clear for the ✕ on any panel heading. */
+.details-content > .details-title:first-child,
+.details-content > .details-head:first-child {
+  padding-right: 44px;
 }
 
 .details-head {
@@ -2654,7 +2718,15 @@ html.is-booting .boot[hidden] { display: grid; }
 }
 
 /* Detail view inside the panel ------------------------------------------- */
-.previous-back { margin-bottom: var(--space-4); }
+/* .details-content is a flex column, so a bare button would stretch the full
+   width and run under the absolutely-positioned close control. Shrink it to
+   its label and keep the top-right corner clear for the ✕. */
+.previous-back {
+  align-self: flex-start;
+  width: auto;
+  max-width: calc(100% - 52px);
+  margin-bottom: var(--space-2);
+}
 
 .previous-detail-head {
   position: relative;
@@ -2670,7 +2742,7 @@ html.is-booting .boot[hidden] { display: grid; }
   background: var(--accent-1, transparent);
   opacity: 0.8;
 }
-/* The shared [data-accent-bands] rules above supply the split gradient. */
+/* The split gradient comes from the [data-accent-bands] rules above. */
 
 .previous-name {
   margin: 0;

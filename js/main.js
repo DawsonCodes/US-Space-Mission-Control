@@ -259,11 +259,14 @@ function startInitialLoad() {
   if (isUsableCache(cache)) {
     renderManifest(cache.launches, cache.truncated, "cache", cache.savedAt, { entrance: "none" });
     if (cache.freshness === "fresh") {
-      setStatus("Showing cached launch data while refreshing…", "info");
+      // Data this recent is not worth a request. LL2 allows about 15 an hour,
+      // and refreshing on every tab open was spending the whole allowance on
+      // launches that had not moved. Refresh data is still one click away.
+      setStatus(`Showing launch data from ${cacheAgeLabel(cache.ageMs)}. Use Refresh data for the latest.`, "info");
     } else {
       setStatus(`Showing cached launch data from ${cacheAgeLabel(cache.ageMs)} while refreshing…`, "warning");
+      refreshLive({ background: true });
     }
-    refreshLive({ background: true });
   } else {
     if (cache && cache.freshness === "expired") {
       clearLaunchCache();
@@ -277,6 +280,17 @@ function startInitialLoad() {
 // Short conservative delay before a single automatic retry when the very first
 // (uncached) load fails transiently. Never retries endlessly.
 const STARTUP_RETRY_DELAY_MS = 2500;
+
+// Minutes until an LL2 cooldown expires, rounded up so "0 minutes" is never
+// shown to someone who still has to wait.
+function cooldownLabel(until) {
+  const minutes = Math.max(1, Math.ceil((until - Date.now()) / 60000));
+  return minutes === 1 ? "about a minute" : `about ${minutes} minutes`;
+}
+
+function rateLimitMessage(error) {
+  return `Launch Library is rate limiting this browser. It allows about 15 requests an hour. Try again in ${cooldownLabel(error.until || Date.now())}.`;
+}
 
 function partialCoverageMessage(failedFeeds) {
   if (failedFeeds.includes("providers")) {
@@ -326,7 +340,17 @@ async function refreshLive({ background = false, manual = false, attempt = 0 } =
       if (state.dataSource !== "cache" || state.launches.length === 0) {
         renderManifest(cache.launches, cache.truncated, "cache", cache.savedAt, { entrance: "none" });
       }
-      setStatus(`Showing cached launch data from ${cacheAgeLabel(cache.ageMs)} because the live refresh failed.`, "warning");
+      setStatus(
+        error?.rateLimited
+          ? `Showing cached launch data from ${cacheAgeLabel(cache.ageMs)}. ${rateLimitMessage(error)}`
+          : `Showing cached launch data from ${cacheAgeLabel(cache.ageMs)} because the live refresh failed.`,
+        "warning"
+      );
+    } else if (error?.rateLimited) {
+      // Retrying is guaranteed to fail and would extend the cooldown, so stop.
+      setStatus(`${rateLimitMessage(error)} Demo data works in the meantime.`, "error");
+      if (state.launches.length === 0) renderLoadError();
+      signalBootReady();
     } else if (!background && !manual && attempt === 0) {
       // No usable cache on first load: retry exactly once after a short delay.
       setStatus("Live data didn't load. Retrying shortly…", "loading");
@@ -504,7 +528,10 @@ async function loadPreviousInto({ force = false } = {}) {
     if (error?.name === "AbortError" && controller.signal.aborted) return;
     els.previousContent.innerHTML = buildPreviousContent([], {
       state: "error",
-      message: "Couldn't load previous launches. The launch API may be busy — try again."
+      message: error?.rateLimited
+        ? rateLimitMessage(error)
+        : "Couldn't load previous launches. The launch API may be busy. Try again in a moment.",
+      retry: !error?.rateLimited
     });
   } finally {
     if (previousRequest === controller) previousRequest = null;

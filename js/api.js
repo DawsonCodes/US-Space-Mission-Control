@@ -9,7 +9,9 @@ import {
   API_NASA,
   API_PREVIOUS,
   FEED_MAX_PAGES,
-  NETWORK_TIMEOUT_MS
+  NETWORK_TIMEOUT_MS,
+  RATE_LIMIT_COOLDOWN_MS,
+  STORAGE_KEYS
 } from "./config.js";
 import { saveLaunchCache } from "./storage.js";
 import {
@@ -220,8 +222,49 @@ export function dedupeMerge(...lists) {
   return Array.from(map.values()).sort((x, y) => new Date(x.net) - new Date(y.net));
 }
 
+// ---- Rate limiting --------------------------------------------------------
+// LL2 answers 429 once the hourly allowance is gone. Retrying through that just
+// burns the next hour too, so the refusal is remembered across reloads and the
+// UI is told how long is left instead of being shown a generic failure.
+
+export function rateLimitedUntil(now = Date.now()) {
+  try {
+    const until = Number(localStorage.getItem(STORAGE_KEYS.cooldown)) || 0;
+    return until > now ? until : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function startCooldown(now = Date.now()) {
+  const until = now + RATE_LIMIT_COOLDOWN_MS;
+  try {
+    localStorage.setItem(STORAGE_KEYS.cooldown, String(until));
+  } catch {
+    /* best effort */
+  }
+  return until;
+}
+
+export function clearRateLimit() {
+  try {
+    localStorage.removeItem(STORAGE_KEYS.cooldown);
+  } catch {
+    /* ignore */
+  }
+}
+
+function rateLimitError(until) {
+  const error = new Error("Launch API rate limit reached");
+  error.name = "RateLimitError";
+  error.rateLimited = true;
+  error.until = until;
+  return error;
+}
+
 async function fetchFeed(url, signal) {
   const response = await fetch(url, { method: "GET", signal });
+  if (response.status === 429) throw rateLimitError(startCooldown());
   if (!response.ok) throw new Error(`Launch API returned ${response.status}`);
   const json = await response.json();
   const results = Array.isArray(json?.results) ? json.results : [];
@@ -239,9 +282,16 @@ async function fetchFeedPaged(url, signal, maxPages = FEED_MAX_PAGES) {
 
   for (let page = 1; page < maxPages; page += 1) {
     if (results.length === 0 || first.count <= results.length) break;
-    const next = await fetchFeed(`${url}&offset=${results.length}`, signal);
-    if (next.results.length === 0) break;
-    results = results.concat(next.results);
+    try {
+      const next = await fetchFeed(`${url}&offset=${results.length}`, signal);
+      if (next.results.length === 0) break;
+      results = results.concat(next.results);
+    } catch (error) {
+      // An extra page is a bonus, never a requirement. Keep the page we already
+      // have and let `truncated` report the shortfall honestly.
+      if (error?.name === "AbortError") throw error;
+      break;
+    }
   }
 
   return { results, count: first.count };
@@ -261,6 +311,9 @@ async function fetchFeedPaged(url, signal, maxPages = FEED_MAX_PAGES) {
 // hung request; an optional external `signal` lets the caller cancel a refresh
 // when a newer one supersedes it (so there are never duplicate in-flight loads).
 export async function fetchLiveLaunches({ signal } = {}) {
+  const until = rateLimitedUntil();
+  if (until) throw rateLimitError(until);
+
   const controller = new AbortController();
   const timeout = setTimeout(() => {
     controller.abort(new DOMException("Network timeout", "AbortError"));
@@ -323,6 +376,14 @@ export async function fetchLiveLaunches({ signal } = {}) {
 export async function fetchPreviousLaunches({ signal, force = false } = {}) {
   const stored = readPreviousStore();
   if (!force && stored.fresh && stored.launches.length > 0) return stored.launches;
+
+  // Cooling off: a stored window is far better than an error the user can do
+  // nothing about, so show what we have and only complain when we have nothing.
+  const until = rateLimitedUntil();
+  if (until) {
+    if (stored.launches.length > 0) return stored.launches;
+    throw rateLimitError(until);
+  }
 
   const controller = new AbortController();
   const timeout = setTimeout(() => {

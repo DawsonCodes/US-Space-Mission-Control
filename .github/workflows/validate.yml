@@ -50,6 +50,12 @@ jobs:
       - name: Cache-first flow integration
         run: node tests/cache-flow.test.mjs
 
+      - name: Fresh-cache request budget (no needless API calls)
+        run: node tests/cache-fresh.test.mjs
+
+      - name: Launch API rate-limit handling
+        run: node tests/rate-limit.test.mjs
+
       - name: Status-banner lifecycle tests
         run: node tests/status.test.mjs
 
