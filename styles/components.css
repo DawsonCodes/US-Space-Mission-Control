@@ -517,25 +517,60 @@ select optgroup {
     box-shadow var(--motion-normal) var(--ease-standard);
 }
 
-/* Thin provider-accent edge (single accent per card; no rainbow). */
-.launch-card[data-accent="nasa"] { --card-accent: var(--org-nasa); }
-.launch-card[data-accent="spacex"] { --card-accent: var(--org-spacex); }
-.launch-card[data-accent="blue-origin"] { --card-accent: var(--org-blueorigin); }
-.launch-card[data-accent="rocket-lab"] { --card-accent: var(--org-rocketlab); }
-.launch-card[data-accent="ula"] { --card-accent: var(--org-ula); }
-.launch-card[data-accent="firefly"] { --card-accent: var(--org-firefly); }
+/* Organization accent edge -----------------------------------------------
+   One band per organization on the launch. A single organization gets a solid
+   stripe; a shared mission (a NASA payload on a SpaceX rocket) splits the edge
+   into equal bands, so a joint launch is readable at a glance. The band colours
+   arrive as inline --accent-1..3 custom properties pointing at the live :root
+   org tokens, so customizing a colour restyles every stripe instantly. */
+.launch-card[data-accent],
+.previous-item[data-accent],
+.saved-card[data-accent] {
+  --card-accent: var(--accent-1, var(--accent));
+}
 
-.launch-card[data-accent]::before {
+.launch-card[data-accent]::before,
+.previous-item[data-accent]::before,
+.saved-card[data-accent]::before {
   content: "";
   position: absolute;
   inset: 0 auto 0 0;
   width: 3px;
   border-radius: var(--radius-lg) 0 0 var(--radius-lg);
-  background: var(--card-accent, transparent);
+  background: var(--accent-1, transparent);
   opacity: 0.55;
   pointer-events: none;
   z-index: 1;
   transition: opacity var(--motion-normal) var(--ease-standard);
+}
+
+/* Hard stops, not a blend: each organization owns an exact share of the edge. */
+[data-accent-bands="2"]::before {
+  background: linear-gradient(
+    180deg,
+    var(--accent-1) 0 50%,
+    var(--accent-2) 50% 100%
+  );
+}
+
+[data-accent-bands="3"]::before {
+  background: linear-gradient(
+    180deg,
+    var(--accent-1) 0 33.34%,
+    var(--accent-2) 33.34% 66.67%,
+    var(--accent-3) 66.67% 100%
+  );
+}
+
+/* A split edge earns a little more presence so the division is obvious. */
+.launch-card[data-accent-bands="2"]::before,
+.launch-card[data-accent-bands="3"]::before,
+.previous-item[data-accent-bands="2"]::before,
+.previous-item[data-accent-bands="3"]::before,
+.saved-card[data-accent-bands="2"]::before,
+.saved-card[data-accent-bands="3"]::before {
+  width: 4px;
+  opacity: 0.75;
 }
 
 /* Hover lift only on pointer-capable devices (never on touch). */
@@ -868,18 +903,6 @@ select optgroup {
   color: #d6ffe9;
 }
 
-/* Destructive remove (× Remove) in the saved drawer — red, never green. */
-.favorite-btn.is-remove {
-  border-color: rgba(255, 128, 142, 0.5);
-  background-color: rgba(255, 128, 142, 0.14);
-  color: #ffc1c9;
-}
-
-.favorite-btn.is-remove:hover {
-  border-color: rgba(255, 128, 142, 0.7);
-  background-color: rgba(255, 128, 142, 0.22);
-}
-
 /* Clear all — red-outline destructive action. */
 .btn-danger-outline {
   border-color: rgba(255, 128, 142, 0.5);
@@ -1145,26 +1168,160 @@ select optgroup {
   font-size: 0.92rem;
 }
 
-/* Saved-mission cards ---------------------------------------------------- */
-.saved-card {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  padding: 14px;
-  background-color: rgba(255, 255, 255, 0.04);
+/* Saved-mission drawer --------------------------------------------------- */
+.drawer-head h2 {
+  font-size: 1.05rem;
+  letter-spacing: 0.01em;
 }
 
-.saved-card h3 {
-  margin: 0;
-  font-size: 1rem;
-}
-
-.saved-card p {
+.saved-summary {
   margin: 0;
   color: var(--muted);
-  font-size: 0.86rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.saved-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.saved-card {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 12px 14px 12px 16px;
+  background-color: rgba(255, 255, 255, 0.035);
+  transition:
+    border-color var(--motion-normal) var(--ease-standard),
+    background-color var(--motion-normal) var(--ease-standard);
+}
+
+@media (hover: hover) {
+  .saved-card:hover {
+    background-color: rgba(255, 255, 255, 0.06);
+    border-color: color-mix(in srgb, var(--card-accent, var(--accent)) 40%, transparent);
+  }
+}
+
+/* A launch whose time has passed stays readable but stops competing. */
+.saved-card.is-past { opacity: 0.62; }
+
+.saved-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.saved-card-head .badge-row {
+  gap: 4px;
+  min-width: 0;
+}
+
+/* The remove control sits quiet until you reach for the card. */
+.saved-remove {
+  flex: none;
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1;
+  opacity: 0.45;
+  transition:
+    opacity var(--motion-fast) var(--ease-standard),
+    color var(--motion-fast) var(--ease-standard),
+    background-color var(--motion-fast) var(--ease-standard);
+}
+
+.saved-card:hover .saved-remove,
+.saved-card:focus-within .saved-remove { opacity: 1; }
+
+.saved-remove:hover,
+.saved-remove:focus-visible {
+  color: #ffc1c9;
+  background-color: rgba(255, 128, 142, 0.14);
+  border-color: rgba(255, 128, 142, 0.35);
+  opacity: 1;
+}
+
+.saved-name {
+  margin: 0;
+  font-size: 0.98rem;
+  line-height: 1.3;
+}
+
+.saved-meta {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.saved-date { color: var(--text); opacity: 0.8; }
+.saved-place { overflow-wrap: anywhere; min-width: 0; }
+
+.saved-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.saved-flown {
+  color: var(--muted);
+  font-size: 0.8rem;
+  letter-spacing: 0.03em;
+}
+
+.saved-empty {
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  padding: 40px 20px;
+  text-align: center;
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-lg);
+  background-color: rgba(255, 255, 255, 0.02);
+  color: var(--muted);
+}
+
+.saved-empty-icon {
+  font-size: 1.8rem;
+  line-height: 1;
+  opacity: 0.5;
+}
+
+.saved-empty strong {
+  color: var(--text);
+  font-size: 0.98rem;
+}
+
+.saved-empty-text {
+  font-size: 0.85rem;
+  line-height: 1.5;
+  max-width: 30ch;
+}
+
+.drawer-foot {
+  display: flex;
+  justify-content: flex-end;
 }
 
 /* Empty & loading states ------------------------------------------------- */
@@ -1317,14 +1474,6 @@ select optgroup {
   outline: none;
   border-color: var(--focus-ring);
   box-shadow: 0 0 0 4px var(--focus-ring-glow);
-}
-
-.org-scope-note {
-  margin: 12px 0 0;
-  max-width: 60ch;
-  color: var(--muted);
-  font-size: 0.82rem;
-  line-height: 1.5;
 }
 
 /* More menu (native <details> disclosure) -------------------------------- */
@@ -2485,14 +2634,43 @@ html.is-booting .boot[hidden] { display: grid; }
 }
 
 .previous-item {
+  position: relative;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
   padding: var(--space-4);
+  padding-left: calc(var(--space-4) + 4px);
   border: var(--border-subtle);
   border-radius: var(--radius-md);
   background-color: rgba(255, 255, 255, 0.03);
+  transition: border-color var(--motion-normal) var(--ease-standard);
 }
+
+@media (hover: hover) {
+  .previous-item:hover {
+    border-color: color-mix(in srgb, var(--card-accent, var(--accent)) 40%, transparent);
+  }
+}
+
+/* Detail view inside the panel ------------------------------------------- */
+.previous-back { margin-bottom: var(--space-4); }
+
+.previous-detail-head {
+  position: relative;
+  padding-left: calc(var(--space-3) + 4px);
+}
+
+.previous-detail-head[data-accent]::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-1, transparent);
+  opacity: 0.8;
+}
+/* The shared [data-accent-bands] rules above supply the split gradient. */
 
 .previous-name {
   margin: 0;

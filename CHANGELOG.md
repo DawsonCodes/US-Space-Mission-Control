@@ -1,154 +1,164 @@
 # Changelog
 
-All notable changes to U.S. Space Mission Control are documented here. Dates use
-the release ordering; the project follows a simple semantic-style versioning.
+Release history for U.S. Space Mission Control, newest first.
+
+## v3.4.3 — Previous Launch Details, Accents & Cleanup
+
+- Previous launches now open a full detail view with the mission description,
+  rocket, pad, orbit, agencies, outcome, published cause and a pad map
+- Added the weather recorded at liftoff to that view, from Open-Meteo. It is
+  fetched once per launch and stored with it, so reopening a launch costs
+  nothing and the weather source is barely touched
+- The Previous launches panel is now a rolling window of the 20 most recent
+  completed launches. A new launch enters the top, the oldest drops off, and its
+  stored weather goes with it, so the saved data cannot grow
+- Launch cards, saved missions and previous launches now carry a coloured edge
+  for the organization flying them. A mission shared by two organizations splits
+  the edge into a band for each, so a NASA payload on a SpaceX rocket reads as
+  both at a glance
+- Redesigned the saved missions drawer. Soonest first, launches that already
+  flew sink to the bottom and are labelled, a count of what is still ahead, a
+  quieter remove control and a clearer empty state
+- Launch feeds are now paged. Launch Library 2 returns at most 100 records per
+  request, so a feed with more than that follows one extra page and covers up to
+  200 upcoming launches instead of 100
+- Coverage messages now say how many launches are shown rather than just calling
+  the list partial
+- Cut duplicated and low-value text from the dashboard, including the
+  organization note that repeated the tab strip directly above it
+- Rewrote the README and this changelog to be shorter and plainer
+- Added four test suites for feed paging, the rolling store, accent edges and
+  the saved drawer
 
 ## v3.4.2 — Startup Polish & Previous Launches
 
-- Startup no longer flashes the dashboard before the overlay appears (a
-  synchronous head gate applies the pre-boot state before first paint), so the
-  title screen is genuinely the first thing on screen
-- The boot overlay now shows the real charcoal starfield background instead of a
-  flat panel, so it reads as part of the same space theme
-- The sequence confirms with "Loaded" under the title, then flies the title into
-  its dashboard position
-- New **Previous launches** panel (More menu): recently completed launches from
-  the tracked providers with an honest Success / Partial failure / Failure
-  outcome, the published cause when something went wrong, and a link to watch
-  the launch back. Lazily fetched and cached, so it costs nothing on a normal
-  visit
-- "Partial Failure" is no longer misread as a plain failure (the label contains
-  the word "failure", so it is now matched first)
-- Detail modals are noticeably wider on desktop, with a three-column detail grid
-  from 900px up (mobile keeps its full-screen sheet)
-- Added a previous-launches test suite (outcome mapping, cause extraction, watch
-  links, unsafe-URL rejection, feed shape)
+- Fixed the dashboard flashing on screen before the loading overlay appeared. A
+  head gate applies the pre-boot state before first paint, so the title screen is
+  the first thing you see
+- The boot overlay now uses the real starfield background instead of a flat
+  panel
+- The startup sequence confirms with "Loaded" under the title, then flies the
+  title into its dashboard position
+- Added a Previous launches panel to the More menu, with a Success, Partial
+  failure or Failure outcome, the published cause when something went wrong, and
+  a link to watch the launch back
+- Fixed "Partial Failure" being read as a plain failure, since the label
+  contains the word failure
+- Detail modals are wider on desktop with a three-column grid from 900px up.
+  Mobile keeps its full-screen sheet
 
 ## v3.4.1 — Controls, Motion & Startup
 
-- Buttons are now a solid graphite system (no gradients or blue tints); primary
-  keeps its hierarchy through a lighter step of the same gray, and focus rings
-  are neutral
-- Organization tiles blend their accent into the charcoal with a soft gradient
-  instead of filling with flat colour (NASA reads as a light rose wash, not a
-  red block)
-- New startup sequence: the product title shimmers, flies into the hero, and the
-  dashboard reveals in a stagger (skipped for reduced motion, deep links, and
-  repeat visits in a tab)
-- Countdown now shows days / hours / minutes / seconds with per-digit roll
-  animations
-- Full animation pass — 29 documented animations, catalogued in ANIMATIONS.md
-- Fixed launch-card image distortion on hover (nested transforms forced bitmap
-  resampling; the image now gets its own compositor layer)
-- Fixed Mission Insights chips replaying their entrance on every keystroke
-- Fixed overview counts animating from a stale previous dataset after a reload
-- Startup now shimmers the title, shows a Loading spinner, holds for at least
-  three seconds (longer if data needs it), then flies the title into the hero
-- The shimmer no longer makes the title vanish — the gradient tiles so every
+- Buttons are now a solid graphite system with no gradients or blue tints.
+  Primary keeps its hierarchy through a lighter step of the same gray
+- Organization tiles blend their accent into the charcoal instead of filling
+  with flat colour, so NASA reads as a light rose wash rather than a red block
+- Added the startup sequence. The title shimmers, a loading spinner holds for at
+  least three seconds, then the title flies into the hero and the dashboard
+  reveals in a stagger. Skipped for reduced motion, deep links and repeat visits
+- The shimmer no longer makes the title vanish. The gradient tiles, so every
   glyph stays painted and only the highlight moves
-- Countdowns everywhere (cards, details modal, saved drawer) use the segmented
-  D/H/M/S rolling display; cards drop the vague "in 22 days" label for it
-- Save keeps its green pill but the star turns gold and fires a confetti burst;
-  the button no longer jumps, and the Saved tile count updates instantly
-- Button hover sheen parks at the left instead of snapping back to the right
-- Fixed long select labels ("All mission types") clipping, and the typewriter
-  search hint being truncated to an unreadable "…"
+- Countdowns everywhere now show days, hours, minutes and seconds with per-digit
+  roll animations. Cards dropped the vague "in 22 days" label for it
+- Save keeps its green pill, the star turns gold and fires a confetti burst, the
+  button no longer jumps, and the saved count updates instantly
+- Fixed launch-card image distortion on hover. Nested transforms were forcing
+  bitmap resampling; the image now gets its own compositor layer
+- Fixed Mission Insights chips replaying their entrance on every keystroke
+- Fixed overview counts animating up from a stale dataset after a reload
+- Fixed the button hover sheen snapping back to the right at the end
+- Fixed long select labels clipping, and the typewriter search hint truncating
+  to an unreadable ellipsis
+- Full animation pass, 29 animations catalogued in ANIMATIONS.md
 
 ## v3.4.0 — Theme Polish
 
-- Reworked the background into a cleaner black / charcoal / graphite space theme
-  with much less blue wash (panels, cards, and the spotlight tuned toward
-  charcoal while keeping content contrast strong)
-- Subtler, neutral-gray starfield with infrequent, elegant gradient
-  shooting-star streaks (frozen/disabled under reduced motion)
-- Fixed search/input text clipping with an explicit line-height + fixed input
-  height and normalized search-field appearance
-- Fixed the long-standing pagination bug: "Load 10 more" / "Show all" now hide
-  correctly (an HTML `hidden` attribute was being overridden by `.btn`'s
-  `display`); the empty pagination row also collapses
-- Added pagination-visibility and theme/input-clipping test suites
-- Bug audit: no unrelated bugs found that warranted a fix in this patch
+- Reworked the background into a black, charcoal and graphite space theme with
+  much less blue wash
+- Subtler gray starfield with infrequent shooting-star streaks, frozen under
+  reduced motion
+- Fixed search and input text clipping with an explicit line height and fixed
+  input height
+- Fixed a long-standing pagination bug where Load more and Show all failed to
+  hide, because the HTML hidden attribute was overridden by the button display
+  rule. The empty pagination row now collapses too
+- Added pagination and theme test suites
 
 ## v3.3.1 — Launch Stabilization
 
-- Full mobile responsive repair: no page-level horizontal overflow or forced
-  zoom-out; long mission names/locations wrap; hero, modal, and saved drawer fit
-  and scroll cleanly on small screens
-- Redesigned hero organization selector into a clean wrapping layout (every
-  provider always visible, no desktop horizontal scrolling, no clipped pill)
-- Distinct, centralized organization color system (one accent family per
-  organization) applied to pills, badges, on-image badges, and overview tiles
-- Locally-saved organization-color customization with curated accessible swatches,
-  live preview, Reset to defaults, and malformed-storage safety
-- Typewriter-style animated search hint (stops on focus/typing, pauses while the
-  tab is hidden, static placeholder for reduced motion)
-- Mission Overview redesign: balanced responsive grid, clearer selected state,
-  quieter overlap note, non-clipping labels
-- API startup resilience: partial-success handling (one feed can fail without
-  destroying the dashboard), honest partial-coverage and stale-cache messages, and
-  a single bounded retry when the first uncached load fails
-- Expanded plain-Node CI validation (org colors, search hint, API resilience,
-  retry, stale-cache, duplicate-refresh, responsive audit)
+- Full mobile repair. No horizontal overflow or forced zoom-out, long names
+  wrap, and the hero, modal and drawer fit and scroll cleanly
+- Redesigned the hero organization selector into a wrapping layout, so every
+  provider is visible with no horizontal scrolling or clipped pills
+- Added a distinct colour per organization across pills, badges and tiles
+- Added organization colour customization with curated accessible swatches,
+  live preview and a reset, saved on the device
+- Added the typewriter search hint, which stops on focus and pauses when the tab
+  is hidden
+- Redesigned Mission Overview with a balanced grid and non-clipping labels
+- Hardened startup. One feed can fail without breaking the dashboard, stale
+  cache stays usable with an honest notice, and a failed first load retries once
+- Expanded CI validation
 
-## v3.3.0 — Interface, Motion & Performance Polish
+## v3.3.0 — Interface, Motion & Performance
 
-- Premium visual refresh across the hero, overview, filters, cards, overlays, drawer, More menu, and footer
-- Centralized CSS motion system with reduced-motion support
-- Animated organization tabs, overview counts, Mission Insights, featured missions, result cards, and saved states
-- Cache-first launch-data rendering with honest stale-data fallback
-- Background live-data refresh
-- Improved initial loading experience with skeleton states and progressive status messaging
-- Status-banner synchronization hardening
-- Responsive-layout audit for desktop, tablet, and mobile
-- Accessibility polish
-- CSS token cleanup
-- Careful dead-code and unused-asset cleanup
-- Expanded plain-Node GitHub Actions validation
+- Visual refresh across the hero, overview, filters, cards, overlays, drawer,
+  More menu and footer
+- Added a centralized CSS motion system with full reduced-motion support
+- Animated organization tabs, overview counts, insights, featured missions,
+  result cards and saved states
+- Added cache-first launch data with an honest stale-data fallback and a
+  background refresh
+- Added skeleton loading states and progressive status messaging
+- Hardened status-banner synchronization
+- Responsive audit, accessibility polish and CSS token cleanup
+- Removed dead code and unused assets
+- Expanded CI validation
 
 ## v3.2.0 — Provider Expansion & Mission Tools
-- ULA (United Launch Alliance) support — tab, overview tile, badges, filters, demo data, tests
-- Firefly Aerospace support — tab, overview tile, badges, filters, demo data, tests
-- Responsive provider navigation (horizontally scrollable tab strip on narrow screens)
-- Date-range filter (next 24 hours / 7 days / 30 days / this year)
-- Launch-site filter (Cape Canaveral, Kennedy, Vandenberg, Wallops, Rocket Lab LC-1, other)
-- Orbit filter (LEO, SSO, GTO, GEO, MEO, polar, lunar, interplanetary, suborbital, unknown)
-- Launch-site time mode (uses the pad timezone when available, with an honest fallback)
-- Add-to-calendar `.ics` downloads (client-side, no dependency, UTC timestamps)
-- Shareable mission deep links (`?mission=<id>`, copy link, auto-open, Back-button aware)
-- Expanded Mission Insights (now ten metrics, including providers represented)
-- About this data panel (sources, counts, status, tracked organizations)
-- Mission status legend
-- GitHub Actions validation workflow (plain Node, no package manager)
+
+- Added ULA and Firefly Aerospace, with tabs, tiles, badges, filters and demo
+  data
+- Added a scrollable provider tab strip for narrow screens
+- Added date range, launch site and orbit filters
+- Added launch-site time mode, using the pad timezone when available
+- Added calendar file downloads, generated client-side
+- Added shareable mission deep links that are Back-button aware
+- Expanded Mission Insights to ten metrics
+- Added the About this data panel and the mission status legend
+- Added the GitHub Actions validation workflow
 
 ## v3.1.0 — Rocket Lab & Mission Insights
-- Rocket Lab provider support
-- Mission Insights
-- keyless OpenStreetMap pad maps
-- honest webcast-availability styling
-- neutral fallback imagery
-- More menu and pagination fixes
+
+- Added Rocket Lab
+- Added Mission Insights
+- Added keyless OpenStreetMap pad maps
+- Added honest webcast availability styling and neutral fallback imagery
+- Fixed the More menu and pagination
 
 ## v3.0.0 — U.S. Space Mission Control
-- rebrand from SpaceX Mission Control
-- NASA, SpaceX, and Blue Origin support
-- organization tabs and overlap model
-- mission overview redesign
-- improved modal and saved drawer
+
+- Rebranded from SpaceX Mission Control
+- Added NASA and Blue Origin alongside SpaceX
+- Added organization tabs and the overlap model
+- Redesigned Mission Overview, the modal and the saved drawer
 
 ## v2.1.1 — Final SpaceX Mission Control Hotfix
-- random mission behavior fix
-- synchronized status countdown
+
+- Fixed random mission behavior
+- Synchronized the status countdown
 
 ## v2.1.0 — UI Overhaul & Weather
-- major UI overhaul
-- Open-Meteo weather
-- Fahrenheit and Celsius display
-- modal, drawer, pagination, and polish
+
+- Major UI overhaul
+- Added Open-Meteo weather in Fahrenheit and Celsius
+- Modal, drawer and pagination polish
 
 ## v2.0.0 — Modular Refactor
-- native ES-module architecture
-- split stylesheets
-- recruiter-facing documentation
+
+- Moved to native ES modules and split stylesheets
+- Added recruiter-facing documentation
 
 ## v1.0.0 — Initial AP CSP Project
-- original SpaceX launch tracker
+
+- The original SpaceX launch tracker

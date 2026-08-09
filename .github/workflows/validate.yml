@@ -86,5 +86,17 @@ jobs:
       - name: Previous-launches outcome + panel tests
         run: node tests/previous.test.mjs
 
+      - name: Previous-launch rolling store (eviction + recorded weather)
+        run: node tests/previous-store.test.mjs
+
+      - name: Feed paging (LL2 100-record cap)
+        run: node tests/feed-paging.test.mjs
+
+      - name: Organization accent edges + previous-launch detail
+        run: node tests/accents.test.mjs
+
+      - name: Saved-missions drawer
+        run: node tests/saved-drawer.test.mjs
+
       - name: Headless UI / render harness
         run: node tests/headless.test.mjs

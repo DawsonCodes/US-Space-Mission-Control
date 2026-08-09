@@ -8,11 +8,15 @@ import {
   API_PROVIDERS,
   API_NASA,
   API_PREVIOUS,
-  PREVIOUS_TTL_MS,
-  STORAGE_KEYS,
+  FEED_MAX_PAGES,
   NETWORK_TIMEOUT_MS
 } from "./config.js";
 import { saveLaunchCache } from "./storage.js";
+import {
+  readPreviousStore,
+  writePreviousStore,
+  mergePreviousLaunches
+} from "./previous-store.js";
 import { isPublicMissionUrl } from "./utils.js";
 
 // Coerce a Launch Library latitude/longitude (often a numeric string) into a
@@ -225,6 +229,24 @@ async function fetchFeed(url, signal) {
   return { results, count };
 }
 
+// LL2 returns at most 100 records per request, so a feed that reports more
+// matches than it returned is followed onto the next page. Bounded by
+// FEED_MAX_PAGES so a large or misreported count can never spin the request
+// budget; anything still missing after that is reported as truncated.
+async function fetchFeedPaged(url, signal, maxPages = FEED_MAX_PAGES) {
+  const first = await fetchFeed(url, signal);
+  let results = first.results;
+
+  for (let page = 1; page < maxPages; page += 1) {
+    if (results.length === 0 || first.count <= results.length) break;
+    const next = await fetchFeed(`${url}&offset=${results.length}`, signal);
+    if (next.results.length === 0) break;
+    results = results.concat(next.results);
+  }
+
+  return { results, count: first.count };
+}
+
 // Network fetch of BOTH feeds CONCURRENTLY (provider feed + NASA mission-agency
 // feed), tolerant of a single feed failing. Normalizes, merges, and de-dupes by
 // stable id, then writes the fresh manifest to the cache. Returns
@@ -253,8 +275,8 @@ export async function fetchLiveLaunches({ signal } = {}) {
     // allSettled so one provider feed failing temporarily can't destroy a load
     // that otherwise has usable data.
     const [providersR, nasaR] = await Promise.allSettled([
-      fetchFeed(API_PROVIDERS, controller.signal),
-      fetchFeed(API_NASA, controller.signal)
+      fetchFeedPaged(API_PROVIDERS, controller.signal),
+      fetchFeedPaged(API_NASA, controller.signal)
     ]);
 
     const providersOk = providersR.status === "fulfilled";
@@ -275,13 +297,18 @@ export async function fetchLiveLaunches({ signal } = {}) {
     const truncated =
       providers.count > providers.results.length || nasa.count > nasa.results.length;
 
+    // Upper bound on what the feeds say exists. The two feeds overlap (a NASA
+    // mission on a SpaceX rocket is in both), so this is only used to say how
+    // much was left behind when the list is truncated.
+    const available = providers.count + nasa.count;
+
     const failedFeeds = [];
     if (!providersOk) failedFeeds.push("providers");
     if (!nasaOk) failedFeeds.push("nasa");
     const partial = failedFeeds.length > 0;
 
     saveLaunchCache({ launches, truncated });
-    return { launches, truncated, partial, failedFeeds };
+    return { launches, truncated, available, partial, failedFeeds };
   } finally {
     clearTimeout(timeout);
   }
@@ -289,35 +316,13 @@ export async function fetchLiveLaunches({ signal } = {}) {
 
 
 // ---- Previous launches (lazy) --------------------------------------------
-// Fetched only when the user opens the Previous launches panel, then cached in
-// sessionStorage so reopening it costs no extra LL2 request.
-
-function readPreviousCache(now = Date.now()) {
-  try {
-    const raw = sessionStorage.getItem(STORAGE_KEYS.previous);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (!parsed || !Array.isArray(parsed.launches)) return null;
-    if (now - Number(parsed.savedAt || 0) > PREVIOUS_TTL_MS) return null;
-    return parsed.launches;
-  } catch {
-    return null;
-  }
-}
-
-function writePreviousCache(launches, now = Date.now()) {
-  try {
-    sessionStorage.setItem(STORAGE_KEYS.previous, JSON.stringify({ savedAt: now, launches }));
-  } catch {
-    /* quota/serialization — the panel simply refetches next time */
-  }
-}
+// Fetched only when the user opens the Previous launches panel, then kept in a
+// fixed-size rolling store so reopening it costs no extra LL2 request and any
+// recorded weather already fetched is reused instead of refetched.
 
 export async function fetchPreviousLaunches({ signal, force = false } = {}) {
-  if (!force) {
-    const cached = readPreviousCache();
-    if (cached) return cached;
-  }
+  const stored = readPreviousStore();
+  if (!force && stored.fresh && stored.launches.length > 0) return stored.launches;
 
   const controller = new AbortController();
   const timeout = setTimeout(() => {
@@ -330,9 +335,13 @@ export async function fetchPreviousLaunches({ signal, force = false } = {}) {
 
   try {
     const { results } = await fetchFeed(API_PREVIOUS, controller.signal);
-    const launches = results.map(simplifyLaunch);
-    writePreviousCache(launches);
-    return launches;
+    const merged = mergePreviousLaunches(stored.launches, results.map(simplifyLaunch));
+    writePreviousStore(merged);
+    return merged;
+  } catch (error) {
+    // A failed refresh should not empty a window the user can still read.
+    if (stored.launches.length > 0) return stored.launches;
+    throw error;
   } finally {
     clearTimeout(timeout);
   }

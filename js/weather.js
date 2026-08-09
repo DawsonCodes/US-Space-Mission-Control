@@ -9,6 +9,7 @@ import {
   OPEN_METEO_URL,
   WEATHER_TTL_MS,
   WEATHER_FORECAST_DAYS,
+  RECORDED_WEATHER_DAYS,
   STORAGE_KEYS
 } from "./config.js";
 
@@ -123,17 +124,12 @@ function pickNearestHour(hourly, launchMs) {
   return bestIdx;
 }
 
-async function fetchWeather(lat, lon, launchMs, signal, key) {
-  const params = new URLSearchParams({
-    latitude: lat.toFixed(4),
-    longitude: lon.toFixed(4),
-    hourly:
-      "temperature_2m,precipitation_probability,weather_code,cloud_cover,visibility,wind_speed_10m,wind_gusts_10m",
-    timezone: "auto",
-    forecast_days: String(WEATHER_FORECAST_DAYS),
-    timeformat: "unixtime"
-  });
+const HOURLY_FIELDS =
+  "temperature_2m,precipitation_probability,weather_code,cloud_cover,visibility,wind_speed_10m,wind_gusts_10m";
 
+// Shared request + nearest-hour extraction. `key` is optional: forecasts are
+// cached in sessionStorage, recorded conditions are stored by the caller.
+async function requestHourly(params, launchMs, signal, key) {
   const response = await fetch(`${OPEN_METEO_URL}?${params.toString()}`, { signal });
   if (!response.ok) return { status: "error" };
 
@@ -155,8 +151,66 @@ async function fetchWeather(lat, lon, launchMs, signal, key) {
     units: json?.hourly_units || {}
   };
 
-  writeCache(key, data);
+  if (key) writeCache(key, data);
   return { status: "ok", data };
+}
+
+async function fetchWeather(lat, lon, launchMs, signal, key) {
+  const params = new URLSearchParams({
+    latitude: lat.toFixed(4),
+    longitude: lon.toFixed(4),
+    hourly: HOURLY_FIELDS,
+    timezone: "auto",
+    forecast_days: String(WEATHER_FORECAST_DAYS),
+    timeformat: "unixtime"
+  });
+  return requestHourly(params, launchMs, signal, key);
+}
+
+// UTC calendar date (YYYY-MM-DD) offset by whole days.
+function utcDateStamp(ms, dayOffset = 0) {
+  return new Date(ms + dayOffset * DAY_MS).toISOString().slice(0, 10);
+}
+
+async function fetchRecordedWeather(lat, lon, launchMs, signal) {
+  // A one-day window either side of the launch date, so a launch near a UTC
+  // midnight still has its true nearest hour available.
+  const params = new URLSearchParams({
+    latitude: lat.toFixed(4),
+    longitude: lon.toFixed(4),
+    hourly: HOURLY_FIELDS,
+    timezone: "UTC",
+    start_date: utcDateStamp(launchMs, -1),
+    end_date: utcDateStamp(launchMs, 1),
+    timeformat: "unixtime"
+  });
+  return requestHourly(params, launchMs, signal, null);
+}
+
+// Conditions recorded at the pad for a launch that already happened. Uses the
+// same keyless Open-Meteo endpoint, which serves past hours for roughly the
+// last RECORDED_WEATHER_DAYS days. Anything older reports honestly instead of
+// guessing. The caller is expected to store the result against the launch so
+// this costs at most one request per launch, ever.
+export async function getRecordedWeatherForLaunch(launch, { signal } = {}) {
+  const lat = launch?.padLat;
+  const lon = launch?.padLon;
+  if (typeof lat !== "number" || typeof lon !== "number") {
+    return { status: "unavailable-coords" };
+  }
+
+  const launchMs = new Date(launch?.net).getTime();
+  if (!launch?.net || Number.isNaN(launchMs)) return { status: "invalid-time" };
+  if (Date.now() - launchMs > RECORDED_WEATHER_DAYS * DAY_MS) {
+    return { status: "beyond-archive" };
+  }
+
+  try {
+    return await fetchRecordedWeather(lat, lon, launchMs, signal);
+  } catch (error) {
+    if (error?.name === "AbortError") throw error;
+    return { status: "error" };
+  }
 }
 
 // Resolve a weather outlook for a launch. Returns a status object the UI can
