@@ -1055,6 +1055,25 @@ export function renderDrawer() {
 // Keyless OpenStreetMap link for a launch pad. Built only from validated
 // finite coordinates, run through safeUrl, and opened by the user on demand —
 // no map tiles or third-party requests are loaded into the app itself.
+// Mission or rocket imagery for the detail views. Same resolver the cards use,
+// so it falls back to the neutral placeholder rather than stand-in artwork, and
+// it carries the compositor hints that keep the bitmap from resampling.
+function detailsMediaHtml(launch) {
+  const { src, kind } = resolveLaunchImage(launch);
+  if (!src) {
+    return `
+      <div class="details-media is-empty" aria-hidden="true">
+        <span>No mission image available</span>
+      </div>`;
+  }
+  const caption = kind === "rocket" ? "Rocket" : "Mission";
+  return `
+    <figure class="details-media">
+      <img src="${src}" alt="${escapeHtml(launchImageAlt(launch))}" loading="lazy" decoding="async" />
+      <figcaption>${caption} image from Launch Library 2</figcaption>
+    </figure>`;
+}
+
 function padMapSectionHtml(launch) {
   const lat = launch.padLat;
   const lon = launch.padLon;
@@ -1123,6 +1142,8 @@ export function buildDetailsContent(launch) {
       </div>
       <h2 id="detailsTitle" class="details-title">${escapeHtml(launch.name)}</h2>
     </div>
+
+    ${detailsMediaHtml(launch)}
 
     <div class="details-countdown">
       ${countdownUnitsHtml(launch.net)}
@@ -1351,16 +1372,20 @@ export function renderAll({ resultsEntrance = "none" } = {}) {
 // tracked providers, with an honest outcome label, the published cause when a
 // launch failed, and a link to watch the launch back.
 
-export function buildPreviousContent(launches, { state: viewState = "ok", message = "" } = {}) {
+export function buildPreviousContent(
+  launches,
+  { state: viewState = "ok", message = "", retry = true } = {}
+) {
   const head = `<h2 id="previousTitle" class="details-title">Previous launches</h2>`;
 
   if (viewState === "loading") {
     return `${head}<p class="previous-note">Loading recent launches…</p>`;
   }
   if (viewState === "error") {
+    // Retrying into a rate limit only extends it, so the action is withheld.
     return `${head}
       <p class="previous-note is-error">${escapeHtml(message || "Couldn't load previous launches.")}</p>
-      <button class="btn" type="button" data-previous-retry>Try again</button>`;
+      ${retry ? `<button class="btn" type="button" data-previous-retry>Try again</button>` : ""}`;
   }
   if (!Array.isArray(launches) || launches.length === 0) {
     return `${head}<p class="previous-note">No recent launches were returned for the tracked providers.</p>`;
@@ -1457,6 +1482,8 @@ export function buildPreviousDetail(launch, { weather } = {}) {
       <p class="previous-meaning">${escapeHtml(OUTCOME_MEANING[outcome])}</p>
       ${cause}
     </div>
+
+    ${detailsMediaHtml(launch)}
 
     <dl class="details-grid">
       ${row("Launched (local)", detailDate(launch.net, false))}

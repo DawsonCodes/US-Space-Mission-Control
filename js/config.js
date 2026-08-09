@@ -82,7 +82,9 @@ export const STORAGE_KEYS = {
   // Rolling window of the most recent completed launches, plus any recorded
   // weather already fetched for them. Lives in localStorage so the recorded
   // outlook is paid for once, not once per visit.
-  previous: "us-space-mission-control-previous-v2"
+  previous: "us-space-mission-control-previous-v2",
+  // When LL2 last rate-limited us, so a reload doesn't immediately retry.
+  cooldown: "us-space-mission-control-ll2-cooldown"
 };
 
 // Schema version for the cached manifest payload. Bump when the normalized
@@ -99,6 +101,11 @@ export const CACHE_STALE_MS = 1000 * 60 * 60 * 24;
 // Abort a live request that takes longer than this so the UI can fall back to
 // cache/demo instead of hanging.
 export const NETWORK_TIMEOUT_MS = 1000 * 15;
+
+// LL2 allows roughly 15 requests an hour to anonymous callers. When it answers
+// 429 we stop asking for a while rather than spending every reload on a request
+// that is going to be refused anyway.
+export const RATE_LIMIT_COOLDOWN_MS = 1000 * 60 * 15;
 
 // Legacy keys to migrate from (read once, never written back).
 export const LEGACY_STORAGE_KEYS = {

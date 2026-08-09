@@ -1,6 +1,10 @@
-// Integration harness: boots main.js with a pre-seeded FRESH manifest cache and
-// a controllable fetch to verify cache-first rendering (instant cached render →
-// background live refresh → cache updated with fresh data). Minimal DOM shim.
+// Integration harness: boots main.js with a pre-seeded STALE-but-usable manifest
+// cache and a controllable fetch, to verify cache-first rendering. Cached data
+// renders instantly, a background live refresh replaces it, and the fresh
+// manifest is written back. Minimal DOM shim.
+//
+// A *fresh* cache deliberately skips the refresh entirely to stay inside LL2's
+// hourly allowance; that path is covered by cache-fresh.test.mjs.
 
 function makeEl(id = "") {
   const classes = new Set();
@@ -49,15 +53,16 @@ globalThis.history = { pushState() {}, replaceState() {} };
 
 const { MANIFEST_CACHE_SCHEMA, STORAGE_KEYS } = await import("../js/config.js");
 
-// Seed a FRESH cache (5 minutes old) with two launches that have NO coordinates
-// (so no weather fetch noise).
+// Seed a STALE-but-usable cache (45 minutes old) with two launches that have NO
+// coordinates (so no weather fetch noise). Stale is what triggers the
+// background refresh this harness is here to observe.
 const cachedLaunches = [
   { id: "cache-1", name: "Cached One", net: "2026-09-01T00:00:00Z", providerName: "SpaceX", providerId: 121, agencies: [], padLat: null, padLon: null },
   { id: "cache-2", name: "Cached Two", net: "2026-09-02T00:00:00Z", providerName: "SpaceX", providerId: 121, agencies: [], padLat: null, padLon: null }
 ];
 mem.set(STORAGE_KEYS.manifest, JSON.stringify({
   schema: MANIFEST_CACHE_SCHEMA,
-  savedAt: Date.now() - 5 * 60 * 1000,
+  savedAt: Date.now() - 45 * 60 * 1000,
   payload: { launches: cachedLaunches, truncated: false }
 }));
 
