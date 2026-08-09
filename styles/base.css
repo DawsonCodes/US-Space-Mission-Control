@@ -20,6 +20,22 @@
   --warning: #ffd166;
   --danger: #ff808e;
 
+  /* Solid gray button surfaces (v3.4.1). Buttons are flat graphite rather than
+     tinted/translucent gradients so the whole control layer reads as one solid,
+     neutral system against the charcoal background. */
+  --btn-bg: #24272e;
+  --btn-bg-hover: #2e323a;
+  --btn-bg-active: #1e2127;
+  --btn-border: rgba(255, 255, 255, 0.12);
+  --btn-border-hover: rgba(255, 255, 255, 0.22);
+  /* Primary = same family, one step lighter, so hierarchy survives without color. */
+  --btn-primary-bg: #333842;
+  --btn-primary-bg-hover: #3d434e;
+  --btn-primary-border: rgba(255, 255, 255, 0.2);
+  /* Neutral focus ring (no blue) that still reads clearly on dark. */
+  --focus-ring: rgba(226, 232, 240, 0.85);
+  --focus-ring-glow: rgba(226, 232, 240, 0.22);
+
   /* Organization accent tokens — the single source of truth for badges, pills,
      overview tiles, and card edges. Chosen as DISTINCT visual families so every
      organization is recognizable at a glance; overridable per-user via

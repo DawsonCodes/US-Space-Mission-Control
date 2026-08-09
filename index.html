@@ -17,6 +17,13 @@
   <body>
     <canvas id="starfield" aria-hidden="true"></canvas>
 
+    <!-- Startup sequence (ANIM-01). Decorative only: hidden by default and shown
+         by js/boot.js, which also skips it for reduced-motion, deep links, and
+         repeat visits in the same tab. -->
+    <div id="bootScreen" class="boot" role="presentation" aria-hidden="true" hidden>
+      <span id="bootTitle" class="boot-title">U.S. Space Mission Control</span>
+    </div>
+
     <div class="shell">
       <header class="hero panel">
         <div class="hero-copy">

@@ -80,5 +80,8 @@ jobs:
       - name: Theme + input-clipping + reduced-motion checks
         run: node tests/theme.test.mjs
 
+      - name: Animation catalog + boot sequence tests
+        run: node tests/animations.test.mjs
+
       - name: Headless UI / render harness
         run: node tests/headless.test.mjs

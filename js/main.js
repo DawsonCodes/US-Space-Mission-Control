@@ -23,6 +23,7 @@ import { ORG, ORG_LABELS } from "./organizations.js";
 import { applyOrgColors } from "./org-theme.js";
 import { buildColorCustomizerContent, wireColorCustomizer } from "./customize.js";
 import { setupSearchHint } from "./search-hint.js";
+import { setupBoot } from "./boot.js";
 import { buildICS, icsFilename } from "./calendar.js";
 import { buildMissionUrl, parseMissionId, stripMissionParam } from "./deeplink.js";
 import { setupStarfield } from "./starfield.js";
@@ -111,6 +112,28 @@ function syncModalFavorite(id) {
   btn.textContent = fav ? "★ Saved" : "☆ Save";
 }
 
+// Shared reduced-motion probe for the JS-driven animation hooks.
+function prefersReducedMotionUI() {
+  try {
+    return Boolean(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  } catch {
+    return false;
+  }
+}
+
+// ANIM-16 — replay the save pop on every button bound to this mission.
+function popSavedButtons(id) {
+  try {
+    document.querySelectorAll(`[data-favorite-id=${JSON.stringify(id)}]`).forEach((btn) => {
+      btn.classList?.remove("is-just-saved");
+      void btn.offsetWidth;
+      btn.classList?.add("is-just-saved");
+    });
+  } catch {
+    /* decorative only */
+  }
+}
+
 function afterFavoriteChange(id) {
   saveFavorites();
   refreshHero();
@@ -126,6 +149,7 @@ function addFavorite(launch) {
   if (!launch || !launch.id || isFavorite(launch.id)) return;
   state.favorites.unshift(launch);
   afterFavoriteChange(launch.id);
+  popSavedButtons(launch.id); // ANIM-16
   setStatus(`Saved "${launch.name}" to your missions.`, "success");
 }
 
@@ -241,6 +265,7 @@ async function refreshLive({ background = false, manual = false, attempt = 0 } =
 
   if (manual) setStatus("Refreshing live launch data…", "loading");
   else if (!background) setStatus(attempt > 0 ? "Retrying live launch data…" : "Loading launch providers…", "loading");
+  els.btnRefresh?.classList?.add("is-refreshing"); // ANIM-23
 
   try {
     const { launches, truncated, partial, failedFeeds = [] } = await fetchLiveLaunches({ signal: controller.signal });
@@ -284,7 +309,10 @@ async function refreshLive({ background = false, manual = false, attempt = 0 } =
       if (state.launches.length === 0) renderLoadError();
     }
   } finally {
-    if (state.activeRequest === controller) state.activeRequest = null;
+    if (state.activeRequest === controller) {
+      state.activeRequest = null;
+      els.btnRefresh?.classList?.remove("is-refreshing"); // ANIM-23
+    }
   }
 }
 
@@ -714,16 +742,27 @@ function setupMoreMenu() {
 function setupInsights() {
   if (!els.insightsToggle || !els.insightsBody) return;
 
-  const setOpen = (open) => {
+  let revealTimer = null;
+  const setOpen = (open, { animate = false } = {}) => {
     els.insightsToggle.setAttribute("aria-expanded", String(open));
     els.insightsBody.hidden = !open;
+    // ANIM-13: only cascade the chips when the section is actually opened —
+    // NOT on every re-render (renderOverview rebuilds this markup on each
+    // keystroke, which previously replayed the stagger constantly).
+    if (revealTimer) window.clearTimeout(revealTimer);
+    els.insightsBody.classList?.remove("is-revealing");
+    if (open && animate) {
+      void els.insightsBody.offsetWidth;
+      els.insightsBody.classList?.add("is-revealing");
+      revealTimer = window.setTimeout(() => els.insightsBody.classList?.remove("is-revealing"), 600);
+    }
   };
 
   const mobile = window.matchMedia && window.matchMedia("(max-width: 640px)").matches;
   setOpen(!mobile);
 
   els.insightsToggle.addEventListener("click", () => {
-    setOpen(els.insightsToggle.getAttribute("aria-expanded") !== "true");
+    setOpen(els.insightsToggle.getAttribute("aria-expanded") !== "true", { animate: true });
   });
 }
 
@@ -908,8 +947,19 @@ function attachEventListeners() {
       const id = favBtn.getAttribute("data-favorite-id");
       const launch = findLaunch(id);
       if (!launch) return;
-      if (isFavorite(id)) removeFavorite(id);
-      else addFavorite(launch);
+      if (isFavorite(id)) {
+        // ANIM-17: if the click came from the saved drawer, let the card collapse
+        // before the list re-renders; elsewhere remove immediately.
+        const savedCard = favBtn.closest?.(".saved-card");
+        if (savedCard && !prefersReducedMotionUI()) {
+          savedCard.classList.add("is-removing");
+          window.setTimeout(() => removeFavorite(id), 200);
+        } else {
+          removeFavorite(id);
+        }
+      } else {
+        addFavorite(launch);
+      }
     }
   });
 }
@@ -917,6 +967,14 @@ function attachEventListeners() {
 // ----- Boot --------------------------------------------------------------
 
 function init() {
+  // ANIM-01: startup title shimmer -> hand-off -> section reveal. Guarded so a
+  // boot failure can never leave the dashboard hidden behind the overlay.
+  try {
+    setupBoot();
+  } catch {
+    document.documentElement?.classList?.remove("is-booting");
+    document.getElementById("bootScreen")?.remove?.();
+  }
   migrateLegacyStorage();
   applyOrgColors(); // apply saved/default organization accents before first paint
   loadPreferences();
