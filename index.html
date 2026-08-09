@@ -58,9 +58,8 @@
           <span class="eyebrow">Live U.S. spaceflight tracker</span>
           <h1>U.S. Space Mission Control</h1>
           <p class="hero-text">
-            Track upcoming NASA missions, SpaceX launches, Blue Origin flights, and
-            Rocket Lab launches with live countdowns, launch-site weather, filters,
-            and saved missions.
+            Upcoming launches from NASA, SpaceX, Blue Origin, Rocket Lab, ULA and
+            Firefly, with live countdowns, pad weather and saved missions.
           </p>
 
           <div class="org-selector">
@@ -78,12 +77,6 @@
               <span class="customize-colors-text">Customize colors</span>
             </button>
           </div>
-          <p class="org-scope-note">
-            Tracks NASA missions plus SpaceX, Blue Origin, Rocket Lab, ULA, and Firefly
-            launches — not every launch provider. NASA is a civil agency, so its
-            missions can also appear under a provider tab.
-          </p>
-
           <div class="hero-meta">
             <span class="pill-indicator" id="dataSource">Not loaded</span>
             <span class="pill-indicator" id="lastUpdated">Awaiting data</span>
@@ -125,9 +118,8 @@
             <h2 id="overviewTitle" class="sr-only">Mission overview</h2>
           </div>
           <p class="overview-note" id="overviewNote">
-            Organization counts can overlap — a NASA mission may also count under its
-            launch provider (SpaceX, Blue Origin, Rocket Lab, ULA, or Firefly) — so they
-            aren't expected to add up to the total.
+            Counts overlap. A NASA mission also counts under the provider flying it,
+            so they will not add up to the total.
           </p>
         </div>
         <div class="overview-tiles" id="overviewTiles" aria-label="Mission overview"></div>
@@ -145,7 +137,7 @@
           </button>
           <div id="insightsBody" class="insights-body">
             <p class="insights-note">
-              Counts reflect the currently loaded, filtered view — not all-time statistics.
+              Based on the current view, not all-time totals.
             </p>
             <div id="insightsChips" class="insights-chips"></div>
           </div>
@@ -311,11 +303,10 @@
           <strong class="footer-title">U.S. Space Mission Control</strong>
           <span>Built by <a href="https://github.com/DawsonCodes" target="_blank" rel="noopener">DawsonCodes</a></span>
           <span class="footer-sources">
-            Launch data from
+            Data from
             <a href="https://thespacedevs.com/llapi" target="_blank" rel="noopener">Launch Library 2</a>,
-            local weather from
-            <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>,
-            launch-pad maps from
+            <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a>
+            and
             <a href="https://www.openstreetmap.org/" target="_blank" rel="noopener">OpenStreetMap</a>.
           </span>
           <nav class="footer-links" aria-label="Project links">
@@ -346,13 +337,13 @@
     >
       <div class="overlay-backdrop" data-overlay-backdrop></div>
       <aside class="overlay-panel drawer-panel" data-overlay-panel tabindex="-1">
-        <div class="overlay-head">
-          <h2 id="drawerTitle">Saved missions <span class="count-badge" id="drawerCount">0</span></h2>
+        <div class="overlay-head drawer-head">
+          <h2 id="drawerTitle">Saved <span class="count-badge" id="drawerCount">0</span></h2>
           <button class="icon-btn" data-overlay-close type="button" aria-label="Close saved missions">✕</button>
         </div>
         <div id="drawerList" class="drawer-list"></div>
-        <div class="overlay-foot">
-          <button id="btnClearFavorites" class="btn btn-danger-outline" type="button">Clear all</button>
+        <div class="overlay-foot drawer-foot">
+          <button id="btnClearFavorites" class="btn btn-small btn-danger-outline" type="button">Clear all</button>
         </div>
       </aside>
     </div>

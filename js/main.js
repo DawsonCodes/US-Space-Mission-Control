@@ -28,7 +28,8 @@ import { buildICS, icsFilename } from "./calendar.js";
 import { buildMissionUrl, parseMissionId, stripMissionParam } from "./deeplink.js";
 import { setupStarfield } from "./starfield.js";
 import { openOverlay, closeOverlay, isOverlayOpen } from "./modal.js";
-import { getWeatherForLaunch } from "./weather.js";
+import { getWeatherForLaunch, getRecordedWeatherForLaunch } from "./weather.js";
+import { setRecordedWeather } from "./previous-store.js";
 import {
   els,
   setStatus,
@@ -49,6 +50,8 @@ import {
   buildDetailsContent,
   buildAboutContent,
   buildPreviousContent,
+  buildPreviousDetail,
+  buildWeatherHtml,
   favoriteButtonInner,
   renderWeatherInto,
   updateCountdownNodes,
@@ -479,6 +482,10 @@ function openLegend(opener) {
 // The list is fetched the first time the panel is opened and then cached, so a
 // normal visit never spends an LL2 request on it.
 let previousRequest = null;
+let previousWeatherRequest = null;
+// The window currently on screen, so the detail view and its recorded weather
+// can be resolved without another fetch.
+let previousLaunches = [];
 
 async function loadPreviousInto({ force = false } = {}) {
   if (!els.previousContent) return;
@@ -491,6 +498,7 @@ async function loadPreviousInto({ force = false } = {}) {
   try {
     const launches = await fetchPreviousLaunches({ signal: controller.signal, force });
     if (previousRequest !== controller) return; // superseded
+    previousLaunches = launches;
     els.previousContent.innerHTML = buildPreviousContent(launches);
   } catch (error) {
     if (error?.name === "AbortError" && controller.signal.aborted) return;
@@ -503,6 +511,56 @@ async function loadPreviousInto({ force = false } = {}) {
   }
 }
 
+// Recorded conditions are fetched at most once per launch, then written into
+// the rolling store alongside it. Reopening a launch, or coming back to it in a
+// later visit, costs no request at all; when the launch ages out of the window
+// its snapshot is discarded with it.
+async function loadRecordedWeather(launch) {
+  const mount = () => els.previousContent?.querySelector("[data-previous-weather]");
+  if (launch.weather) return;
+
+  if (previousWeatherRequest) previousWeatherRequest.abort();
+  const controller = new AbortController();
+  previousWeatherRequest = controller;
+
+  try {
+    const result = await getRecordedWeatherForLaunch(launch, { signal: controller.signal });
+    if (previousWeatherRequest !== controller) return; // superseded
+    const node = mount();
+    if (node) node.innerHTML = buildWeatherHtml(result, { recorded: true });
+
+    // Only a real reading is worth keeping; a transient failure should retry.
+    if (result.status !== "error") {
+      launch.weather = result;
+      previousLaunches = setRecordedWeather(launch.id, result);
+    }
+  } catch (error) {
+    if (error?.name === "AbortError") return;
+    const node = mount();
+    if (node) node.innerHTML = buildWeatherHtml({ status: "error" }, { recorded: true });
+  } finally {
+    if (previousWeatherRequest === controller) previousWeatherRequest = null;
+  }
+}
+
+function showPreviousDetail(id) {
+  if (!els.previousContent) return;
+  const launch = previousLaunches.find((l) => l.id === id);
+  els.previousContent.innerHTML = buildPreviousDetail(launch, { weather: launch?.weather });
+  els.previousContent.scrollTop = 0;
+  if (launch) loadRecordedWeather(launch);
+}
+
+function showPreviousList() {
+  if (!els.previousContent) return;
+  if (previousWeatherRequest) {
+    previousWeatherRequest.abort();
+    previousWeatherRequest = null;
+  }
+  els.previousContent.innerHTML = buildPreviousContent(previousLaunches);
+  els.previousContent.scrollTop = 0;
+}
+
 function openPrevious(opener) {
   if (!els.previousModal || !els.previousContent) return;
   els.previousModal.setAttribute("aria-labelledby", "previousTitle");
@@ -512,6 +570,10 @@ function openPrevious(opener) {
       if (previousRequest) {
         previousRequest.abort();
         previousRequest = null;
+      }
+      if (previousWeatherRequest) {
+        previousWeatherRequest.abort();
+        previousWeatherRequest = null;
       }
     }
   });
@@ -979,6 +1041,17 @@ function attachEventListeners() {
     const previousRetry = event.target.closest("[data-previous-retry]");
     if (previousRetry) {
       loadPreviousInto({ force: true });
+      return;
+    }
+
+    const previousDetails = event.target.closest("[data-previous-id]");
+    if (previousDetails) {
+      showPreviousDetail(previousDetails.getAttribute("data-previous-id"));
+      return;
+    }
+
+    if (event.target.closest("[data-previous-back]")) {
+      showPreviousList();
       return;
     }
 

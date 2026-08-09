@@ -25,7 +25,6 @@ import {
   PROVIDER_ORGS,
   ORG_MATCHERS,
   orgTags,
-  isNASA,
   classifyMissionType,
   missionTypeBadgeClass,
   MISSION_TYPE_LABELS,
@@ -254,6 +253,49 @@ function siteDate(launch) {
 
 function concise(launch) {
   return launch.location || launch.padName || "Location pending";
+}
+
+// ----- Organization accent stripe -----------------------------------------
+// The coloured edge on a card. One organization gets a solid stripe; a shared
+// mission (a NASA payload on a SpaceX rocket, say) splits the stripe into an
+// equal band per organization, so you can tell at a glance whose launch it is
+// and when two of them are flying it together.
+
+const ORG_ACCENT_VAR = {
+  [ORG.NASA]: "--org-nasa",
+  [ORG.SPACEX]: "--org-spacex",
+  [ORG.BLUE_ORIGIN]: "--org-blueorigin",
+  [ORG.ROCKET_LAB]: "--org-rocketlab",
+  [ORG.ULA]: "--org-ula",
+  [ORG.FIREFLY]: "--org-firefly"
+};
+
+// Bands stay readable up to three; beyond that the stripe would be mush.
+const MAX_ACCENT_BANDS = 3;
+
+// The stripe references the live :root tokens rather than resolved hex values,
+// so a colour customized in the panel restyles every stripe immediately.
+export function accentStripe(launch) {
+  // Provider first so a NASA-on-provider mission leads with the rocket's owner,
+  // matching the single accent used before.
+  const tags = orgTags(launch).filter((tag) => ORG_ACCENT_VAR[tag]);
+  const ordered = [...tags.filter((t) => t !== ORG.NASA), ...tags.filter((t) => t === ORG.NASA)];
+  const bands = ordered.slice(0, MAX_ACCENT_BANDS);
+
+  if (bands.length === 0) return { primary: "", bands: 0, style: "" };
+  return {
+    primary: bands[0],
+    bands: bands.length,
+    style: bands.map((tag, i) => `--accent-${i + 1}:var(${ORG_ACCENT_VAR[tag]})`).join(";")
+  };
+}
+
+// Ready-made attributes for an element that should carry the stripe.
+function accentAttrs(launch, extraStyle = "") {
+  const stripe = accentStripe(launch);
+  if (!stripe.bands) return extraStyle ? ` style="${escapeHtml(extraStyle)}"` : "";
+  const style = [stripe.style, extraStyle].filter(Boolean).join(";");
+  return ` data-accent="${escapeHtml(stripe.primary)}" data-accent-bands="${stripe.bands}" style="${escapeHtml(style)}"`;
 }
 
 // ----- Badge builders -----------------------------------------------------
@@ -796,7 +838,7 @@ export function renderCoverageNote() {
   if (!els.coverageNote) return;
   if (state.truncated && state.launches.length > 0) {
     els.coverageNote.hidden = false;
-    els.coverageNote.textContent = `Showing the next ${state.launches.length} tracked launches — some upcoming launches may not be listed.`;
+    els.coverageNote.textContent = `Showing the next ${state.launches.length} tracked launches. A few of the furthest-out ones are not listed.`;
   } else {
     els.coverageNote.hidden = true;
     els.coverageNote.textContent = "";
@@ -809,10 +851,6 @@ function buildLaunchCard(launch, index, { enter = false } = {}) {
   const image = resolveLaunchImage(launch);
   const stagger = Math.min(index, 8); // cap stagger so many cards stay fast
 
-  // Subtle single provider accent (prefer the provider over the NASA overlay).
-  const tags = orgTags(launch);
-  const accent = tags.find((t) => t !== "nasa") || tags[0] || "";
-
   // No usable LL2 image (or a malformed URL) → quiet neutral placeholder that
   // preserves the card's media dimensions. Broken loads fall back to the same
   // panel via the global error handler in main.js.
@@ -823,7 +861,7 @@ function buildLaunchCard(launch, index, { enter = false } = {}) {
   const enterClass = enter ? " motion-card-enter" : "";
 
   return `
-    <article class="launch-card${enterClass}" data-launch-id="${escapeHtml(launch.id)}" data-accent="${escapeHtml(accent)}" style="--card-index:${stagger}">
+    <article class="launch-card${enterClass}" data-launch-id="${escapeHtml(launch.id)}"${accentAttrs(launch, `--card-index:${stagger}`)}>
       <div class="launch-card-media">
         ${media}
         <div class="badge-row badge-float">${orgBadgesHtml(launch)}</div>
@@ -933,9 +971,13 @@ export function renderDrawer() {
   renderSavedCount();
   if (state.favorites.length === 0) {
     els.drawerList.innerHTML = `
-      <div class="empty-state">
-        <strong>No saved missions yet</strong>
-        <span>Save launches to build a shortlist that survives refreshes.</span>
+      <div class="saved-empty">
+        <span class="saved-empty-icon" aria-hidden="true">☆</span>
+        <strong>Nothing saved yet</strong>
+        <span class="saved-empty-text">
+          Use Save on any mission to keep it here. Saved missions stay put across
+          refreshes and new visits.
+        </span>
       </div>
     `;
     if (els.btnClearFavorites) els.btnClearFavorites.disabled = true;
@@ -943,25 +985,69 @@ export function renderDrawer() {
   }
 
   if (els.btnClearFavorites) els.btnClearFavorites.disabled = false;
-  els.drawerList.innerHTML = state.favorites
+
+  const now = Date.now();
+  // Soonest first, so the drawer reads as a shortlist you work down. Launches
+  // whose time has passed sink to the bottom instead of leading the list.
+  const ordered = [...state.favorites].sort((a, b) => {
+    const at = new Date(a.net).getTime();
+    const bt = new Date(b.net).getTime();
+    const av = Number.isFinite(at) ? at : Infinity;
+    const bv = Number.isFinite(bt) ? bt : Infinity;
+    const aPast = av < now;
+    const bPast = bv < now;
+    if (aPast !== bPast) return aPast ? 1 : -1;
+    return av - bv;
+  });
+
+  const upcoming = ordered.filter((l) => {
+    const t = new Date(l.net).getTime();
+    return !Number.isFinite(t) || t >= now;
+  }).length;
+
+  const summary = `
+    <p class="saved-summary">
+      ${escapeHtml(String(ordered.length))} saved,
+      ${escapeHtml(String(upcoming))} still ahead
+    </p>`;
+
+  const cards = ordered
     .map((launch) => {
+      const past = new Date(launch.net).getTime() < now;
+      const timing = past
+        ? `<span class="saved-flown">Already flown</span>`
+        : countdownUnitsHtml(launch.net, { compact: true });
+
       return `
-        <article class="saved-card">
-          <div class="badge-row">
-            ${orgBadgesHtml(launch)}
-            <span class="badge">${escapeHtml(formatCompactDate(launch.net))}</span>
+        <article class="saved-card${past ? " is-past" : ""}"${accentAttrs(launch)}>
+          <div class="saved-card-head">
+            <div class="badge-row">${orgBadgesHtml(launch)}</div>
+            <button
+              class="saved-remove"
+              data-favorite-id="${escapeHtml(launch.id)}"
+              type="button"
+              title="Remove from saved"
+              aria-label="Remove ${escapeHtml(launch.name)} from saved"
+            >✕</button>
           </div>
-          <h3>${escapeHtml(launch.name)}</h3>
-          <p>${escapeHtml(concise(launch))}</p>
-          ${countdownUnitsHtml(launch.net, { compact: true })}
-          <div class="card-actions">
+
+          <h3 class="saved-name">${escapeHtml(launch.name)}</h3>
+
+          <p class="saved-meta">
+            <span class="saved-date">${escapeHtml(formatCompactDate(launch.net))}</span>
+            <span class="saved-place">${escapeHtml(concise(launch))}</span>
+          </p>
+
+          <div class="saved-foot">
+            ${timing}
             <button class="btn btn-small btn-details" data-details-id="${escapeHtml(launch.id)}" type="button">Details</button>
-            <button class="favorite-btn btn-small is-remove" data-favorite-id="${escapeHtml(launch.id)}" type="button" aria-label="Remove ${escapeHtml(launch.name)} from saved">× Remove</button>
           </div>
         </article>
       `;
     })
     .join("");
+
+  els.drawerList.innerHTML = `${summary}<div class="saved-stack">${cards}</div>`;
 }
 
 // ----- Details modal content ---------------------------------------------
@@ -1088,7 +1174,7 @@ export function buildAboutContent() {
         : "Not loaded";
   const refreshed = state.lastUpdated ? formatCompactDate(state.lastUpdated) : "—";
   const coverage = state.truncated
-    ? "Partial — more upcoming launches exist than were returned."
+    ? `Partial. Showing the soonest ${loaded} launches; more are scheduled beyond them.`
     : "Complete for the tracked providers.";
 
   const row = (label, value) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`;
@@ -1116,14 +1202,12 @@ export function buildAboutContent() {
         <span class="badge org-badge org-firefly">Firefly</span>
       </div>
       <p class="about-note">
-        NASA is a civil space <strong>agency</strong>; SpaceX, Blue Origin, Rocket Lab,
-        ULA, and Firefly are launch <strong>providers</strong>. A NASA mission can also
-        appear under its provider, so organization totals may overlap intentionally and
-        are not expected to sum to the total.
+        NASA is an agency; the other five are launch providers. A NASA mission
+        also counts under whoever flies it, so the totals overlap on purpose.
       </p>
       <p class="about-note">
-        Schedules, launch statuses, and webcast links may change at any time. This is
-        not an official launch forecast.
+        Schedules, statuses and webcast links change often. This is not an
+        official launch forecast.
       </p>
     </div>
   `;
@@ -1135,16 +1219,25 @@ function weatherRow(label, value) {
   return `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`;
 }
 
-export function buildWeatherHtml(result, { compact = false } = {}) {
-  const heading = `<h4 class="weather-heading">Local weather outlook</h4>`;
-  const note = `<p class="weather-note">Weather data from Open-Meteo. Not an official launch forecast.</p>`;
+export function buildWeatherHtml(result, { compact = false, recorded = false } = {}) {
+  const heading = recorded
+    ? `<h4 class="weather-heading">Weather recorded at launch</h4>`
+    : `<h4 class="weather-heading">Local weather outlook</h4>`;
+  const note = recorded
+    ? `<p class="weather-note">Conditions recorded at the pad for the launch hour, from Open-Meteo.</p>`
+    : `<p class="weather-note">Weather data from Open-Meteo. Not an official launch forecast.</p>`;
   const wrap = (inner, extraNote = false) => `${heading}${inner}${extraNote ? note : ""}`;
 
   if (!result || result.status === "loading") {
-    return wrap(`<p class="weather-msg">Loading local weather…</p>`);
+    return wrap(
+      `<p class="weather-msg">${recorded ? "Loading recorded conditions…" : "Loading local weather…"}</p>`
+    );
   }
   if (result.status === "beyond-horizon") {
     return wrap(`<p class="weather-msg">Weather outlook available closer to launch.</p>`);
+  }
+  if (result.status === "beyond-archive") {
+    return wrap(`<p class="weather-msg">No recorded weather is available this far back.</p>`);
   }
   if (result.status === "unavailable-coords") {
     return wrap(`<p class="weather-msg">Local weather unavailable for this pad.</p>`);
@@ -1184,7 +1277,9 @@ export function buildWeatherHtml(result, { compact = false } = {}) {
     return wrap(`<dl class="weather-grid">${rows}</dl>`, true);
   }
 
-  return wrap(`<p class="weather-msg">Weather outlook temporarily unavailable.</p>`);
+  return wrap(
+    `<p class="weather-msg">${recorded ? "Recorded conditions are unavailable for this launch." : "Weather outlook temporarily unavailable."}</p>`
+  );
 }
 
 export function renderWeatherInto(container, result, options = {}) {
@@ -1275,7 +1370,6 @@ export function buildPreviousContent(launches, { state: viewState = "ok", messag
     .map((launch) => {
       const outcome = launchOutcome(launch);
       const replay = safeUrl(launch.webcast);
-      const article = launch.official;
 
       // Only failure/partial get a cause line, and we never invent one.
       const cause =
@@ -1290,12 +1384,8 @@ export function buildPreviousContent(launches, { state: viewState = "ok", messag
         ? `<a class="card-link btn-small" href="${replay}" target="_blank" rel="noopener noreferrer" aria-label="${escapeHtml(`Watch ${launch.name}`)}">▶ Watch launch</a>`
         : `<span class="previous-nowatch">No video available</span>`;
 
-      const readMore = article
-        ? `<a class="card-link btn-small" href="${article}" target="_blank" rel="noopener noreferrer">Mission page</a>`
-        : "";
-
       return `
-        <article class="previous-item">
+        <article class="previous-item"${accentAttrs(launch)}>
           <div class="badge-row">
             ${orgBadgesHtml(launch)}
             <span class="badge ${outcomeBadgeClass(outcome)}">${escapeHtml(OUTCOME_LABELS[outcome])}</span>
@@ -1308,7 +1398,10 @@ export function buildPreviousContent(launches, { state: viewState = "ok", messag
           </p>
           <p class="previous-meaning">${escapeHtml(OUTCOME_MEANING[outcome])}</p>
           ${cause}
-          <div class="card-actions">${watch}${readMore}</div>
+          <div class="card-actions">
+            <button class="btn btn-small btn-details" data-previous-id="${escapeHtml(launch.id)}" type="button">View details</button>
+            ${watch}
+          </div>
         </article>`;
     })
     .join("");
@@ -1319,4 +1412,76 @@ export function buildPreviousContent(launches, { state: viewState = "ok", messag
       Outcomes and any published failure cause come from Launch Library 2.
     </p>
     <div class="previous-list">${rows}</div>`;
+}
+
+// ----- Previous-launch detail ---------------------------------------------
+// Rendered inside the Previous launches panel rather than the mission-details
+// modal, so the Back action returns you to the list you were reading.
+
+export function buildPreviousDetail(launch, { weather } = {}) {
+  if (!launch) {
+    return `<h2 id="previousTitle" class="details-title">Launch not found</h2>
+      <button class="btn" type="button" data-previous-back>Back to previous launches</button>`;
+  }
+
+  const outcome = launchOutcome(launch);
+  const replay = safeUrl(launch.webcast);
+  const officialUrl = safeUrl(launch.official);
+  const wikiUrl = safeUrl(launch.wikipedia);
+  const locationLabel = [launch.padName, launch.location].filter(Boolean).join(" • ");
+
+  const cause =
+    outcome === "failure" || outcome === "partial"
+      ? `<p class="previous-cause">
+           <strong>What went wrong:</strong>
+           ${escapeHtml(launch.failReason || "No official cause has been published.")}
+         </p>`
+      : "";
+
+  const row = (label, value) =>
+    value ? `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>` : "";
+
+  const agencyNames = (launch.agencies || []).map((a) => a?.name).filter(Boolean).join(", ");
+
+  return `
+    <button class="btn btn-small previous-back" type="button" data-previous-back>← Back to previous launches</button>
+
+    <div class="details-head previous-detail-head"${accentAttrs(launch)}>
+      <div class="badge-row">
+        ${orgBadgesHtml(launch)}
+        ${missionTypeBadgeHtml(launch)}
+        ${flightTypeBadgeHtml(launch)}
+        <span class="badge ${outcomeBadgeClass(outcome)}">${escapeHtml(OUTCOME_LABELS[outcome])}</span>
+      </div>
+      <h2 id="previousTitle" class="details-title">${escapeHtml(launch.name)}</h2>
+      <p class="previous-meaning">${escapeHtml(OUTCOME_MEANING[outcome])}</p>
+      ${cause}
+    </div>
+
+    <dl class="details-grid">
+      ${row("Launched (local)", detailDate(launch.net, false))}
+      ${row("Launched (UTC)", detailDate(launch.net, true))}
+      ${row("Rocket", launch.rocket || "Unknown rocket")}
+      ${row("Pad & location", locationLabel || "Not published")}
+      ${row("Launch provider", launch.providerName)}
+      ${row("Mission agencies", agencyNames)}
+      ${row("Orbit", launch.orbitName)}
+    </dl>
+
+    <p class="details-description">
+      ${escapeHtml(launch.details || "No mission description has been provided yet.")}
+    </p>
+
+    <section class="weather-block" data-previous-weather aria-live="polite">
+      ${buildWeatherHtml(weather || { status: "loading" }, { recorded: true })}
+    </section>
+
+    ${padMapSectionHtml(launch)}
+
+    <div class="card-actions details-actions">
+      ${replay ? `<a class="card-link" href="${replay}" target="_blank" rel="noopener noreferrer">▶ Watch launch</a>` : `<span class="previous-nowatch">No video available</span>`}
+      ${officialUrl ? `<a class="card-link" href="${officialUrl}" target="_blank" rel="noopener">Official page</a>` : ""}
+      ${wikiUrl ? `<a class="card-link" href="${wikiUrl}" target="_blank" rel="noopener">Wiki</a>` : ""}
+    </div>
+  `;
 }
