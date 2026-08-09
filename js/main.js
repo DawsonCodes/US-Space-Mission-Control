@@ -23,7 +23,7 @@ import { ORG, ORG_LABELS } from "./organizations.js";
 import { applyOrgColors } from "./org-theme.js";
 import { buildColorCustomizerContent, wireColorCustomizer } from "./customize.js";
 import { setupSearchHint } from "./search-hint.js";
-import { setupBoot } from "./boot.js";
+import { setupBoot, signalBootReady } from "./boot.js";
 import { buildICS, icsFilename } from "./calendar.js";
 import { buildMissionUrl, parseMissionId, stripMissionParam } from "./deeplink.js";
 import { setupStarfield } from "./starfield.js";
@@ -48,6 +48,7 @@ import {
   renderSavedCount,
   buildDetailsContent,
   buildAboutContent,
+  favoriteButtonInner,
   renderWeatherInto,
   updateCountdownNodes,
   refreshFooterMeta,
@@ -109,7 +110,7 @@ function syncModalFavorite(id) {
   const fav = isFavorite(id);
   btn.classList.toggle("is-active", fav);
   btn.setAttribute("aria-pressed", String(fav));
-  btn.textContent = fav ? "★ Saved" : "☆ Save";
+  btn.innerHTML = favoriteButtonInner(fav);
 }
 
 // Shared reduced-motion probe for the JS-driven animation hooks.
@@ -121,16 +122,41 @@ function prefersReducedMotionUI() {
   }
 }
 
-// ANIM-16 — replay the save pop on every button bound to this mission.
-function popSavedButtons(id) {
+// ANIM-16 — confetti burst from the star on every button bound to this mission.
+// The button itself no longer jumps; the celebration is the particles.
+const CONFETTI_BITS = 10;
+
+function burstConfetti(id) {
+  if (prefersReducedMotionUI()) return;
   try {
     document.querySelectorAll(`[data-favorite-id=${JSON.stringify(id)}]`).forEach((btn) => {
-      btn.classList?.remove("is-just-saved");
-      void btn.offsetWidth;
-      btn.classList?.add("is-just-saved");
+      const star = btn.querySelector?.(".fav-star");
+      if (!star || typeof document.createElement !== "function") return;
+
+      // The button clips its hover sheen, so open it up for the burst only.
+      btn.classList?.add("is-bursting");
+
+      for (let i = 0; i < CONFETTI_BITS; i += 1) {
+        const bit = document.createElement("i");
+        bit.className = "confetti-bit";
+        // Even spread with a little jitter so it never looks mechanical.
+        const angle = (i / CONFETTI_BITS) * Math.PI * 2 + Math.random() * 0.5;
+        const distance = 16 + Math.random() * 14;
+        bit.style.setProperty("--dx", `${Math.cos(angle) * distance}px`);
+        bit.style.setProperty("--dy", `${Math.sin(angle) * distance}px`);
+        bit.style.setProperty("--spin", `${Math.round(Math.random() * 240 - 120)}deg`);
+        bit.style.setProperty("--delay", `${Math.round(Math.random() * 60)}ms`);
+        bit.dataset.tone = String(i % 4); // gold / green / white / gold-dim
+        star.appendChild(bit);
+      }
+
+      window.setTimeout(() => {
+        btn.classList?.remove("is-bursting");
+        star.querySelectorAll?.(".confetti-bit").forEach((b) => b.remove());
+      }, 760);
     });
   } catch {
-    /* decorative only */
+    /* decorative only — never break saving */
   }
 }
 
@@ -149,7 +175,7 @@ function addFavorite(launch) {
   if (!launch || !launch.id || isFavorite(launch.id)) return;
   state.favorites.unshift(launch);
   afterFavoriteChange(launch.id);
-  popSavedButtons(launch.id); // ANIM-16
+  burstConfetti(launch.id); // ANIM-16
   setStatus(`Saved "${launch.name}" to your missions.`, "success");
 }
 
@@ -213,6 +239,7 @@ function renderManifest(launches, truncated, source, dataTime, { preservePaginat
   const heroChanged = nextId !== (state.nextLaunch?.id || null);
   state.nextLaunch = state.filteredLaunches[0] || null;
   renderAll({ resultsEntrance: entrance });
+  signalBootReady(); // ANIM-01: first paint is up — the boot hand-off may proceed
   if (heroChanged) {
     heroWeather = null;
     loadHeroWeather();
@@ -307,6 +334,7 @@ async function refreshLive({ background = false, manual = false, attempt = 0 } =
     } else {
       setStatus("Live API failed. Try again or switch to demo data.", "error");
       if (state.launches.length === 0) renderLoadError();
+      signalBootReady();
     }
   } finally {
     if (state.activeRequest === controller) {

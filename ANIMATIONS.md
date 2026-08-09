@@ -17,14 +17,14 @@ the source with the same id, and listed here.
 
 | # | Name | Where | Trigger | Duration / easing | Reduced motion |
 |---|------|-------|---------|-------------------|----------------|
-| **ANIM-01** | Boot title shimmer + hand-off | `js/boot.js`, `.boot` | First load in a tab | 420ms in · 1150ms shimmer · 620ms FLIP | Skipped entirely |
+| **ANIM-01** | Boot: shimmer → Loading → hand-off | `js/boot.js`, `.boot` | First load in a tab | 420ms in · ≥3s shimmer+loading · 620ms FLIP | Skipped entirely |
 | **ANIM-02** | Section reveal stagger | `.is-booted .shell > *` | After the boot hand-off | `--motion-slow`, 70ms steps (capped 280ms) | No animation |
 | **ANIM-03** | Launch-card entrance | `.motion-card-enter` | Fresh load & newly paginated cards | `--motion-normal`, `--stagger-step` (capped at 8) | No animation |
 | **ANIM-04** | Card hover lift | `.launch-card:hover` | Pointer hover | `--motion-fast` | Instant state change |
 | **ANIM-05** | Card media zoom | `.launch-card-media img` | Pointer hover | `--motion-slow` scale to 1.045 | No zoom |
 | **ANIM-06** | Card press | `.launch-card:active` | Press / tap | `--motion-fast` | Instant |
 | **ANIM-07** | Featured-mission transition | `.motion-spotlight-enter` | Spotlight mission changes | `--motion-slow` rise | No animation |
-| **ANIM-08** | Details countdown pulse | `.details-countdown strong.is-ticking` | Modal countdown value changes | `--motion-normal`, spring | No pulse |
+| **ANIM-08** | Legacy countdown pulse | `.details-countdown strong.is-ticking` | Plain-text countdown changes (passed/unknown launches) | `--motion-normal`, spring | No pulse |
 | **ANIM-09** | Final-hour countdown glow | `.countdown-ring.is-final-hour` | < 1h to launch | 2.6s gentle loop | No glow |
 | **ANIM-10** | Org pill active indicator | `.org-tab.is-active::after` | Organization selected | `--motion-normal` | Static indicator |
 | **ANIM-11** | Overview tile hover bloom | `.overview-tile.is-org::after` | Pointer hover | `--motion-normal` | Layer removed |
@@ -32,7 +32,7 @@ the source with the same id, and listed here.
 | **ANIM-13** | Insights chip cascade | `.insights-body.is-revealing` | Section **opened** (not re-render) | `--motion-normal`, 30ms steps (capped 150ms) | No animation |
 | **ANIM-14** | Button sheen sweep | `.btn::after` and friends | Pointer hover | `--motion-emphasis` | Layer removed |
 | **ANIM-15** | Button press | `.btn:active` | Press / tap | `--motion-fast` | Instant |
-| **ANIM-16** | Save pop | `.favorite-btn.is-just-saved` | Mission saved | `--motion-normal`, spring | No pop |
+| **ANIM-16** | Save confetti | `.confetti-bit`, `js/main.js` | Mission saved | 640ms burst, 10 particles | Skipped entirely |
 | **ANIM-17** | Saved-card collapse | `.saved-card.is-removing` | Removed from the drawer | `--motion-normal` | Removed immediately |
 | **ANIM-18** | Status banner lifecycle | `.status`, `.status-progress` | Status message shown | 10s timer, 200ms exit | Timer kept, motion dropped |
 | **ANIM-19** | Random-mission flash | `.launch-card.is-flash` | Random mission picked | `--motion-emphasis` ×2 | No flash |
@@ -45,19 +45,27 @@ the source with the same id, and listed here.
 | **ANIM-26** | Select arrow rotate | `.select-wrap.is-open::after` | Dropdown open | 200ms | Instant |
 | **ANIM-27** | Active-filter summary | `.active-filters` | A filter becomes active | `--motion-fast` rise | Instant |
 | **ANIM-28** | Results fade | `.motion-fade-in` | Filter/organization change | `--motion-normal` | Instant |
-| **ANIM-29** | Segmented countdown roll | `.cd-value.is-rolling` | Each changed D/H/M/S digit | `--motion-fast` roll-up | Digits update, no roll |
+| **ANIM-29** | Segmented countdown roll | `.cd-value.is-rolling` | Each changed D/H/M/S digit — hero, cards, details modal and saved drawer | `--motion-fast` roll-up | Digits update, no roll |
 
 ## Notes on the two most involved ones
 
 ### ANIM-01 — startup sequence
 
 1. A full-screen charcoal overlay presents the product title.
-2. A light band sweeps across the glyphs (`background-clip: text` on a moving
-   gradient) while launch data loads underneath.
-3. The title **FLIPs** — measured `getBoundingClientRect()` on both the boot
-   title and the real hero `<h1>`, then a single `translate()+scale()` moves it
-   into place — and the backdrop fades out.
-4. `.is-booted` triggers the section reveal (ANIM-02).
+2. A bright band sweeps across the glyphs (`background-clip: text` on a **tiled**
+   moving gradient). The gradient tiles deliberately: with `no-repeat` the parts
+   of the text outside the gradient box get no paint and vanish, which is exactly
+   the "text disappears" bug this replaced. The letters stay readable in a dimmed
+   tone and only the highlight moves.
+3. A **Loading** row (spinner + label) fades in beneath the title.
+4. The overlay holds until **both** ≥3s has elapsed **and** the app has called
+   `signalBootReady()` (fired on first paint, and on load failure so a dead API
+   can't trap anyone). A 9s cap bounds the wait.
+5. The loading row fades out and the title **FLIPs** home: the hero's computed
+   font-size/width/alignment are copied onto the boot title first, so the glyph
+   geometry matches and it lands pixel-accurately by pure translation — no
+   width-ratio scaling, which distorted when the two wrapped differently.
+6. `.is-booted` triggers the section reveal (ANIM-02).
 
 It is skipped for reduced motion, for `?mission=` deep links, and after the
 first play in a tab (`sessionStorage`). It is click/key skippable, has a hard
@@ -66,7 +74,9 @@ no-JS visitors and the test harness always see the dashboard.
 
 ### ANIM-29 — segmented countdown
 
-The hero countdown renders days / hours / minutes / seconds as separate cells.
+Used by the featured mission, every launch card, the details modal and the saved
+drawer (cards and the drawer get a `.is-compact` variant). Renders days / hours /
+minutes / seconds as separate cells.
 Each tick only rewrites and rolls the cells whose value actually changed, so the
 seconds animate every second while the days sit still. The visible digits are
 `aria-hidden`; an `.sr-only` text copy carries the value **without** an

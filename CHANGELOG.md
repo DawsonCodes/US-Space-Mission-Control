@@ -21,6 +21,17 @@ the release ordering; the project follows a simple semantic-style versioning.
   resampling; the image now gets its own compositor layer)
 - Fixed Mission Insights chips replaying their entrance on every keystroke
 - Fixed overview counts animating from a stale previous dataset after a reload
+- Startup now shimmers the title, shows a Loading spinner, holds for at least
+  three seconds (longer if data needs it), then flies the title into the hero
+- The shimmer no longer makes the title vanish — the gradient tiles so every
+  glyph stays painted and only the highlight moves
+- Countdowns everywhere (cards, details modal, saved drawer) use the segmented
+  D/H/M/S rolling display; cards drop the vague "in 22 days" label for it
+- Save keeps its green pill but the star turns gold and fires a confetti burst;
+  the button no longer jumps, and the Saved tile count updates instantly
+- Button hover sheen parks at the left instead of snapping back to the right
+- Fixed long select labels ("All mission types") clipping, and the typewriter
+  search hint being truncated to an unreadable "…"
 
 ## v3.4.0 — Theme Polish
 

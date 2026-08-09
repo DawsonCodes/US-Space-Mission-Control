@@ -141,10 +141,39 @@ check("every animation in the catalog is documented in ANIMATIONS.md", () => {
 check("key animation hooks exist in CSS", () => {
   for (const sel of [
     "bootShimmer", "bootTitleIn", "sheenSweep", "countdownRoll",
-    "countBump", "savePop", "removeCollapse", "refreshSpin", "countdownTick"
+    "countBump", "confettiFly", "removeCollapse", "refreshSpin", "countdownTick"
   ]) {
     assert.ok(css.includes(sel), `${sel} keyframes/rule missing`);
   }
+});
+
+check("boot shimmer tiles its gradient so the text never goes transparent", () => {
+  const block = css.match(/\.boot-title\.is-shimmering \{[^}]*\}/s);
+  assert.ok(block, "shimmer rule present");
+  assert.match(block[0], /background-repeat:\s*repeat/, "gradient must tile");
+  assert.ok(!/no-repeat/.test(block[0]), "no-repeat leaves glyphs unpainted");
+});
+
+check("boot shows a Loading row with a spinner", () => {
+  const html = readFileSync("index.html", "utf8");
+  assert.match(html, /id="bootLoading"/);
+  assert.match(html, /class="boot-spinner"/);
+  assert.match(css, /\.boot-spinner \{/);
+});
+
+check("save button uses a separate star element that turns gold when saved", () => {
+  assert.match(css, /\.favorite-btn\.is-active \.fav-star \{[^}]*#ffcf5c/s);
+  assert.ok(!css.includes("savePop"), "the save button jump was removed");
+});
+
+check("confetti escapes the button's clip while bursting", () => {
+  assert.match(css, /\.favorite-btn\.is-bursting \{[^}]*overflow:\s*visible/s);
+});
+
+check("button sheen parks on the left instead of snapping back", () => {
+  const hover = css.match(/animation: sheenSweep[^;]*;/);
+  assert.ok(hover, "sheen animation present");
+  assert.match(hover[0], /forwards/, "needs fill-mode forwards");
 });
 
 check("reduced motion neutralises the decorative layers", () => {
