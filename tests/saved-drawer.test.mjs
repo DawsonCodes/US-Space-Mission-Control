@@ -86,7 +86,7 @@ check("the summary counts what is still ahead", () => {
 
 check("each card carries its organization accent edge", () => {
   const html = draw([mission("x", "Crew flight", inDays(6), { agencies: [{ id: 44, name: "NASA" }] })]);
-  assert.match(html, /data-accent="spacex"/);
+  assert.match(html, /data-accent="nasa"/);
   assert.match(html, /data-accent-bands="2"/);
 });
 

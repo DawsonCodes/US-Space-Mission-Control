@@ -47,6 +47,7 @@ the source with the same id, and listed here.
 | **ANIM-28** | Results fade | `.motion-fade-in` | Filter/organization change | `--motion-normal` | Instant |
 | **ANIM-29** | Segmented countdown roll | `.cd-value.is-rolling` | Each changed D/H/M/S digit — hero, cards, details modal and saved drawer | `--motion-fast` roll-up | Digits update, no roll |
 | **ANIM-30** | Refresh-window pulse | `.refresh-window[data-state="checking"] .refresh-window-dot` | An automatic data check is in flight | 1.4s opacity loop | No pulse, dot stays solid |
+| **ANIM-31** | Debug toggle busy | `.debug-toggle.is-busy` | Debug data pressed, mirror not yet answered | 1.1s opacity loop | No pulse, label still changes |
 
 ## Notes on the two most involved ones
 

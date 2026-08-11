@@ -16,6 +16,7 @@ import {
   validTimeZone
 } from "./utils.js";
 import { isFavorite } from "./storage.js";
+import { apiUsageThisSession } from "./api.js";
 import { hasActiveFilters, baseManifest } from "./filters.js";
 import { WEATHER_FORECAST_DAYS } from "./config.js";
 import {
@@ -112,6 +113,27 @@ const PERSISTENT_TONES = new Set(["loading", "error"]);
 const statusTimer = createStatusTimer(STATUS_DURATION_MS);
 let statusInterval = null;
 
+// The startup overlay covers the dashboard for at least three seconds, so a
+// banner set during it was already a third spent before anyone could read it,
+// and a short boot could burn most of it. While held, a banner shows without
+// counting down; releasing starts the full duration from that moment.
+let statusHeld = false;
+let heldTone = null;
+
+export function holdStatusCountdown() {
+  statusHeld = true;
+}
+
+export function releaseStatusCountdown() {
+  if (!statusHeld) return;
+  statusHeld = false;
+  // Whatever ended up on screen now gets its whole duration.
+  if (heldTone && statusHasCountdown(heldTone) && els.status && !els.status.hidden) {
+    runStatusCountdown();
+  }
+  heldTone = null;
+}
+
 function clearStatusInterval() {
   if (statusInterval) {
     window.clearInterval(statusInterval);
@@ -192,7 +214,14 @@ export function setStatus(message, tone = "info") {
     `<button type="button" class="status-close" data-status-close aria-label="Dismiss message">&times;</button>` +
     progress;
 
-  if (withCountdown) runStatusCountdown();
+  if (!withCountdown) return;
+  if (statusHeld) {
+    // The freshly written markup already reads the full duration and the bar
+    // defaults to 100%, so leaving it alone is exactly "not started yet".
+    heldTone = tone;
+    return;
+  }
+  runStatusCountdown();
 }
 
 // Pause the auto-dismiss countdown while the banner is hovered or keyboard-
@@ -276,10 +305,11 @@ const MAX_ACCENT_BANDS = 3;
 // The stripe references the live :root tokens rather than resolved hex values,
 // so a colour customized in the panel restyles every stripe immediately.
 export function accentStripe(launch) {
-  // Provider first so a NASA-on-provider mission leads with the rocket's owner,
-  // matching the single accent used before.
+  // NASA leads when it is on the mission. It is the agency whose payload is
+  // flying, it reads first in the badge row, and it makes the top band the one
+  // that names the mission rather than the rocket.
   const tags = orgTags(launch).filter((tag) => ORG_ACCENT_VAR[tag]);
-  const ordered = [...tags.filter((t) => t !== ORG.NASA), ...tags.filter((t) => t === ORG.NASA)];
+  const ordered = [...tags.filter((t) => t === ORG.NASA), ...tags.filter((t) => t !== ORG.NASA)];
   const bands = ordered.slice(0, MAX_ACCENT_BANDS);
 
   if (bands.length === 0) return { primary: "", bands: 0, style: "" };
@@ -474,14 +504,24 @@ export function setLoadingState() {
 
 // ----- Hero spotlight -----------------------------------------------------
 
+// One place decides how a data source is described, so the hero pill, the About
+// panel and the footer can never disagree. "snapshot" is the published file,
+// "live" is a direct API call, "dev" is the development mirror behind the Debug
+// switch, and "cache" is this browser's saved copy.
+export function dataSourceLabel() {
+  if (state.usingDemo) return "Debug data";
+  switch (state.dataSource) {
+    case "snapshot": return "Published data";
+    case "snapshot-stale": return "Published data (old)";
+    case "live": return "Live data";
+    case "dev": return "Development mirror";
+    case "cache": return "Saved data";
+    default: return "Not loaded";
+  }
+}
+
 export function renderHeroMeta() {
-  const source = state.usingDemo
-    ? "Debug data"
-    : state.dataSource === "live"
-      ? "Live data"
-      : state.dataSource === "cache"
-        ? "Cached data"
-        : "Not loaded";
+  const source = dataSourceLabel();
   if (els.dataSource) els.dataSource.textContent = source;
   if (els.lastUpdated) {
     els.lastUpdated.textContent = state.lastUpdated
@@ -1186,19 +1226,47 @@ export function buildDetailsContent(launch) {
 export function buildAboutContent() {
   const loaded = state.launches.length;
   const filtered = state.filteredLaunches.length;
-  const source = state.usingDemo
-    ? "Debug data"
-    : state.dataSource === "live"
-      ? "Live data"
-      : state.dataSource === "cache"
-        ? "Cached live data"
-        : "Not loaded";
+  const source = dataSourceLabel();
   const refreshed = state.lastUpdated ? formatCompactDate(state.lastUpdated) : "—";
   const coverage = state.truncated
     ? `Partial. Showing the soonest ${loaded} launches; more are scheduled beyond them.`
     : "Complete for the tracked providers.";
 
   const row = (label, value) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`;
+
+  // What the data actually costs. The scheduled run's spend is published in the
+  // snapshot; this browser's is counted locally and should read zero on the
+  // normal path, which is the whole point of publishing the file.
+  const spend = state.apiUsage;
+  const mine = apiUsageThisSession();
+  const perHour = spend ? spend.requests * (spend.runsPerHour || 2) : null;
+
+  const usageRows = [
+    spend
+      ? row(
+          "Scheduled run cost",
+          `${spend.requests} request${spend.requests === 1 ? "" : "s"}` +
+            (spend.retries ? `, ${spend.retries} of them retries` : "") +
+            (spend.byFeed
+              ? ` (${Object.entries(spend.byFeed).map(([k, v]) => `${k} ${v}`).join(", ")})`
+              : "")
+        )
+      : "",
+    perHour !== null
+      ? row(
+          "Spend per hour",
+          `About ${perHour} of ${spend.hourlyBudget || 15} allowed, across ${spend.runsPerHour || 2} runs`
+        )
+      : "",
+    row(
+      "This browser has spent",
+      mine.requests === 0
+        ? "0 requests. Published data is a static file, not an API call."
+        : `${mine.requests} request${mine.requests === 1 ? "" : "s"} (${Object.entries(mine.byHost).map(([k, v]) => `${k} ${v}`).join(", ")})`
+    )
+  ]
+    .filter(Boolean)
+    .join("");
 
   return `
     <h2 id="aboutTitle" class="details-title">About this data</h2>
@@ -1211,6 +1279,11 @@ export function buildAboutContent() {
       ${row("Last refresh", refreshed)}
       ${row("Data status", source)}
       ${row("Coverage", coverage)}
+    </dl>
+
+    <h3 class="about-subhead">API usage</h3>
+    <dl class="details-grid about-grid">
+      ${usageRows}
     </dl>
     <div class="about-orgs">
       <h3 class="about-subhead">Tracked organizations</h3>
@@ -1348,7 +1421,7 @@ function updateCountdownUnits() {
 
 export function refreshFooterMeta() {
   const pieces = [];
-  pieces.push(state.usingDemo ? "Debug data" : `Source: ${state.dataSource || "unknown"}`);
+  pieces.push(dataSourceLabel());
   pieces.push(`Time mode: ${state.dateMode.toUpperCase()}`);
   pieces.push(`Clock: ${new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(new Date())}`);
   els.footerMeta.textContent = pieces.join(" • ");

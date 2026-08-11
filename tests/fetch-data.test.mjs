@@ -168,5 +168,70 @@ await check("an unchanged dataset is not rewritten, so the repo does not churn",
   await rm(first.dir, { recursive: true, force: true });
 });
 
+await check("the run publishes exactly what it spent on the API", async () => {
+  const { dir, out } = await runScript({ total: 237, previousTotal: 5 });
+  const snap = await readSnapshot(dir, "launches.json");
+
+  assert.ok(snap.apiUsage, "apiUsage missing from the snapshot");
+  // 3 provider pages + 1 NASA + 1 previous for this fixture.
+  assert.equal(snap.apiUsage.requests, 5, `unexpected request count: ${snap.apiUsage.requests}`);
+  assert.equal(snap.apiUsage.byFeed.providers, 3);
+  assert.equal(snap.apiUsage.byFeed.nasa, 1);
+  assert.equal(snap.apiUsage.byFeed.previous, 1);
+  assert.equal(snap.apiUsage.retries, 0);
+  assert.match(out, /API requests this run: 5/);
+  await rm(dir, { recursive: true, force: true });
+});
+
+await check("retries are counted, because they cost the same allowance", async () => {
+  const { dir } = await runScript({ total: 4, failFirst: 2 });
+  const snap = await readSnapshot(dir, "launches.json");
+  assert.equal(snap.apiUsage.retries, 2, "retried requests must be counted");
+  assert.ok(snap.apiUsage.requests > 3);
+  await rm(dir, { recursive: true, force: true });
+});
+
+await check("a huge feed stops paging rather than blowing the hourly allowance", async () => {
+  // 5000 launches would be 50 pages. The run budget stops it well before that
+  // and says so, instead of silently spending the next hour's requests.
+  const { dir, out } = await runScript({ total: 5000 });
+  const snap = await readSnapshot(dir, "launches.json");
+  assert.ok(snap.apiUsage.requests <= snap.apiUsage.runBudget, `spent ${snap.apiUsage.requests}`);
+  assert.equal(snap.truncated, true, "the shortfall must be reported");
+  assert.match(out, /stopped early to stay inside/, "the cap must be logged, not silent");
+  await rm(dir, { recursive: true, force: true });
+});
+
+await check("the published spend sits inside the hourly allowance", async () => {
+  const { dir } = await runScript({ total: 237 });
+  const snap = await readSnapshot(dir, "launches.json");
+  const perHour = snap.apiUsage.requests * snap.apiUsage.runsPerHour;
+  assert.ok(
+    perHour <= snap.apiUsage.hourlyBudget,
+    `the schedule would spend ${perHour} an hour against a budget of ${snap.apiUsage.hourlyBudget}`
+  );
+  await rm(dir, { recursive: true, force: true });
+});
+
+await check("changing only the request count does not trigger a commit", async () => {
+  // apiUsage moves every run by definition. If it counted as a change the repo
+  // would churn 48 times a day for nothing.
+  const first = await runScript({ total: 12 });
+  const original = await readFile(join(first.dir, "data", "launches.json"), "utf8");
+  const stub = join(first.dir, "stub.mjs");
+  const rerun = await new Promise((resolve) => {
+    const child = spawn(process.execPath, ["--import", `file://${stub}`, join(ROOT, "scripts/fetch-data.mjs")], {
+      cwd: first.dir,
+      env: { ...process.env, USMC_DATA_DIR: join(first.dir, "data"), USMC_REQUEST_GAP_MS: "0", USMC_RETRY_BASE_MS: "10" }
+    });
+    let out = "";
+    child.stdout.on("data", (d) => (out += d));
+    child.on("close", (code) => resolve({ code, out }));
+  });
+  assert.equal(rerun.code, 0);
+  assert.equal(await readFile(join(first.dir, "data", "launches.json"), "utf8"), original);
+  await rm(first.dir, { recursive: true, force: true });
+});
+
 if (failures > 0) { console.error(`\n${failures} fetch-data test(s) failed.`); process.exit(1); }
 console.log("\nAll fetch-data tests passed.");

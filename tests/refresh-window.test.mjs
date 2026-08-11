@@ -1,0 +1,171 @@
+// The rolling-window readout and the status-banner timing.
+//
+// Two reported bugs live here. The countdown restarted at thirty minutes on
+// every reload and in every new tab, because it was anchored to a per-session
+// timestamp rather than to when the data was actually published. And the
+// "Showing saved launch data" banner flashed and vanished, because the startup
+// path dismissed it a few hundred milliseconds after raising it, and because
+// the boot overlay spent several seconds of its ten-second life before anyone
+// could see it.
+
+import assert from "node:assert/strict";
+
+const docListeners = {};
+const autoTicks = [];
+
+function makeEl(id = "") {
+  const classes = new Set();
+  const attrs = {};
+  return {
+    id, dataset: {}, style: { setProperty() {}, removeProperty() {} },
+    hidden: false, disabled: false, value: "", textContent: "", innerHTML: "",
+    tabIndex: 0, open: false,
+    classList: {
+      add: (c) => classes.add(c), remove: (c) => classes.delete(c),
+      toggle: (c, f) => (f === undefined ? (classes.has(c) ? classes.delete(c) : classes.add(c)) : f ? classes.add(c) : classes.delete(c)),
+      contains: (c) => classes.has(c)
+    },
+    addEventListener() {}, removeEventListener() {},
+    setAttribute(k, v) { attrs[k] = String(v); }, getAttribute(k) { return attrs[k] ?? null; }, removeAttribute(k) { delete attrs[k]; },
+    appendChild() {}, append() {}, prepend() {}, remove() {},
+    querySelector() { return null; }, querySelectorAll() { return []; },
+    closest() { return null; }, contains() { return false; },
+    focus() {}, scrollIntoView() {}, getContext() { return null; },
+    get offsetWidth() { return 0; }
+  };
+}
+const nodes = new Map();
+globalThis.document = {
+  getElementById(id) { if (!nodes.has(id)) nodes.set(id, makeEl(id)); return nodes.get(id); },
+  querySelector() { return null; }, querySelectorAll() { return []; },
+  createElement() { return makeEl(); }, createDocumentFragment() { return makeEl(); },
+  addEventListener(type, fn) { (docListeners[type] ||= []).push(fn); },
+  fire(type) { (docListeners[type] || []).forEach((fn) => fn({ type })); },
+  visibilityState: "visible",
+  documentElement: makeEl("html"),
+  get body() { return makeEl(); }
+};
+const mem = new Map();
+globalThis.localStorage = {
+  getItem: (k) => (mem.has(k) ? mem.get(k) : null),
+  setItem: (k, v) => mem.set(k, String(v)),
+  removeItem: (k) => mem.delete(k)
+};
+globalThis.sessionStorage = { getItem: () => null, setItem() {}, removeItem() {} };
+globalThis.window = {
+  addEventListener() {}, matchMedia: () => ({ matches: false, addEventListener() {} }),
+  setInterval: (fn, ms) => { if (ms >= 60000) autoTicks.push(fn); return setInterval(fn, 1e9); },
+  clearInterval: clearInterval.bind(globalThis),
+  setTimeout: setTimeout.bind(globalThis), clearTimeout: clearTimeout.bind(globalThis),
+  requestAnimationFrame: () => 0, cancelAnimationFrame() {},
+  devicePixelRatio: 1, innerWidth: 1280, innerHeight: 800,
+  location: { href: "https://dawsoncodes.github.io/US-Space-Mission-Control/", search: "", pathname: "/US-Space-Mission-Control/", hash: "" }
+};
+globalThis.history = { pushState() {}, replaceState() {} };
+
+const { AUTO_REFRESH_MS, SNAPSHOT_SCHEMA } = await import("../js/config.js");
+
+// Published 12 minutes ago. Everyone reading this snapshot should agree that
+// the next update is about 18 minutes out, whenever they happen to open it.
+const PUBLISHED_MINUTES_AGO = 12;
+const generatedAt = new Date(Date.now() - PUBLISHED_MINUTES_AGO * 60 * 1000).toISOString();
+
+globalThis.fetch = async (url) => {
+  const text = String(url);
+  if (text.includes("previous.json")) {
+    return { ok: true, json: async () => ({ schema: SNAPSHOT_SCHEMA, generatedAt, launches: [] }) };
+  }
+  if (text.includes("launches.json")) {
+    return {
+      ok: true,
+      json: async () => ({
+        schema: SNAPSHOT_SCHEMA,
+        generatedAt,
+        truncated: false,
+        launches: [
+          { id: "a", name: "Mission A", net: "2026-12-01T00:00:00Z", providerId: 121, providerName: "SpaceX", agencies: [], padLat: null, padLon: null }
+        ]
+      })
+    };
+  }
+  throw new Error("no API calls expected");
+};
+
+await import("../js/main.js");
+const { state } = await import("../js/state.js");
+const render = await import("../js/render.js");
+
+let failures = 0;
+const check = (label, fn) => {
+  try { fn(); console.log(`ok  - ${label}`); } catch (e) { failures++; console.error(`FAIL - ${label}: ${e.message}`); }
+};
+
+await new Promise((r) => setTimeout(r, 250));
+
+// ---------- the countdown anchor -------------------------------------------
+check("the countdown is anchored to the publish time, not to this session", () => {
+  const text = nodes.get("refreshWindowText").textContent;
+  const remaining = Number(/Next update in (\d+) minutes?/.exec(text)?.[1]);
+  assert.ok(Number.isFinite(remaining), `no countdown in readout: ${text}`);
+
+  const expected = Math.round((AUTO_REFRESH_MS - PUBLISHED_MINUTES_AGO * 60 * 1000) / 60000);
+  assert.ok(
+    Math.abs(remaining - expected) <= 1,
+    `expected about ${expected} minutes, got ${remaining} (${text})`
+  );
+});
+
+check("the age shown matches how long ago the data was published", () => {
+  const text = nodes.get("refreshWindowText").textContent;
+  const ago = Number(/Updated (\d+) minutes? ago/.exec(text)?.[1]);
+  assert.ok(Math.abs(ago - PUBLISHED_MINUTES_AGO) <= 1, `expected ~${PUBLISHED_MINUTES_AGO}, got ${ago} (${text})`);
+});
+
+check("a reload does not restart the countdown at thirty minutes", () => {
+  // A fresh tab reads the same published stamp, so it computes the same
+  // remaining time. Simulated by re-deriving from state, which is what a new
+  // page load would do from the same snapshot.
+  const text = nodes.get("refreshWindowText").textContent;
+  assert.ok(!/Next update in 30 minutes/.test(text), `countdown restarted: ${text}`);
+  assert.ok(
+    Math.abs(state.lastUpdated - Date.parse(generatedAt)) < 1000,
+    "state should carry the publish time, which is what every tab anchors to"
+  );
+});
+
+// ---------- the status banner ----------------------------------------------
+check("the startup banner is still on screen, not dismissed under the reader", () => {
+  const status = nodes.get("status");
+  assert.equal(status.hidden, false, "the banner was dismissed during startup");
+  assert.ok(status.innerHTML.length > 0, "the banner was emptied");
+});
+
+check("a banner raised during boot keeps its full duration", () => {
+  // While held, the dial reads the full time and the bar is untouched, so none
+  // of it is spent behind the overlay.
+  render.holdStatusCountdown();
+  const status = nodes.get("status");
+  render.setStatus("Held message", "info");
+  assert.match(status.innerHTML, /10s/, "should show the full duration while held");
+
+  render.releaseStatusCountdown();
+  assert.equal(status.hidden, false, "releasing must not hide the banner");
+});
+
+check("a persistent tone never gets a countdown at all", () => {
+  const status = nodes.get("status");
+  render.setStatus("Loading something", "loading");
+  assert.ok(!/data-status-count/.test(status.innerHTML), "loading should not count down");
+  render.setStatus("Something failed", "error");
+  assert.ok(!/data-status-count/.test(status.innerHTML), "error should not count down");
+});
+
+check("the debug tone is its own tone, so it can be styled as a warning", () => {
+  const status = nodes.get("status");
+  render.setStatus("Debug data on", "debug");
+  assert.equal(status.dataset.tone, "debug");
+});
+
+if (failures > 0) { console.error(`\n${failures} refresh-window check(s) failed.`); process.exit(1); }
+console.log("\nRefresh-window and status-timing checks passed.");
+process.exit(0);

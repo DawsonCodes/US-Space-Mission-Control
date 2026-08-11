@@ -32,7 +32,7 @@ import { ORG, ORG_LABELS } from "./organizations.js";
 import { applyOrgColors } from "./org-theme.js";
 import { buildColorCustomizerContent, wireColorCustomizer } from "./customize.js";
 import { setupSearchHint } from "./search-hint.js";
-import { setupBoot, signalBootReady } from "./boot.js";
+import { setupBoot, signalBootReady, onBootRevealed } from "./boot.js";
 import { buildICS, icsFilename } from "./calendar.js";
 import { buildMissionUrl, parseMissionId, stripMissionParam } from "./deeplink.js";
 import { setupStarfield } from "./starfield.js";
@@ -43,6 +43,8 @@ import {
   els,
   setStatus,
   dismissStatus,
+  holdStatusCountdown,
+  releaseStatusCountdown,
   setupStatusBanner,
   updateInputsFromState,
   updateResetState,
@@ -289,7 +291,7 @@ function renderManifest(launches, truncated, source, dataTime, { preservePaginat
 function startInitialLoad() {
   const cache = getLaunchCache();
   if (isUsableCache(cache)) {
-    renderManifest(cache.launches, cache.truncated, "cache", cache.savedAt, { entrance: "none" });
+    renderManifest(cache.launches, cache.truncated, "cache", cache.publishedAt || cache.savedAt, { entrance: "none" });
     setStatus(`Showing saved launch data from ${cacheAgeLabel(cache.ageMs)}. Checking for an update…`, "info");
     // Reading the published snapshot is free, so that always happens. Falling
     // back to the API is not, so it is withheld unless what we are showing has
@@ -329,6 +331,15 @@ function markRefreshed() {
   setRefreshWindow();
 }
 
+// When the data on screen was actually published. For the snapshot this is the
+// workflow run time, which is identical for everyone, so the countdown reads
+// the same in every tab and survives a reload. It falls back to this browser's
+// last check only when there is no published stamp to anchor to.
+function publishedAt() {
+  const stamp = Number(state.lastUpdated);
+  return Number.isFinite(stamp) && stamp > 0 ? stamp : 0;
+}
+
 // Whole minutes, rounded so the reading never sits on "0 minutes" while there
 // is still time on the clock.
 function minutesLabel(ms) {
@@ -352,19 +363,26 @@ function setRefreshWindow({ checking = false } = {}) {
     el.textContent = "Checking for new launch data…";
     return;
   }
-  if (!lastRefreshAt) {
+  const published = publishedAt();
+  if (!published && !lastRefreshAt) {
     els.refreshWindow?.setAttribute("data-state", "checking");
     el.textContent = "Loading launch data…";
     return;
   }
 
-  const since = Date.now() - lastRefreshAt;
-  const until = Math.max(0, AUTO_REFRESH_MS - since);
+  // Anchored to the publish time, not to when this tab happened to open, so a
+  // reload or a second tab continues the same countdown instead of restarting
+  // it at thirty minutes.
+  const anchor = published || lastRefreshAt;
+  const since = Math.max(0, Date.now() - anchor);
+  const until = Math.max(0, AUTO_REFRESH_MS - (since % AUTO_REFRESH_MS));
+
   els.refreshWindow?.setAttribute("data-state", "idle");
+  const age = since < 60000 ? "Updated just now" : `Updated ${minutesLabel(since)} ago`;
   el.textContent =
-    since < 60000
-      ? `Updated just now. Next check in ${minutesLabel(until)}.`
-      : `Updated ${minutesLabel(since)} ago. Next check in ${minutesLabel(until)}.`;
+    since >= AUTO_REFRESH_MS
+      ? `${age}. Next update due now.`
+      : `${age}. Next update in ${minutesLabel(until)}.`;
 }
 
 // Updating is automatic on a rolling window: a timer while the tab is open, plus
@@ -375,11 +393,18 @@ function setupAutoRefresh() {
   autoRefreshTimer = window.setInterval(() => {
     if (state.usingDemo) return;
     refreshData({ background: true, auto: true, allowApi: apiWorthSpending() });
+    syncPreviousWindow();
   }, AUTO_REFRESH_MS);
 
   // Keep the countdown honest between refreshes without re-rendering anything.
   if (windowTicker) window.clearInterval(windowTicker);
   windowTicker = window.setInterval(() => setRefreshWindow(), 30000);
+
+  // Completed launches ride the same cycle. The workflow republishes
+  // data/previous.json every half hour whether or not anybody is looking, and
+  // this keeps the stored window in step with it, so opening the panel shows
+  // current data instead of fetching on demand.
+  syncPreviousWindow();
 
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState !== "visible") return;
@@ -456,7 +481,8 @@ async function refreshData({ background = false, manual = false, auto = false, a
     if (state.activeRequest !== controller) return; // superseded by a newer refresh
     markRefreshed();
 
-    const { launches, truncated, partial, failedFeeds = [], source, generatedAt } = result;
+    const { launches, truncated, partial, failedFeeds = [], source, generatedAt, apiUsage } = result;
+    state.apiUsage = apiUsage || null;
 
     // A one-feed result is not a smaller version of the list, it is a different
     // list. When the provider feed fails, what comes back is every NASA mission
@@ -472,7 +498,7 @@ async function refreshData({ background = false, manual = false, auto = false, a
         return;
       }
       if (betterCached) {
-        renderManifest(cache.launches, cache.truncated, "cache", cache.savedAt, { entrance: "none" });
+        renderManifest(cache.launches, cache.truncated, "cache", cache.publishedAt || cache.savedAt, { entrance: "none" });
         setStatus(partialCoverageMessage(failedFeeds, { kept: true }), "warning");
         return;
       }
@@ -487,7 +513,7 @@ async function refreshData({ background = false, manual = false, auto = false, a
     }
 
     const replacing = state.launches.length > 0 && state.dataSource !== "none";
-    renderManifest(launches, truncated, source === "live" ? "live" : "snapshot", generatedAt, {
+    renderManifest(launches, truncated, source, generatedAt, {
       preservePagination: replacing,
       entrance: replacing ? "fade" : "stagger"
     });
@@ -508,10 +534,15 @@ async function refreshData({ background = false, manual = false, auto = false, a
 
     // No published snapshot yet, and we withheld the API because there is
     // already something usable on screen. That is the intended outcome, not a
-    // failure: leave the page exactly as it is.
+    // failure. Settle the wording rather than dismissing: dismissing here was
+    // wiping the "Showing saved launch data" banner a few hundred milliseconds
+    // after it appeared, which is why it seemed to flash and vanish on reload.
     if (error?.noSnapshot) {
       markRefreshed();
-      dismissStatus();
+      const cached = getLaunchCache();
+      if (isUsableCache(cached)) {
+        setStatus(`Showing saved launch data from ${cacheAgeLabel(cached.ageMs)}.`, "info");
+      }
       return;
     }
 
@@ -519,7 +550,7 @@ async function refreshData({ background = false, manual = false, auto = false, a
     if (isUsableCache(cache)) {
       // Stale-but-usable cache stays visible with an honest, non-destructive note.
       if (state.dataSource !== "cache" || state.launches.length === 0) {
-        renderManifest(cache.launches, cache.truncated, "cache", cache.savedAt, { entrance: "none" });
+        renderManifest(cache.launches, cache.truncated, "cache", cache.publishedAt || cache.savedAt, { entrance: "none" });
       }
       setStatus(
         error?.rateLimited
@@ -573,7 +604,7 @@ function toggleDebugData() {
       renderManifest(realManifest.launches, realManifest.truncated, realManifest.source, realManifest.dataTime, {
         entrance: "fade"
       });
-      setStatus("Debug data off.", "info");
+      setStatus("Debug data off. Showing real launch data again.", "debug");
     } else {
       // Nothing was loaded before debug was switched on, so there is nothing to
       // restore; go through the normal path, which prefers the saved data.
@@ -617,20 +648,24 @@ async function useDebugData() {
     state.activeRequest.abort();
     state.activeRequest = null;
   }
-  setStatus("Loading debug data from the development mirror\u2026", "loading");
+
+  // Paint the pressed state before awaiting anything. Previously the label only
+  // changed once the mirror answered, so a slow response read as a dead button.
+  syncDebugToggle({ busy: true });
+  setStatus("Loading debug data from the development mirror\u2026", "debug");
 
   try {
     const result = await fetchDevLaunches({});
     renderManifest(result.launches, result.truncated, "demo", result.generatedAt, { entrance: "stagger" });
     setStatus(
       `Debug data: ${result.launches.length} launches from the development mirror. That dataset can be out of date.`,
-      "warning"
+      "debug"
     );
   } catch {
     renderManifest(getDemoLaunches(), false, "demo", Date.now(), { entrance: "stagger" });
     setStatus(
       `Debug data: the development mirror is unreachable, so ${state.launches.length} bundled sample missions are shown.`,
-      "warning"
+      "debug"
     );
   }
 
@@ -833,6 +868,23 @@ function showPreviousList() {
   }
   els.previousContent.innerHTML = buildPreviousContent(previousLaunches);
   els.previousContent.scrollTop = 0;
+}
+
+// Pull the published completed-launch file into the rolling store. Reading it
+// is a static same-origin request, so this is free and safe to do on the cycle
+// rather than waiting for someone to open the panel.
+async function syncPreviousWindow() {
+  if (state.usingDemo) return;
+  try {
+    // Background sync: read the published file, never spend an API request.
+    previousLaunches = await fetchPreviousLaunches({ allowApi: false });
+    // If the panel happens to be open on its list view, keep it in step.
+    if (isOverlayOpen(els.previousModal) && !els.previousContent?.querySelector?.("[data-previous-back]")) {
+      els.previousContent.innerHTML = buildPreviousContent(previousLaunches);
+    }
+  } catch {
+    // Nothing published yet and nothing stored: the panel will say so if opened.
+  }
 }
 
 function openPrevious(opener) {
@@ -1389,11 +1441,16 @@ function attachEventListeners() {
 function init() {
   // ANIM-01: startup title shimmer -> hand-off -> section reveal. Guarded so a
   // boot failure can never leave the dashboard hidden behind the overlay.
+  // Hold before boot so any banner raised during startup keeps its full ten
+  // seconds from the moment the dashboard is actually visible.
+  holdStatusCountdown();
   try {
     setupBoot();
+    onBootRevealed(releaseStatusCountdown);
   } catch {
     document.documentElement?.classList?.remove("is-booting");
     document.getElementById("bootScreen")?.remove?.();
+    releaseStatusCountdown();
   }
   migrateLegacyStorage();
   applyOrgColors(); // apply saved/default organization accents before first paint

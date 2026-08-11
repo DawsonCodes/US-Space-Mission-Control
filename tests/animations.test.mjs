@@ -147,11 +147,53 @@ check("key animation hooks exist in CSS", () => {
   }
 });
 
-check("boot shimmer tiles its gradient so the text never goes transparent", () => {
+check("boot shimmer keeps every glyph painted for the whole sweep", () => {
+  // With -webkit-text-fill-color: transparent, any glyph outside the painted
+  // background has nothing to draw and disappears. The flat second layer covers
+  // the full width so that can never happen.
   const block = css.match(/\.boot-title\.is-shimmering \{[^}]*\}/s);
   assert.ok(block, "shimmer rule present");
-  assert.match(block[0], /background-repeat:\s*repeat/, "gradient must tile");
-  assert.ok(!/no-repeat/.test(block[0]), "no-repeat leaves glyphs unpainted");
+  assert.match(block[0], /-webkit-text-fill-color:\s*transparent/);
+
+  const sizes = /background-size:\s*([^;]+);/.exec(block[0]);
+  assert.ok(sizes, "background-size present");
+  const layers = sizes[1].split(",").map((s) => s.trim());
+  assert.equal(layers.length, 2, "expected a glow layer over a flat base layer");
+  assert.match(layers[1], /^100%/, "the base layer must span the whole title");
+
+  const images = /background-image:([\s\S]*?);/.exec(block[0]);
+  assert.ok(images, "background-image present");
+  assert.match(images[1], /linear-gradient\(#[0-9a-f]{6},\s*#[0-9a-f]{6}\)/i, "base layer must be a solid wash");
+});
+
+check("the shimmer glow starts fully off the text, not on top of it", () => {
+  const block = css.match(/\.boot-title\.is-shimmering \{[^}]*\}/s);
+  const frames = css.match(/@keyframes bootShimmer \{[\s\S]*?\n\}/);
+  assert.ok(frames, "bootShimmer keyframes present");
+
+  // A repeating image always has a copy over the glyphs, so it can never start
+  // clear of them. Non-repeating is what makes an off-text start possible.
+  assert.match(block[0], /background-repeat:\s*no-repeat/, "a tiled glow cannot start off-text");
+
+  const glowWidth = Number(/background-size:\s*(-?\d+)%/.exec(block[0])[1]);
+  const startRest = Number(/background-position:\s*(-?\d+)%/.exec(block[0])[1]);
+  const from = Number(/from\s*\{\s*background-position:\s*(-?\d+)%/.exec(frames[0])[1]);
+  const to = Number(/to\s*\{\s*background-position:\s*(-?\d+)%/.exec(frames[0])[1]);
+
+  // For a background narrower than its box, the pixel offset is
+  // (100 - width) * position / 100 as a share of the box width. Fully clear of
+  // the left edge means that offset is at most -width.
+  const offsetShare = (pos) => ((100 - glowWidth) * pos) / 100;
+
+  assert.equal(startRest, from, "the resting position must match the first frame");
+  assert.ok(
+    offsetShare(from) <= -glowWidth,
+    `glow starts at ${offsetShare(from)}% with width ${glowWidth}%, so it is already over the text`
+  );
+  assert.ok(
+    offsetShare(to) >= 100,
+    `glow ends at ${offsetShare(to)}%, so it never fully leaves the text`
+  );
 });
 
 check("boot shows a Loading row with a spinner, then a Loaded confirmation", () => {

@@ -2,12 +2,13 @@
 //
 // They run it so people can build against something without hammering
 // production, and it is not meaningfully rate limited. The trade is that it
-// serves a cached dataset which can be days behind, so it is only ever used
-// deliberately: it backs the Debug data switch, and stands in when production
-// has refused and the alternative is an empty dashboard.
+// serves a cached dataset which can be days behind, so it backs the Debug data
+// switch and nothing else.
 //
-// The rule these pin: mirror data must never be cached, because the cache is
-// what the real dashboard paints from on the next visit.
+// Two rules these pin. Mirror data is never cached, because the cache is what
+// the real dashboard paints from on the next visit. And the mirror is never an
+// automatic fallback: when one of its feeds comes back short it produces a
+// NASA-only list, which is exactly what must never appear unasked.
 
 import assert from "node:assert/strict";
 
@@ -118,7 +119,7 @@ await check("a mirror that returns nothing is an error, not an empty dashboard",
   globalThis.fetch = saved;
 });
 
-// ---------- the last-resort fallback ---------------------------------------
+// ---------- never an automatic fallback ------------------------------------
 await check("production is preferred while it is answering", async () => {
   reset("ok", "ok");
   const result = await loadLaunches({ allowApi: true });
@@ -127,24 +128,25 @@ await check("production is preferred while it is answering", async () => {
   assert.ok(!calls.some((c) => c.includes("lldev.")), "the mirror was used unnecessarily");
 });
 
-await check("a rate-limited production falls through to the mirror", async () => {
+await check("the mirror is NOT an automatic fallback for a rate-limited production", async () => {
+  // It carries a cached dataset, and when one of its feeds is short it produces
+  // exactly the NASA-only list this app must never serve unasked. It is reached
+  // only when the Debug data button is pressed.
   reset("429", "ok");
-  const result = await loadLaunches({ allowApi: true });
-  assert.equal(result.source, "dev", "should have fallen back rather than failing");
-  assert.equal(result.launches[0].id, "dev-1");
-});
-
-await check("that fallback still does not poison the cache", async () => {
-  reset("429", "ok");
-  await loadLaunches({ allowApi: true });
-  assert.equal(mem.has(STORAGE_KEYS.manifest), false);
-});
-
-await check("both down reports the original production failure", async () => {
-  reset("429", "down");
   const error = await loadLaunches({ allowApi: true }).then(() => null, (e) => e);
-  assert.ok(error, "expected a rejection");
-  assert.equal(error.rateLimited, true, "should surface the rate limit, not the mirror's error");
+  assert.ok(error, "expected the rate limit to surface, not a silent mirror swap");
+  assert.equal(error.rateLimited, true);
+  assert.ok(
+    !calls.some((c) => c.includes("lldev.")),
+    `the mirror was used without being asked: ${calls.join(", ")}`
+  );
+});
+
+await check("a failing production never silently downgrades the dashboard", async () => {
+  reset("down", "ok");
+  await assert.rejects(() => loadLaunches({ allowApi: true }));
+  assert.ok(!calls.some((c) => c.includes("lldev.")));
+  assert.equal(mem.has(STORAGE_KEYS.manifest), false);
 });
 
 await check("the mirror is not reached for when the API was not permitted", async () => {

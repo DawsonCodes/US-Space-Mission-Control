@@ -3,6 +3,7 @@
 // a missing root index.html, or any package-manager / dependency / build
 // artifact creeping into the repo. Used locally and by GitHub Actions.
 
+import { spawnSync } from "node:child_process";
 import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
 import { dirname, resolve, join } from "node:path";
 
@@ -119,6 +120,32 @@ for (const file of files) {
   }
 }
 if (undefinedConsts === 0) ok("every config constant used is imported or declared");
+
+// ---- 3c. Modules actually evaluate ---------------------------------------
+// The check above only catches SCREAMING_SNAKE names. A missing camelCase
+// helper is the same failure and slips straight past it, so every module is
+// imported for real: a ReferenceError at module scope fails here rather than
+// in the browser. Modules that touch the DOM get a minimal shim first.
+let evalFailures = 0;
+for (const file of files) {
+  const rel = file.slice(root.length + 1);
+  if (!rel.startsWith("js/")) continue;
+  const result = spawnSync(
+    process.execPath,
+    ["--input-type=module", "-e", `await import(${JSON.stringify(file)});`],
+    {
+      encoding: "utf8",
+      timeout: 20000,
+      env: { ...process.env, NODE_OPTIONS: `--import ${JSON.stringify(join(root, "tests/dom-shim.mjs"))}` }
+    }
+  );
+  if (result.status !== 0) {
+    const message = (result.stderr || "").split("\n").find((l) => /Error/.test(l)) || "failed to evaluate";
+    fail(`${rel}: ${message.trim()}`);
+    evalFailures++;
+  }
+}
+if (evalFailures === 0) ok("every module evaluates without a reference error");
 
 // ---- 4. No package manager / dependency / build artifacts ----------------
 const banned = ["package.json", "package-lock.json", "yarn.lock", "pnpm-lock.yaml", "node_modules", "dist", "build", ".parcel-cache"];
