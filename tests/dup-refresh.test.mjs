@@ -38,6 +38,7 @@ globalThis.window = {
 globalThis.history = { pushState() {}, replaceState() {} };
 
 const { MANIFEST_CACHE_SCHEMA, STORAGE_KEYS } = await import("../js/config.js");
+const { simplifyLaunch: simplify } = await import("../js/normalize.js");
 // Seed a FRESH cache so the initial background refresh is a single, simple round.
 store.set(STORAGE_KEYS.manifest, JSON.stringify({
   schema: MANIFEST_CACHE_SCHEMA,
@@ -53,10 +54,23 @@ const raw = (id) => ({
   pad: { name: "Pad", latitude: "", longitude: "", location: { name: "Cape Canaveral" } }
 });
 const signals = [];
-globalThis.fetch = async (_url, opts = {}) => {
+// Everything now comes from the committed snapshot, so that is what a refresh
+// requests. One request per refresh instead of one per feed.
+globalThis.fetch = async (url, opts = {}) => {
   signals.push(opts.signal);
   await new Promise((r) => setTimeout(r, 50)); // stay in-flight a moment
-  return { ok: true, json: async () => ({ count: 1, results: [raw("live-1")] }) };
+  if (String(url).includes("previous.json")) {
+    return { ok: true, json: async () => ({ schema: 1, generatedAt: new Date().toISOString(), launches: [] }) };
+  }
+  return {
+    ok: true,
+    json: async () => ({
+      schema: 1,
+      generatedAt: new Date().toISOString(),
+      truncated: false,
+      launches: [simplify(raw("live-1"))]
+    })
+  };
 };
 
 await import("../js/main.js");
@@ -77,18 +91,15 @@ btn.fire("click");
 
 // Synchronously after the burst, the first request's signal must be aborted.
 check("two rapid refreshes: the earlier request is aborted (no duplicate in-flight)", () => {
-  assert.ok(signals.length >= 4, `expected >=4 feed calls across two rounds, got ${signals.length}`);
-  // First round (calls 0,1) aborted; latest round (last two) still live.
+  assert.ok(signals.length >= 2, `expected >=2 snapshot calls across two rounds, got ${signals.length}`);
   assert.ok(signals[0].aborted, "first round aborted");
-  assert.ok(signals[1].aborted, "first round aborted");
   assert.ok(!signals[signals.length - 1].aborted, "latest round not aborted");
-  assert.ok(!signals[signals.length - 2].aborted, "latest round not aborted");
 });
 
 await new Promise((r) => setTimeout(r, 120));
 const { state } = await import("../js/state.js");
-check("only the latest refresh applied its result (live data present)", () => {
-  assert.equal(state.dataSource, "live");
+check("only the latest refresh applied its result", () => {
+  assert.equal(state.dataSource, "snapshot");
   assert.equal(state.launches.length, 1);
   assert.equal(state.launches[0].id, "live-1");
 });

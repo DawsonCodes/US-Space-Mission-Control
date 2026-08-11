@@ -2,6 +2,45 @@
 
 Release history for U.S. Space Mission Control, newest first.
 
+## v3.5.0 — Scheduled Data
+
+The launch data no longer comes from each visitor's browser.
+
+Launch Library 2 allows roughly 15 requests an hour per caller. Every visitor
+calling it directly ran that out quickly, which is what caused the partial
+lists, the "provider feed didn't respond" warnings and the outright failures
+after a tab had been closed for a while.
+
+- A workflow now runs twice an hour, fetches every upcoming launch, and commits
+  the result as plain JSON under `data/`. The dashboard loads that from its own
+  origin, so no visitor makes a launch API request and no one can be rate
+  limited
+- Because the workflow runs on a schedule instead of per visitor, it pages each
+  feed until it is exhausted rather than stopping at 200, so the list is
+  complete instead of partial
+- It also retries a feed that fails, so one bad response no longer leaves
+  everyone with a short list until the next run
+- The page refreshes itself every 30 minutes, and when you return to a tab that
+  has been in the background. No more pressing Refresh to find out what changed
+- Both ends skip work when nothing changed. The page sends a conditional
+  request, so an unchanged snapshot comes back as a 304 with no data
+  transferred, and an automatic refresh that finds nothing new leaves the page
+  completely alone. The workflow commits nothing when the data is identical
+- Saved data still paints immediately, so the dashboard is never empty while it
+  checks for an update
+- Calling the API directly remains as a fallback for a fresh fork, a local
+  checkout, or a workflow that has stopped running, and keeps its rate-limit
+  handling
+- Launch normalization moved into its own module so the workflow and the browser
+  produce byte-identical results
+- Added screenshots to the README and rewrote the data section
+- The project audit now fails on a constant that is used but never imported.
+  That exact mistake, a missing import, silently disabled the whole snapshot
+  path during development and only showed up as a fallback to the old behaviour
+- Added four test suites: snapshot validation and fallback order, the scheduled
+  workflow script, the promise that a visitor makes no API request, and the
+  updated refresh flow
+
 ## v3.4.3 — Previous Launch Details, Accents & Cleanup
 
 - Previous launches now open a full detail view with the mission description,

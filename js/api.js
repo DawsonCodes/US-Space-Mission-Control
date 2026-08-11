@@ -1,13 +1,24 @@
-// Live data layer: fetching upcoming launches from two Launch Library 2 feeds
-// (SpaceX + Blue Origin providers, and NASA-tagged missions), normalizing the
-// raw payload, and merging + de-duplicating the feeds by stable launch id with
-// a conservative field-level merge. Request cancellation and a short
-// sessionStorage cache keep us well inside LL2's 15-requests/hour budget.
+// Data layer.
+//
+// The dashboard prefers a snapshot that a scheduled workflow refreshes twice an
+// hour and commits to the repository as a plain JSON file. Loading it is an
+// ordinary static request to the same origin as the page, so a visitor makes no
+// Launch Library call at all, cannot be rate limited, and gets the same complete
+// list everybody else does.
+//
+// Calling LL2 directly is still here as a fallback, for when the snapshot is
+// missing (a fresh fork, a local checkout) or has gone stale because the
+// workflow stopped running. That path keeps its rate-limit handling, since it is
+// the only one that can be refused.
 
 import {
   API_PROVIDERS,
   API_NASA,
   API_PREVIOUS,
+  SNAPSHOT_LAUNCHES,
+  SNAPSHOT_PREVIOUS,
+  SNAPSHOT_SCHEMA,
+  SNAPSHOT_MAX_AGE_MS,
   FEED_MAX_PAGES,
   NETWORK_TIMEOUT_MS,
   RATE_LIMIT_COOLDOWN_MS,
@@ -19,207 +30,58 @@ import {
   writePreviousStore,
   mergePreviousLaunches
 } from "./previous-store.js";
-import { isPublicMissionUrl } from "./utils.js";
+import { simplifyLaunch, dedupeMerge } from "./normalize.js";
 
-// Coerce a Launch Library latitude/longitude (often a numeric string) into a
-// finite number, or null when missing/invalid.
-function toCoord(value) {
-  const num = Number(value);
-  return Number.isFinite(num) ? num : null;
-}
+export { simplifyLaunch, mergeLaunch, dedupeMerge } from "./normalize.js";
 
-// Pick the first candidate that validates as a genuine public mission page.
-function firstPublicUrl(candidates) {
-  for (const candidate of candidates) {
-    const valid = isPublicMissionUrl(candidate);
-    if (valid) return valid;
-  }
-  return "";
-}
+// ---- Snapshot -------------------------------------------------------------
+// A static JSON file on our own origin. `cache: "no-cache"` makes the browser
+// revalidate rather than re-download: when the workflow has not committed
+// anything new, the server answers 304 and no body crosses the wire. That is
+// the "don't call unless something changed" behaviour, handled by HTTP itself.
 
-// LL2 2.3.0 exposes some fields as objects ({ id, name }) that were plain
-// strings in older versions; read either shape safely.
-function nameOf(value) {
-  if (!value) return "";
-  if (typeof value === "string") return value;
-  return value.name || "";
-}
-
-export function simplifyLaunch(raw) {
-  const lsp = raw?.launch_service_provider || {};
-  const mission = raw?.mission || {};
-  const config = raw?.rocket?.configuration || {};
-  const orbit = mission?.orbit || {};
-
-  const agencies = Array.isArray(mission?.agencies)
-    ? mission.agencies.map((a) => ({
-        id: a?.id ?? null,
-        name: a?.name || "",
-        type: nameOf(a?.type),
-        abbrev: a?.abbrev || ""
-      }))
-    : [];
-
-  const families = Array.isArray(config?.families) ? config.families : [];
-  const rocketFamily = nameOf(families[0]) || nameOf(config?.family) || "";
-
-  const missionImage =
-    raw?.image?.image_url || raw?.image_url || (typeof raw?.image === "string" ? raw.image : "") || "";
-  const missionThumb = raw?.image?.thumbnail_url || "";
-  const rocketImage = config?.image_url || "";
-  const providerImage = lsp?.image_url || lsp?.logo_url || "";
-
-  const missionName = mission?.name || "";
-  const missionType = mission?.type || "";
-
+function validateSnapshot(json) {
+  if (!json || typeof json !== "object") return null;
+  if (Number(json.schema) !== SNAPSHOT_SCHEMA) return null;
+  if (!Array.isArray(json.launches)) return null;
+  const generatedAt = Date.parse(json.generatedAt);
+  if (!Number.isFinite(generatedAt)) return null;
   return {
-    id: raw?.id || crypto.randomUUID?.() || `launch-${Math.random().toString(36).slice(2)}`,
-    name: raw?.name || missionName || "Unknown mission",
-    net: raw?.net || raw?.date_utc || "",
-    lastUpdated: raw?.last_updated || "",
-    missionName,
-    missionType,
-    program: nameOf(Array.isArray(raw?.program) ? raw.program[0] : raw?.program),
-    details: mission?.description || raw?.details || "",
-    statusName: nameOf(raw?.status) || (raw?.upcoming ? "Upcoming" : "Completed"),
-    statusId: raw?.status?.id ?? null,
-    statusAbbrev: raw?.status?.abbrev || "",
-    // Why a launch failed. LL2 exposes this as `failreason` on the launch, but
-    // older/other shapes nest it; take the first non-empty candidate.
-    failReason:
-      raw?.failreason ||
-      raw?.fail_reason ||
-      raw?.failure?.reason ||
-      raw?.status?.description ||
-      "",
-    probability: typeof raw?.probability === "number" ? raw.probability : null,
-    // Provider (launch service provider). `provider` kept for back-compat.
-    provider: lsp?.name || "",
-    providerName: lsp?.name || "",
-    providerId: lsp?.id ?? null,
-    providerType: nameOf(lsp?.type),
-    // Mission agencies (NASA overlay, etc.).
-    agencies,
-    rocket: config?.full_name || config?.name || "",
-    rocketFamily,
-    orbitName: orbit?.name || "",
-    orbitAbbrev: orbit?.abbrev || "",
-    padName: raw?.pad?.name || "",
-    location: raw?.pad?.location?.name || "",
-    padLat: toCoord(raw?.pad?.latitude),
-    padLon: toCoord(raw?.pad?.longitude),
-    // IANA timezone for the launch site, used by the "Launch-site time" mode.
-    tzId: raw?.pad?.location?.timezone_name || "",
-    image: missionImage,
-    missionImage,
-    missionThumb,
-    rocketImage,
-    providerImage,
-    imageCredit: raw?.image?.credit || "",
-    webcast: raw?.vid_urls?.[0]?.url || raw?.video_url || raw?.links?.webcast || "",
-    // Validated public-facing mission page only — never the LL2 API self URL.
-    official: firstPublicUrl([
-      raw?.info_urls?.[0]?.url,
-      raw?.mission?.info_urls?.[0]?.url,
-      raw?.info_url,
-      raw?.links?.article
-    ]),
-    wikipedia: raw?.pad?.wiki_url || raw?.wiki_url || raw?.links?.wikipedia || "",
-    upcoming: true
+    launches: json.launches.filter((l) => l && l.id),
+    truncated: Boolean(json.truncated),
+    generatedAt,
+    counts: json.counts && typeof json.counts === "object" ? json.counts : {}
   };
 }
 
-// ---- Conservative field-level merge --------------------------------------
-// `a` is the provider-feed record (authoritative on ties for determinism);
-// `b` is the NASA-feed record. Non-empty values win; richer text/timestamps are
-// preserved; agencies are unioned by id (or normalized name).
-
-function nonEmpty(a, b) {
-  const empty = a === null || a === undefined || a === "";
-  return empty ? b : a;
+export function snapshotAgeMs(snapshot, now = Date.now()) {
+  if (!snapshot) return Infinity;
+  return Math.max(0, now - snapshot.generatedAt);
 }
 
-function richerText(a, b) {
-  const al = a ? String(a).length : 0;
-  const bl = b ? String(b).length : 0;
-  return bl > al ? b : a; // ties keep `a`
+export function isSnapshotUsable(snapshot, now = Date.now()) {
+  return Boolean(snapshot) && snapshotAgeMs(snapshot, now) <= SNAPSHOT_MAX_AGE_MS;
 }
 
-function moreRecent(a, b) {
-  const ta = a ? new Date(a).getTime() : NaN;
-  const tb = b ? new Date(b).getTime() : NaN;
-  if (Number.isNaN(ta)) return b || a;
-  if (Number.isNaN(tb)) return a;
-  return tb > ta ? b : a;
-}
-
-function unionAgencies(a = [], b = []) {
-  const out = [];
-  const seen = new Set();
-  for (const ag of [...(a || []), ...(b || [])]) {
-    if (!ag) continue;
-    const key = ag.id !== null && ag.id !== undefined ? `id:${ag.id}` : `name:${String(ag.name || "").toLowerCase()}`;
-    if (!key || key === "name:") continue;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    out.push(ag);
+export async function fetchSnapshot(url, { signal } = {}) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => {
+    controller.abort(new DOMException("Network timeout", "AbortError"));
+  }, NETWORK_TIMEOUT_MS);
+  if (signal) {
+    if (signal.aborted) controller.abort();
+    else signal.addEventListener("abort", () => controller.abort(), { once: true });
   }
-  return out;
-}
 
-export function mergeLaunch(a, b) {
-  return {
-    ...b,
-    ...a, // scalar fields default to the provider feed
-    net: nonEmpty(a.net, b.net),
-    name: nonEmpty(a.name, b.name),
-    missionName: nonEmpty(a.missionName, b.missionName),
-    missionType: nonEmpty(a.missionType, b.missionType),
-    statusName: nonEmpty(a.statusName, b.statusName),
-    statusId: a.statusId ?? b.statusId,
-    statusAbbrev: nonEmpty(a.statusAbbrev, b.statusAbbrev),
-    failReason: richerText(a.failReason, b.failReason),
-    probability: a.probability ?? b.probability,
-    provider: nonEmpty(a.provider, b.provider),
-    providerName: nonEmpty(a.providerName, b.providerName),
-    providerId: a.providerId ?? b.providerId,
-    providerType: nonEmpty(a.providerType, b.providerType),
-    rocket: richerText(a.rocket, b.rocket),
-    rocketFamily: nonEmpty(a.rocketFamily, b.rocketFamily),
-    orbitName: nonEmpty(a.orbitName, b.orbitName),
-    orbitAbbrev: nonEmpty(a.orbitAbbrev, b.orbitAbbrev),
-    padName: nonEmpty(a.padName, b.padName),
-    location: nonEmpty(a.location, b.location),
-    padLat: a.padLat ?? b.padLat,
-    padLon: a.padLon ?? b.padLon,
-    tzId: nonEmpty(a.tzId, b.tzId),
-    program: richerText(a.program, b.program),
-    details: richerText(a.details, b.details),
-    image: nonEmpty(a.image, b.image),
-    missionImage: nonEmpty(a.missionImage, b.missionImage),
-    missionThumb: nonEmpty(a.missionThumb, b.missionThumb),
-    rocketImage: nonEmpty(a.rocketImage, b.rocketImage),
-    providerImage: nonEmpty(a.providerImage, b.providerImage),
-    webcast: nonEmpty(a.webcast, b.webcast),
-    official: nonEmpty(a.official, b.official),
-    wikipedia: nonEmpty(a.wikipedia, b.wikipedia),
-    lastUpdated: moreRecent(a.lastUpdated, b.lastUpdated),
-    agencies: unionAgencies(a.agencies, b.agencies)
-  };
-}
-
-// Merge any number of already-normalized launch lists, de-duplicating by stable
-// launch id. Earlier lists win ties (pass the provider feed first).
-export function dedupeMerge(...lists) {
-  const map = new Map();
-  for (const list of lists) {
-    for (const launch of list) {
-      if (!launch || !launch.id) continue;
-      const existing = map.get(launch.id);
-      map.set(launch.id, existing ? mergeLaunch(existing, launch) : launch);
-    }
+  try {
+    const response = await fetch(url, { cache: "no-cache", signal: controller.signal });
+    if (!response.ok) throw new Error(`Snapshot returned ${response.status}`);
+    const snapshot = validateSnapshot(await response.json());
+    if (!snapshot) throw new Error("Snapshot payload was not usable");
+    return snapshot;
+  } finally {
+    clearTimeout(timeout);
   }
-  return Array.from(map.values()).sort((x, y) => new Date(x.net) - new Date(y.net));
 }
 
 // ---- Rate limiting --------------------------------------------------------
@@ -368,6 +230,55 @@ export async function fetchLiveLaunches({ signal } = {}) {
 }
 
 
+// ---- Upcoming launches: snapshot first, LL2 as a fallback -----------------
+// Returns { launches, truncated, source, generatedAt, partial, failedFeeds }.
+// `source` is "snapshot" normally, "snapshot-stale" when the workflow has
+// clearly stopped and LL2 could not stand in, or "live" when LL2 answered.
+export async function loadLaunches({ signal } = {}) {
+  let stale = null;
+
+  try {
+    const snapshot = await fetchSnapshot(SNAPSHOT_LAUNCHES, { signal });
+    if (isSnapshotUsable(snapshot)) {
+      saveLaunchCache({ launches: snapshot.launches, truncated: snapshot.truncated });
+      return {
+        launches: snapshot.launches,
+        truncated: snapshot.truncated,
+        generatedAt: snapshot.generatedAt,
+        counts: snapshot.counts,
+        source: "snapshot",
+        partial: false,
+        failedFeeds: []
+      };
+    }
+    stale = snapshot; // readable, but old enough to suggest the workflow stopped
+  } catch (error) {
+    if (error?.name === "AbortError") throw error;
+    // No snapshot at all: a fork that has never run the workflow, or a local
+    // checkout. Fall through to LL2.
+  }
+
+  try {
+    const live = await fetchLiveLaunches({ signal });
+    return { ...live, source: "live", generatedAt: Date.now() };
+  } catch (error) {
+    if (error?.name === "AbortError") throw error;
+    if (stale) {
+      saveLaunchCache({ launches: stale.launches, truncated: stale.truncated });
+      return {
+        launches: stale.launches,
+        truncated: stale.truncated,
+        generatedAt: stale.generatedAt,
+        counts: stale.counts,
+        source: "snapshot-stale",
+        partial: false,
+        failedFeeds: []
+      };
+    }
+    throw error;
+  }
+}
+
 // ---- Previous launches (lazy) --------------------------------------------
 // Fetched only when the user opens the Previous launches panel, then kept in a
 // fixed-size rolling store so reopening it costs no extra LL2 request and any
@@ -376,6 +287,21 @@ export async function fetchLiveLaunches({ signal } = {}) {
 export async function fetchPreviousLaunches({ signal, force = false } = {}) {
   const stored = readPreviousStore();
   if (!force && stored.fresh && stored.launches.length > 0) return stored.launches;
+
+  // The workflow publishes completed launches too, so the normal path spends no
+  // LL2 request here either. The rolling store still wraps it, because that is
+  // what carries recorded weather forward and bounds what we keep.
+  try {
+    const snapshot = await fetchSnapshot(SNAPSHOT_PREVIOUS, { signal });
+    if (isSnapshotUsable(snapshot)) {
+      const merged = mergePreviousLaunches(stored.launches, snapshot.launches);
+      writePreviousStore(merged);
+      return merged;
+    }
+  } catch (error) {
+    if (error?.name === "AbortError") throw error;
+    // Fall through to LL2.
+  }
 
   // Cooling off: a stored window is far better than an error the user can do
   // nothing about, so show what we have and only complain when we have nothing.

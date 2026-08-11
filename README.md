@@ -8,6 +8,23 @@ Live site: <https://dawsoncodes.github.io/US-Space-Mission-Control/>
 
 No framework, no build step, no dependencies. What you see is what ships.
 
+## Screenshots
+
+![The dashboard, showing the hero, featured mission and mission overview](assets/screenshots/dashboard.png)
+
+The startup sequence, before the title flies into the hero.
+
+![The startup screen, with the product title mid-shimmer above a loading spinner](assets/screenshots/startup.png)
+
+Saved missions, soonest first. The coloured edge on each card is the
+organization flying it, split into a band each when two share a mission.
+
+![The saved missions drawer, with four saved launches and their countdowns](assets/screenshots/saved-missions.png)
+
+The layout on a phone.
+
+![The dashboard on a narrow phone screen](assets/screenshots/mobile.png)
+
 ## How the organizations work
 
 NASA is an agency. SpaceX, Blue Origin, Rocket Lab, ULA and Firefly are launch
@@ -58,20 +75,49 @@ Presentation
 
 Reliability
 
-- Cache-first loading, so a repeat visit renders instantly and refreshes in the
-  background
-- One launch feed can fail without taking the dashboard down
-- Stale cached data stays visible with its age stated rather than disappearing
+- Data is published on a schedule, so visitors never call the launch API and
+  cannot be rate limited
+- Refreshes itself every 30 minutes and when you return to a backgrounded tab
+- Renders saved data instantly, so the dashboard is never empty while it checks
+  for an update
+- Falls back to calling the API directly if the published data ever goes stale
 - Demo mode under the More menu, so the whole UI works with the API offline
 
-## Data
+## How the data gets here
 
-Launch data comes from [Launch Library 2](https://thespacedevs.com/llapi). Two
-feeds are fetched at once, one for the tracked providers and one for
-NASA-tagged missions, then merged and de-duplicated by launch id. Each feed
-returns up to 100 records per request, so a feed with more than that is paged
-once. The result is cached in `localStorage` with a schema version and is never
-presented as current after 24 hours.
+Launch Library 2 allows roughly 15 requests an hour per caller. When every
+visitor called it directly that ran out fast, which showed up as partial lists
+and outright failures.
+
+So visitors no longer call it. A workflow runs twice an hour, fetches
+everything, and commits the result as plain JSON under `data/`. The dashboard
+loads those files from its own origin, which means:
+
+- No visitor makes a launch API request, so no one can be rate limited
+- Everyone sees the same complete list, not whatever their browser managed to
+  fetch before being cut off
+- The workflow can page each feed until it is exhausted and retry a feed that
+  fails, rather than publishing a partial list
+
+The page re-reads the snapshot every 30 minutes and when you come back to a
+backgrounded tab. It uses a conditional request, so when nothing has been
+published since last time the server answers 304 and no data is transferred.
+The workflow likewise commits nothing when the data has not changed.
+
+Calling the API directly is still in the code as a fallback, for a fresh fork, a
+local checkout, or a workflow that has stopped running. That path keeps the
+rate-limit handling, since it is the only one that can be refused.
+
+To run the fetch yourself:
+
+```bash
+node scripts/fetch-data.mjs
+```
+
+Two feeds are fetched, one for the tracked providers and one for NASA-tagged
+missions, then merged and de-duplicated by launch id. The result is also cached
+in `localStorage` with a schema version, so the dashboard paints instantly on a
+repeat visit and is never empty while it checks for an update.
 
 Weather comes from [Open-Meteo](https://open-meteo.com/), which needs no key.
 Forecasts are fetched only for the spotlight and the open mission details, not
@@ -126,7 +172,8 @@ js/
   storage.js          Prefs, favorites, manifest cache, key migration
   previous-store.js   Rolling window of completed launches and their weather
   utils.js            Escaping, URL safety, date and countdown formatting
-  api.js              Two-feed fetch, paging, normalize, merge, dedupe
+  normalize.js        Launch normalization and merge, shared with the workflow
+  api.js              Snapshot loading, API fallback, paging, rate limiting
   organizations.js    Organization, mission type, orbit, site, status, outcome
   images.js           Launch-image resolver
   filters.js          Keyword, date, site, orbit and sorting pipeline
@@ -142,8 +189,16 @@ js/
   boot.js             Startup sequence
   starfield.js        Canvas background
   main.js             Composition root, loading, events, wiring
+scripts/
+  fetch-data.mjs      Builds data/*.json; run by the scheduled workflow
+data/
+  launches.json       Published upcoming launches, refreshed twice an hour
+  previous.json       Published completed launches
+assets/screenshots/   README images
 tests/                Plain-Node suites, one per behaviour area
-.github/workflows/    CI validation, no package manager
+.github/workflows/
+  validate.yml        CI validation, no package manager
+  refresh-data.yml    Fetches and commits the launch data twice an hour
 ```
 
 ## GitHub Pages

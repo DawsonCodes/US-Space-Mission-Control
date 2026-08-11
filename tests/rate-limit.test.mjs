@@ -1,3 +1,7 @@
+// The fallback path, for when there is no published snapshot: a fresh fork, a
+// local checkout, or a workflow that has stopped running. Only that path talks
+// to LL2, so it is the only one that can be refused.
+//
 // LL2 answers 429 once the hourly allowance is gone. Retrying through that just
 // burns the next hour too, so the refusal is remembered across reloads, stored
 // data keeps being served, and the UI is told how long is left instead of being
@@ -50,7 +54,9 @@ const raw = (id) => ({
 
 let mode = "ok";
 let requests = 0;
-globalThis.fetch = async () => {
+globalThis.fetch = async (url) => {
+  // No snapshot published, so every loader falls through to LL2.
+  if (String(url).includes(".json")) return { ok: false, status: 404, json: async () => ({}) };
   requests += 1;
   if (mode === "429") return { ok: false, status: 429, json: async () => ({}) };
   if (mode === "500") return { ok: false, status: 500, json: async () => ({}) };
@@ -147,7 +153,8 @@ await check("an extra page failing does not lose the page already fetched", asyn
   reset("ok");
   // First call succeeds and reports more than it returned; the offset page 429s.
   let call = 0;
-  globalThis.fetch = async () => {
+  globalThis.fetch = async (url) => {
+    if (String(url).includes(".json")) return { ok: false, status: 404, json: async () => ({}) };
     call += 1;
     if (call === 1) {
       const results = [raw("a"), raw("b")];

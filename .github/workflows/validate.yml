@@ -24,7 +24,7 @@ jobs:
       - name: Syntax-check every JavaScript module
         run: |
           set -e
-          for f in js/*.js tests/*.mjs; do
+          for f in js/*.js scripts/*.mjs tests/*.mjs; do
             echo "node --check $f"
             node --check "$f"
           done
@@ -50,8 +50,14 @@ jobs:
       - name: Cache-first flow integration
         run: node tests/cache-flow.test.mjs
 
-      - name: Fresh-cache request budget (no needless API calls)
-        run: node tests/cache-fresh.test.mjs
+      - name: Visitor makes no launch-API request
+        run: node tests/visitor-requests.test.mjs
+
+      - name: Snapshot validation + fallback order
+        run: node tests/snapshot.test.mjs
+
+      - name: Scheduled data workflow script
+        run: node tests/fetch-data.test.mjs
 
       - name: Launch API rate-limit handling
         run: node tests/rate-limit.test.mjs

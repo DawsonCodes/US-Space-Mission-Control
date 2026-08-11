@@ -1,0 +1,63 @@
+name: Refresh launch data
+
+# Calls Launch Library 2 twice an hour and commits the result as static JSON
+# under data/. The dashboard reads those files from its own origin, so visitors
+# make no API request and cannot be rate limited.
+#
+# Nothing is committed when the data has not changed, so the repository does not
+# churn on every run.
+#
+# Note: GitHub disables scheduled workflows on a repository with no activity for
+# 60 days. If the snapshot ever goes stale the dashboard falls back to calling
+# the API directly, so the site keeps working either way.
+
+on:
+  schedule:
+    - cron: "0,30 * * * *"
+  workflow_dispatch:
+
+# Only the commit below needs write access.
+permissions:
+  contents: write
+
+concurrency:
+  group: refresh-data
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Fetch launch data
+        run: node scripts/fetch-data.mjs
+
+      - name: Commit the snapshot when it changed
+        run: |
+          set -e
+          if git diff --quiet -- data/; then
+            echo "No snapshot changes to commit."
+            exit 0
+          fi
+          git config user.name "DawsonCodes"
+          git config user.email "71105828+DawsonCodes@users.noreply.github.com"
+          git add data/
+          git commit -m "Refresh launch data"
+          # The schedule can overlap a push to main; rebase and retry rather
+          # than failing the run.
+          for attempt in 1 2 3; do
+            if git push; then
+              exit 0
+            fi
+            echo "Push failed (attempt $attempt), rebasing onto the latest main."
+            git pull --rebase origin main
+          done
+          echo "Could not push the snapshot after 3 attempts."
+          exit 1
