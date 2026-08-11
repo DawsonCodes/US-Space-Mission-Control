@@ -83,8 +83,8 @@ Reliability
   for an update
 - Falls back to calling the API directly if the published data ever goes stale
 - A one-feed failure never replaces the complete list with a partial one
-- Debug data at the foot of the page swaps in sample missions, so the whole UI
-  works offline
+- Debug data at the foot of the page loads real missions from the development
+  mirror, falling back to bundled samples with no network at all
 
 ## How the data gets here
 
@@ -117,6 +117,13 @@ The published file is the shared cache. Everyone who opens the page reads the
 same one, so the 30-minute cycle applies to everybody rather than per browser.
 The copy in `localStorage` exists only so the dashboard paints instantly instead
 of showing an empty page while that file loads.
+
+The Space Devs also run a development mirror at `lldev.thespacedevs.com`, meant
+for building and testing rather than production traffic. It is not meaningfully
+rate limited, and in exchange it serves a cached dataset that can be days out of
+date. Debug data at the foot of the page reads from it, and it stands in as a
+last resort when production has refused and there is nothing else to show. It is
+labelled wherever it appears and is never written to the cache.
 
 To run the fetch yourself:
 

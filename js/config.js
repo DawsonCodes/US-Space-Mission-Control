@@ -5,7 +5,22 @@
 // SpaceX, Blue Origin, Rocket Lab, ULA, and Firefly are launch *providers*
 // (lsp__id); NASA is a civil *agency* matched on the mission's agencies
 // (mission__agency__ids). The app intentionally tracks only these organizations.
-export const LL2_UPCOMING = "https://ll.thespacedevs.com/2.3.0/launches/upcoming/";
+export const LL2_BASE = "https://ll.thespacedevs.com/2.3.0";
+export const LL2_UPCOMING = `${LL2_BASE}/launches/upcoming/`;
+
+// The Space Devs also run a development mirror at lldev, which they ask people
+// to use for building and testing so the production API is not hammered. It has
+// a far looser rate limit, and in exchange it serves a cached dataset that can
+// be out of date. That trade is exactly right for a debug switch and exactly
+// wrong for the real dashboard, so it is only ever used deliberately: never as
+// the normal source, and always labelled when shown.
+export const LL2_DEV_BASE = "https://lldev.thespacedevs.com/2.3.0";
+
+// Swap a production LL2 URL onto the development mirror, keeping the path and
+// every query parameter identical.
+export function toDevEndpoint(url) {
+  return String(url).replace(LL2_BASE, LL2_DEV_BASE);
+}
 
 // Verified provider / agency IDs (see docs links in the PR description).
 export const SPACEX_PROVIDER_ID = 121;
@@ -84,7 +99,7 @@ export const WORKFLOW_REQUEST_GAP_MS = 1500;
 // Feed C (lazy) — recently completed launches from the tracked providers, used
 // by the "Previous launches" panel. Only requested when the user opens that
 // panel, so it costs nothing on a normal visit and stays inside LL2's budget.
-export const LL2_PREVIOUS = "https://ll.thespacedevs.com/2.3.0/launches/previous/";
+export const LL2_PREVIOUS = `${LL2_BASE}/launches/previous/`;
 // How many completed launches the panel keeps. The store is a rolling window:
 // when a newer launch arrives the oldest entry falls out, taking its recorded
 // weather with it, so the saved payload can never grow.

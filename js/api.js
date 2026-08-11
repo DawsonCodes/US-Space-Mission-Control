@@ -22,7 +22,8 @@ import {
   FEED_MAX_PAGES,
   NETWORK_TIMEOUT_MS,
   RATE_LIMIT_COOLDOWN_MS,
-  STORAGE_KEYS
+  STORAGE_KEYS,
+  toDevEndpoint
 } from "./config.js";
 import { saveLaunchCache } from "./storage.js";
 import {
@@ -236,6 +237,65 @@ export async function fetchLiveLaunches({ signal } = {}) {
 }
 
 
+// ---- Development mirror ---------------------------------------------------
+// The Space Devs ask people to build against lldev rather than production, and
+// it is not meaningfully rate limited. The catch is that it serves a cached
+// dataset which can be days behind, so it is never the normal source: it backs
+// the Debug data switch, and stands in when production has refused us and the
+// alternative is showing nothing at all. Either way the UI labels it.
+
+export async function fetchDevLaunches({ signal } = {}) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => {
+    controller.abort(new DOMException("Network timeout", "AbortError"));
+  }, NETWORK_TIMEOUT_MS);
+  if (signal) {
+    if (signal.aborted) controller.abort();
+    else signal.addEventListener("abort", () => controller.abort(), { once: true });
+  }
+
+  try {
+    const [providersR, nasaR] = await Promise.allSettled([
+      fetchFeedPaged(toDevEndpoint(API_PROVIDERS), controller.signal),
+      fetchFeedPaged(toDevEndpoint(API_NASA), controller.signal)
+    ]);
+
+    const providersOk = providersR.status === "fulfilled";
+    const nasaOk = nasaR.status === "fulfilled";
+    if (!providersOk && !nasaOk) {
+      throw providersR.reason || nasaR.reason || new Error("Both development feeds failed");
+    }
+
+    const providers = providersOk ? providersR.value : { results: [], count: 0 };
+    const nasa = nasaOk ? nasaR.value : { results: [], count: 0 };
+
+    const launches = dedupeMerge(
+      providers.results.map(simplifyLaunch),
+      nasa.results.map(simplifyLaunch)
+    );
+    if (launches.length === 0) throw new Error("Development mirror returned nothing");
+
+    // Never cached: this data is knowingly out of date, and the cache is what
+    // the real dashboard paints from on the next visit.
+    return {
+      launches,
+      truncated:
+        providers.count > providers.results.length || nasa.count > nasa.results.length,
+      source: "dev",
+      generatedAt: Date.now(),
+      partial: !providersOk || !nasaOk,
+      failedFeeds: [...(providersOk ? [] : ["providers"]), ...(nasaOk ? [] : ["nasa"])]
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+export async function fetchDevPreviousLaunches({ signal } = {}) {
+  const { results } = await fetchFeed(toDevEndpoint(API_PREVIOUS), signal);
+  return results.map(simplifyLaunch);
+}
+
 // ---- Upcoming launches: snapshot first, LL2 as a fallback -----------------
 // Returns { launches, truncated, source, generatedAt, partial, failedFeeds }.
 // `source` is "snapshot" normally, "snapshot-stale" when the workflow has
@@ -302,7 +362,15 @@ export async function loadLaunches({ signal, allowApi = true } = {}) {
         failedFeeds: []
       };
     }
-    throw error;
+
+    // Production refused or failed and we have nothing to show. The development
+    // mirror is the last resort: possibly out of date, but a dashboard with
+    // dated launches beats an empty one, and the UI says which it is.
+    try {
+      return await fetchDevLaunches({ signal });
+    } catch {
+      throw error; // report the original failure, not the fallback's
+    }
   }
 }
 
@@ -355,7 +423,14 @@ export async function fetchPreviousLaunches({ signal, force = false } = {}) {
   } catch (error) {
     // A failed refresh should not empty a window the user can still read.
     if (stored.launches.length > 0) return stored.launches;
-    throw error;
+    // Nothing stored either, so try the development mirror before giving up.
+    try {
+      const merged = mergePreviousLaunches([], await fetchDevPreviousLaunches({ signal: controller.signal }));
+      writePreviousStore(merged);
+      return merged;
+    } catch {
+      throw error;
+    }
   } finally {
     clearTimeout(timeout);
   }
