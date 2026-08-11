@@ -1,10 +1,10 @@
-// Integration harness: boots main.js with a pre-seeded STALE-but-usable manifest
-// cache and a controllable fetch, to verify cache-first rendering. Cached data
-// renders instantly, a background live refresh replaces it, and the fresh
-// manifest is written back. Minimal DOM shim.
+// Integration harness: boots main.js with a pre-seeded manifest cache and a
+// controllable fetch, to verify the loading order. Saved data renders instantly
+// so the dashboard is never empty, the committed snapshot is then read and
+// replaces it, and the result is written back to the cache.
 //
-// A *fresh* cache deliberately skips the refresh entirely to stay inside LL2's
-// hourly allowance; that path is covered by cache-fresh.test.mjs.
+// That a visitor never calls Launch Library at all is covered by
+// visitor-requests.test.mjs.
 
 function makeEl(id = "") {
   const classes = new Set();
@@ -66,7 +66,7 @@ mem.set(STORAGE_KEYS.manifest, JSON.stringify({
   payload: { launches: cachedLaunches, truncated: false }
 }));
 
-// Live feed returns three different launches (provider feed); NASA feed empty.
+// The published snapshot holds three different launches.
 const liveRaw = (id, name) => ({
   id, name, net: "2026-10-01T00:00:00Z", status: { name: "Go for Launch" },
   launch_service_provider: { id: 121, name: "SpaceX" },
@@ -74,13 +74,23 @@ const liveRaw = (id, name) => ({
   rocket: { configuration: { full_name: "Falcon 9", families: [{ name: "Falcon" }] } },
   pad: { name: "Pad", latitude: "", longitude: "", location: { name: "Cape Canaveral" } }
 });
+const { simplifyLaunch } = await import("../js/normalize.js");
 globalThis.fetch = async (url) => {
-  // Small macrotask delay so the cache-first render phase is observable before
-  // the background live refresh resolves.
+  // Small macrotask delay so the cached render phase is observable before the
+  // snapshot resolves.
   await new Promise((r) => setTimeout(r, 30));
-  const isNasa = String(url).includes("mission__agency__ids");
-  const results = isNasa ? [] : [liveRaw("live-1", "Live One"), liveRaw("live-2", "Live Two"), liveRaw("live-3", "Live Three")];
-  return { ok: true, json: async () => ({ count: results.length, results }) };
+  if (String(url).includes("previous.json")) {
+    return { ok: true, json: async () => ({ schema: 1, generatedAt: new Date().toISOString(), launches: [] }) };
+  }
+  return {
+    ok: true,
+    json: async () => ({
+      schema: 1,
+      generatedAt: new Date().toISOString(),
+      truncated: false,
+      launches: [liveRaw("live-1", "Live One"), liveRaw("live-2", "Live Two"), liveRaw("live-3", "Live Three")].map(simplifyLaunch)
+    })
+  };
 };
 
 await import("../js/main.js");
@@ -93,7 +103,7 @@ const check = (label, fn) => { try { fn(); console.log(`ok  - ${label}`); } catc
 
 // Immediately after boot (before the background refresh resolves), cached data
 // is already on screen.
-check("cache-first: cached data is rendered immediately on boot", () => {
+check("saved data is rendered immediately on boot, so the page is never empty", () => {
   assert.equal(state.dataSource, "cache");
   assert.equal(state.launches.length, 2);
   assert.equal(state.launches[0].id, "cache-1");
@@ -102,14 +112,14 @@ check("cache-first: cached data is rendered immediately on boot", () => {
 // Let the background live refresh resolve.
 await new Promise((r) => setTimeout(r, 60));
 
-check("background refresh replaces cached data with fresh live data", () => {
-  assert.equal(state.dataSource, "live");
+check("the published snapshot replaces the saved data", () => {
+  assert.equal(state.dataSource, "snapshot");
   assert.equal(state.launches.length, 3);
   assert.ok(state.launches.some((l) => l.id === "live-1"));
   assert.ok(!state.launches.some((l) => l.id === "cache-1"));
 });
 
-check("the fresh live manifest is written back to the cache", () => {
+check("the snapshot is written back to the cache for the next visit", () => {
   const raw = JSON.parse(mem.get(STORAGE_KEYS.manifest));
   assert.equal(raw.schema, MANIFEST_CACHE_SCHEMA);
   const ids = raw.payload.launches.map((l) => l.id).sort();

@@ -74,6 +74,52 @@ for (const file of files) {
 for (const css of listJs(join(root, "styles")).length ? [] : []) void css; // styles are .css, skip
 if (absIssues === 0) ok("no absolute-root import paths in modules");
 
+// ---- 3b. Config constants are imported before they are used --------------
+// A SCREAMING_SNAKE_CASE name that a module references but never imports or
+// declares is a ReferenceError waiting to happen. `node --check` does not catch
+// it, and a try/catch around the call site can swallow it entirely: that is how
+// a missing SNAPSHOT_SCHEMA import once made the whole snapshot path fall
+// silently back to the API.
+let undefinedConsts = 0;
+for (const file of files) {
+  const src = readFileSync(file, "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/(^|[^:])\/\/.*$/gm, "$1");
+
+  const known = new Set();
+  // import { A, B as C } from "..."
+  for (const m of src.matchAll(/import\s*\{([^}]*)\}\s*from/g)) {
+    for (const part of m[1].split(",")) {
+      const name = part.trim().split(/\s+as\s+/).pop()?.trim();
+      if (name) known.add(name);
+    }
+  }
+  // import D from "..." / import * as E from "..."
+  for (const m of src.matchAll(/import\s+(?:\*\s*as\s+)?(\w+)\s*(?:,|from)/g)) known.add(m[1]);
+  // locally declared, including destructured and exported
+  for (const m of src.matchAll(/(?:const|let|var|function|class)\s+([A-Z][A-Z0-9_]{2,})\b/g)) known.add(m[1]);
+  for (const m of src.matchAll(/\{([^}]*)\}\s*=/g)) {
+    for (const part of m[1].split(",")) {
+      const name = part.trim().split(":").pop()?.trim();
+      if (name) known.add(name);
+    }
+  }
+
+  const reported = new Set();
+  for (const m of src.matchAll(/\b([A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+)\b/g)) {
+    const name = m[1];
+    if (known.has(name) || reported.has(name)) continue;
+    // A property read (ORG.BLUE_ORIGIN, process.env.FOO) resolves at runtime,
+    // and a key in an object literal (FOO: value) is not a reference at all.
+    if (src[m.index - 1] === ".") continue;
+    if (/^\s*:/.test(src.slice(m.index + name.length))) continue;
+    reported.add(name);
+    fail(`${file}: uses ${name} but never imports or declares it`);
+    undefinedConsts++;
+  }
+}
+if (undefinedConsts === 0) ok("every config constant used is imported or declared");
+
 // ---- 4. No package manager / dependency / build artifacts ----------------
 const banned = ["package.json", "package-lock.json", "yarn.lock", "pnpm-lock.yaml", "node_modules", "dist", "build", ".parcel-cache"];
 let bannedFound = 0;

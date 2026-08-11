@@ -1,7 +1,10 @@
-// Request budget: LL2 allows roughly 15 requests an hour, so a cache that is
-// still fresh must render with no network at all. Refreshing on every tab open
-// was spending the whole allowance re-fetching launches that had not moved,
-// which is what left the live API failing on reopen.
+// The point of the snapshot: a visitor never calls Launch Library.
+//
+// LL2 allows roughly 15 requests an hour per browser, which is what kept
+// leaving the dashboard rate limited or half-loaded. Everything now comes from
+// a static JSON file that a scheduled workflow publishes, served from the same
+// origin as the page, so no visitor can exhaust anything. This pins that: boot
+// the app and assert that nothing in the request log points at thespacedevs.
 
 function makeEl(id = "") {
   const classes = new Set();
@@ -48,7 +51,7 @@ globalThis.window = {
 };
 globalThis.history = { pushState() {}, replaceState() {} };
 
-const { MANIFEST_CACHE_SCHEMA, STORAGE_KEYS, CACHE_FRESH_MS } = await import("../js/config.js");
+const { MANIFEST_CACHE_SCHEMA, STORAGE_KEYS, AUTO_REFRESH_MS } = await import("../js/config.js");
 
 // A cache well inside the freshness window.
 const cachedLaunches = [
@@ -61,10 +64,31 @@ mem.set(STORAGE_KEYS.manifest, JSON.stringify({
   payload: { launches: cachedLaunches, truncated: false }
 }));
 
+const { simplifyLaunch } = await import("../js/normalize.js");
+const published = [
+  { id: "snap-1", name: "Published One", net: "2026-11-01T00:00:00Z", status: { name: "Go for Launch" },
+    launch_service_provider: { id: 121, name: "SpaceX" }, mission: { name: "m", agencies: [] },
+    rocket: { configuration: { full_name: "Falcon 9", families: [] } },
+    pad: { name: "Pad", latitude: "", longitude: "", location: { name: "Cape Canaveral" } } }
+].map(simplifyLaunch);
+
 let requests = [];
-globalThis.fetch = async (url) => {
+const fetchOptions = new Map();
+globalThis.fetch = async (url, options = {}) => {
   requests.push(String(url));
-  return { ok: true, json: async () => ({ count: 0, results: [] }) };
+  fetchOptions.set(String(url), options);
+  if (String(url).includes("previous.json")) {
+    return { ok: true, json: async () => ({ schema: 1, generatedAt: new Date().toISOString(), launches: [] }) };
+  }
+  return {
+    ok: true,
+    json: async () => ({
+      schema: 1,
+      generatedAt: new Date().toISOString(),
+      truncated: false,
+      launches: published
+    })
+  };
 };
 
 await import("../js/main.js");
@@ -80,26 +104,34 @@ const check = (label, fn) => {
 // Give any background work a chance to fire before asserting it did not.
 await new Promise((r) => setTimeout(r, 80));
 
-check("a fresh cache renders without spending a single request", () => {
-  const launchRequests = requests.filter((u) => u.includes("thespacedevs.com"));
-  assert.deepEqual(launchRequests, [], `unexpected launch requests: ${launchRequests.join(", ")}`);
+check("a visitor makes no Launch Library request", () => {
+  const apiCalls = requests.filter((u) => u.includes("thespacedevs.com"));
+  assert.deepEqual(apiCalls, [], `unexpected launch API calls: ${apiCalls.join(", ")}`);
 });
 
-check("the cached launches are what is on screen", () => {
-  assert.equal(state.dataSource, "cache");
-  assert.equal(state.launches.length, 2);
-  assert.equal(state.launches[0].id, "cache-1");
+check("the data came from the published snapshot", () => {
+  assert.ok(requests.some((u) => u.includes("data/launches.json")), "snapshot was never requested");
+  assert.equal(state.dataSource, "snapshot");
+  assert.equal(state.launches[0].id, "snap-1");
 });
 
-check("the cached manifest is left untouched", () => {
-  const raw = JSON.parse(mem.get(STORAGE_KEYS.manifest));
-  assert.deepEqual(raw.payload.launches.map((l) => l.id), ["cache-1", "cache-2"]);
+check("the snapshot path is relative, so the Pages project subpath still works", () => {
+  const snap = requests.find((u) => u.includes("launches.json"));
+  assert.ok(!snap.startsWith("/"), `snapshot path must not be root-absolute: ${snap}`);
+  assert.ok(!/^https?:/.test(snap), `snapshot must be same-origin: ${snap}`);
 });
 
-check("the freshness window is a real bound, not effectively infinite", () => {
-  assert.ok(CACHE_FRESH_MS > 0 && CACHE_FRESH_MS <= 60 * 60 * 1000);
+check("the snapshot is revalidated rather than blindly re-downloaded", () => {
+  // cache: "no-cache" makes the browser send a conditional request, so an
+  // unchanged snapshot comes back as a 304 with no body.
+  assert.equal(fetchOptions.get("data/launches.json")?.cache, "no-cache");
+});
+
+check("the auto-refresh interval is a real, sane cadence", () => {
+  assert.ok(AUTO_REFRESH_MS >= 5 * 60 * 1000, "refreshing more often than every 5 minutes is pointless");
+  assert.ok(AUTO_REFRESH_MS <= 60 * 60 * 1000, "an hour between checks is too stale");
 });
 
 if (failures > 0) { console.error(`\n${failures} fresh-cache check(s) failed.`); process.exit(1); }
-console.log("\nFresh-cache request-budget checks passed.");
+console.log("\nVisitor-request checks passed.");
 process.exit(0);

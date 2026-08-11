@@ -2,7 +2,7 @@
 // loading, filters, reveal, overlays, weather orchestration, organization tabs),
 // wires DOM events, and boots the app.
 
-import { DEFAULT_VISIBLE, LOAD_MORE_STEP } from "./config.js";
+import { DEFAULT_VISIBLE, LOAD_MORE_STEP, AUTO_REFRESH_MS } from "./config.js";
 import { state } from "./state.js";
 import { getDemoLaunches } from "./demo-data.js";
 import {
@@ -18,7 +18,7 @@ import {
   cacheAgeLabel
 } from "./storage.js";
 import { applyFilters } from "./filters.js";
-import { fetchLiveLaunches, fetchPreviousLaunches } from "./api.js";
+import { loadLaunches as loadLaunchData, fetchPreviousLaunches } from "./api.js";
 import { ORG, ORG_LABELS } from "./organizations.js";
 import { applyOrgColors } from "./org-theme.js";
 import { buildColorCustomizerContent, wireColorCustomizer } from "./customize.js";
@@ -226,6 +226,27 @@ function renderResultsAndOverview() {
   renderAll();
 }
 
+// Cheap equality for an automatic refresh: same launches, same order, and no
+// field that shows on screen has moved. Lets a scheduled tick that found
+// nothing new leave the page completely alone, rather than re-rendering and
+// flashing a status banner every half hour.
+function isSameManifest(next, current) {
+  if (!Array.isArray(next) || !Array.isArray(current)) return false;
+  if (next.length !== current.length) return false;
+  return next.every((launch, i) => {
+    const other = current[i];
+    return (
+      other &&
+      launch.id === other.id &&
+      launch.net === other.net &&
+      launch.statusName === other.statusName &&
+      launch.name === other.name &&
+      launch.probability === other.probability &&
+      launch.webcast === other.webcast
+    );
+  });
+}
+
 // Apply a normalized manifest to state + the UI. `source` is live | cache |
 // demo; `dataTime` is when the data was actually fetched (cache uses its saved
 // time so "last refresh" stays honest). On a background replacement we preserve
@@ -252,29 +273,47 @@ function renderManifest(launches, truncated, source, dataTime, { preservePaginat
   }
 }
 
-// Cache-first initial load: render usable cached data instantly, then refresh in
-// the background; otherwise show skeletons and load fresh.
+// Initial load. Cached data paints first so there is never an empty dashboard,
+// then the snapshot is read. Reading it is a static request to our own origin,
+// and the browser revalidates rather than re-downloading, so when the workflow
+// has published nothing new the server answers 304 and no data crosses the wire.
 function startInitialLoad() {
   const cache = getLaunchCache();
   if (isUsableCache(cache)) {
     renderManifest(cache.launches, cache.truncated, "cache", cache.savedAt, { entrance: "none" });
-    if (cache.freshness === "fresh") {
-      // Data this recent is not worth a request. LL2 allows about 15 an hour,
-      // and refreshing on every tab open was spending the whole allowance on
-      // launches that had not moved. Refresh data is still one click away.
-      setStatus(`Showing launch data from ${cacheAgeLabel(cache.ageMs)}. Use Refresh data for the latest.`, "info");
-    } else {
-      setStatus(`Showing cached launch data from ${cacheAgeLabel(cache.ageMs)} while refreshing…`, "warning");
-      refreshLive({ background: true });
-    }
+    setStatus(`Showing saved launch data from ${cacheAgeLabel(cache.ageMs)}. Checking for an update…`, "info");
+    refreshData({ background: true });
   } else {
     if (cache && cache.freshness === "expired") {
       clearLaunchCache();
-      setStatus("Cached launch data expired. Loading fresh data…", "loading");
     }
     setLoadingState();
-    refreshLive({ background: false });
+    refreshData({ background: false });
   }
+}
+
+// ----- Automatic refresh --------------------------------------------------
+// The snapshot is republished twice an hour, so the page re-reads it on that
+// cadence instead of asking the user to press Refresh. It also checks when a
+// backgrounded tab comes back, which is the case that used to show hours-old
+// data until someone noticed.
+
+let autoRefreshTimer = null;
+let lastRefreshAt = 0;
+
+function setupAutoRefresh() {
+  if (autoRefreshTimer) window.clearInterval(autoRefreshTimer);
+  autoRefreshTimer = window.setInterval(() => {
+    if (state.usingDemo) return;
+    refreshData({ background: true, auto: true });
+  }, AUTO_REFRESH_MS);
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState !== "visible") return;
+    if (state.usingDemo) return;
+    if (Date.now() - lastRefreshAt < AUTO_REFRESH_MS) return;
+    refreshData({ background: true, auto: true });
+  });
 }
 
 // Short conservative delay before a single automatic retry when the very first
@@ -294,40 +333,71 @@ function rateLimitMessage(error) {
 
 function partialCoverageMessage(failedFeeds) {
   if (failedFeeds.includes("providers")) {
-    return "Showing partial live data — the provider launch feed didn't respond. Try Refresh for the full manifest.";
+    return "Partial list. The provider feed didn't respond, so some launches are missing. The next scheduled update should fill it in.";
   }
-  return "Showing partial live data — the NASA mission feed didn't respond, so some NASA overlaps may be missing.";
+  return "Partial list. The NASA feed didn't respond, so some NASA overlaps may be missing.";
+}
+
+// How the loaded data should be described, given where it came from.
+function sourceMessage({ source, launches, truncated, generatedAt }) {
+  const note = truncated ? " Some launches beyond these are not listed." : "";
+  if (source === "snapshot") {
+    return {
+      text: `${launches.length} upcoming launches, updated ${cacheAgeLabel(Date.now() - generatedAt)}.${note}`,
+      tone: "success"
+    };
+  }
+  if (source === "snapshot-stale") {
+    return {
+      text: `Showing the last published launch data from ${cacheAgeLabel(Date.now() - generatedAt)}. The scheduled update hasn't run recently.`,
+      tone: "warning"
+    };
+  }
+  return {
+    text: `Loaded ${launches.length} upcoming launches directly from the launch API.${note}`,
+    tone: "success"
+  };
 }
 
 // Fetch fresh live data. `background` keeps current/cached content visible while
 // refreshing; otherwise skeletons are already showing. A new refresh aborts any
 // in-flight one (no duplicate loads); a superseded request resolves silently.
 // `attempt` guards the one-time uncached-startup retry.
-async function refreshLive({ background = false, manual = false, attempt = 0 } = {}) {
+async function refreshData({ background = false, manual = false, auto = false, attempt = 0 } = {}) {
   if (state.activeRequest) state.activeRequest.abort();
   const controller = new AbortController();
   state.activeRequest = controller;
 
-  if (manual) setStatus("Refreshing live launch data…", "loading");
-  else if (!background) setStatus(attempt > 0 ? "Retrying live launch data…" : "Loading launch providers…", "loading");
+  if (manual) setStatus("Checking for new launch data…", "loading");
+  else if (!background) setStatus(attempt > 0 ? "Retrying…" : "Loading launches…", "loading");
   els.btnRefresh?.classList?.add("is-refreshing"); // ANIM-23
 
   try {
-    const { launches, truncated, partial, failedFeeds = [] } = await fetchLiveLaunches({ signal: controller.signal });
+    const result = await loadLaunchData({ signal: controller.signal });
     if (state.activeRequest !== controller) return; // superseded by a newer refresh
+    lastRefreshAt = Date.now();
+
+    const { launches, truncated, partial, failedFeeds = [], source, generatedAt } = result;
+
+    // An automatic tick that found nothing new should not disturb the page:
+    // no re-render, no status banner, no scroll or pagination reset.
+    const unchanged = auto && isSameManifest(launches, state.launches);
+    if (unchanged) return;
+
     const replacing = state.launches.length > 0 && state.dataSource !== "none";
-    renderManifest(launches, truncated, "live", Date.now(), {
+    renderManifest(launches, truncated, source === "live" ? "live" : "snapshot", generatedAt, {
       preservePagination: replacing,
       entrance: replacing ? "fade" : "stagger"
     });
+
     if (partial) {
       // Usable data arrived, but one feed failed — honest, non-destructive.
       setStatus(partialCoverageMessage(failedFeeds), "warning");
-    } else if (background || manual) {
-      setStatus("Updated with fresh live launch data.", "success");
+    } else if (auto) {
+      setStatus(`Updated. ${launches.length} upcoming launches.`, "success");
     } else {
-      const note = truncated ? " (partial list)" : "";
-      setStatus(`Loaded ${launches.length} upcoming launches.${note}`, "success");
+      const { text, tone } = sourceMessage({ source, launches, truncated, generatedAt });
+      setStatus(text, tone);
     }
     openMissionFromUrl();
   } catch (error) {
@@ -353,14 +423,14 @@ async function refreshLive({ background = false, manual = false, attempt = 0 } =
       signalBootReady();
     } else if (!background && !manual && attempt === 0) {
       // No usable cache on first load: retry exactly once after a short delay.
-      setStatus("Live data didn't load. Retrying shortly…", "loading");
+      setStatus("Launch data didn't load. Retrying shortly…", "loading");
       window.setTimeout(() => {
         if (!state.usingDemo && state.launches.length === 0) {
-          refreshLive({ background: false, attempt: 1 });
+          refreshData({ background: false, attempt: 1 });
         }
       }, STARTUP_RETRY_DELAY_MS);
     } else {
-      setStatus("Live API failed. Try again or switch to demo data.", "error");
+      setStatus("Couldn't load launch data. Try again or switch to demo data.", "error");
       if (state.launches.length === 0) renderLoadError();
       signalBootReady();
     }
@@ -375,7 +445,7 @@ async function refreshLive({ background = false, manual = false, attempt = 0 } =
 // Manual "Reload live data" / Refresh: force a network refresh, keeping the
 // current content visible as a temporary fallback.
 function loadLaunches(forceRefresh = false) {
-  if (forceRefresh) refreshLive({ background: true, manual: true });
+  if (forceRefresh) refreshData({ background: true, manual: true });
   else startInitialLoad();
 }
 
@@ -1178,6 +1248,7 @@ function init() {
   startCountdownTicker();
   setupStarfield();
   loadLaunches(false);
+  setupAutoRefresh();
 }
 
 init();

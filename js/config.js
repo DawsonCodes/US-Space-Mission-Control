@@ -24,12 +24,40 @@ export const PROVIDER_IDS = [
   FIREFLY_PROVIDER_ID
 ];
 
+// ---- Snapshot (the normal source of data) --------------------------------
+// A scheduled workflow calls LL2 twice an hour and commits the result to the
+// repository as plain JSON. The dashboard loads that file from its own origin,
+// so a visitor makes no Launch Library request, cannot be rate limited, and
+// sees the same complete list as everybody else. Relative paths keep this
+// working under the GitHub Pages project subpath.
+export const SNAPSHOT_LAUNCHES = "data/launches.json";
+export const SNAPSHOT_PREVIOUS = "data/previous.json";
+
+// Bump when the snapshot shape changes so an old committed file is ignored.
+export const SNAPSHOT_SCHEMA = 1;
+
+// How often the page re-reads the snapshot while a tab is open. Matched to the
+// workflow's half-hourly schedule, and cheap either way: it is a static file on
+// the same origin, not an API call.
+export const AUTO_REFRESH_MS = 1000 * 60 * 30;
+
+// A snapshot older than this means the workflow has stopped running, so the
+// dashboard falls back to calling LL2 directly rather than quietly serving
+// stale data. Three hours is six missed runs.
+export const SNAPSHOT_MAX_AGE_MS = 1000 * 60 * 60 * 3;
+
+// ---- Direct LL2 access (fallback only) -----------------------------------
 // LL2 caps `limit` at 100 records per request, so a feed with more upcoming
-// launches than that has to be paged. We follow at most one extra page per
-// feed, which covers up to 200 launches while keeping a full load to three
-// requests at worst — comfortably inside LL2's 15-per-hour budget.
+// launches than that has to be paged. In the browser fallback we follow at most
+// one extra page to stay inside the 15-per-hour budget. The workflow has no such
+// pressure and pages much further; see WORKFLOW_MAX_PAGES.
 export const FEED_PAGE_SIZE = 100;
 export const FEED_MAX_PAGES = 2;
+
+// The scheduled workflow runs twice an hour from a CI runner, so it can afford
+// to page until the feed is exhausted. Bounded anyway so a misreported count
+// cannot loop.
+export const WORKFLOW_MAX_PAGES = 8;
 
 // Feed A — all tracked provider launches (orbital + suborbital so New Shepard
 // flights are not missed). A single request covers every provider because
@@ -37,6 +65,15 @@ export const FEED_MAX_PAGES = 2;
 export const API_PROVIDERS =
   `${LL2_UPCOMING}?lsp__id=${PROVIDER_IDS.join(",")}` +
   `&include_suborbital=true&mode=detailed&limit=${FEED_PAGE_SIZE}&ordering=net&hide_recent_previous=true`;
+
+// The workflow retries a feed that fails or is refused, since one bad response
+// on a CI runner should not leave every visitor with a partial list for the
+// next half hour.
+export const WORKFLOW_RETRIES = 3;
+export const WORKFLOW_RETRY_BASE_MS = 5000;
+// Spacing between the workflow's own requests, so a full page sweep stays a
+// polite caller rather than a burst.
+export const WORKFLOW_REQUEST_GAP_MS = 1500;
 
 // Feed C (lazy) — recently completed launches from the tracked providers, used
 // by the "Previous launches" panel. Only requested when the user opens that
