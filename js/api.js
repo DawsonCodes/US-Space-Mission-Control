@@ -21,6 +21,7 @@ import {
   SNAPSHOT_MAX_AGE_MS,
   FEED_MAX_PAGES,
   NETWORK_TIMEOUT_MS,
+  DEBUG_TIMEOUT_MS,
   RATE_LIMIT_COOLDOWN_MS,
   STORAGE_KEYS,
   toDevEndpoint
@@ -51,7 +52,8 @@ function validateSnapshot(json) {
     launches: json.launches.filter((l) => l && l.id),
     truncated: Boolean(json.truncated),
     generatedAt,
-    counts: json.counts && typeof json.counts === "object" ? json.counts : {}
+    counts: json.counts && typeof json.counts === "object" ? json.counts : {},
+    apiUsage: json.apiUsage && typeof json.apiUsage === "object" ? json.apiUsage : null
   };
 }
 
@@ -125,7 +127,24 @@ function rateLimitError(until) {
   return error;
 }
 
+// Every Launch Library request this page makes, so the claim that a visitor
+// spends none is something you can read off the About panel rather than take on
+// faith. Snapshot reads are not counted: they are static files on our own
+// origin and cost the API nothing.
+const browserUsage = { requests: 0, byHost: {} };
+
+export function apiUsageThisSession() {
+  return { requests: browserUsage.requests, byHost: { ...browserUsage.byHost } };
+}
+
+function countBrowserRequest(url) {
+  browserUsage.requests += 1;
+  const host = String(url).includes("lldev.") ? "development mirror" : "launch API";
+  browserUsage.byHost[host] = (browserUsage.byHost[host] || 0) + 1;
+}
+
 async function fetchFeed(url, signal) {
+  countBrowserRequest(url);
   const response = await fetch(url, { method: "GET", signal });
   if (response.status === 429) throw rateLimitError(startCooldown());
   if (!response.ok) throw new Error(`Launch API returned ${response.status}`);
@@ -229,7 +248,7 @@ export async function fetchLiveLaunches({ signal } = {}) {
     // single request was even sent, and it stayed that way until a full load
     // happened to succeed. The caller decides what to show; the cache keeps the
     // last complete manifest.
-    if (!partial) saveLaunchCache({ launches, truncated });
+    if (!partial) saveLaunchCache({ launches, truncated, generatedAt: Date.now() });
     return { launches, truncated, available, partial, failedFeeds };
   } finally {
     clearTimeout(timeout);
@@ -248,7 +267,7 @@ export async function fetchDevLaunches({ signal } = {}) {
   const controller = new AbortController();
   const timeout = setTimeout(() => {
     controller.abort(new DOMException("Network timeout", "AbortError"));
-  }, NETWORK_TIMEOUT_MS);
+  }, DEBUG_TIMEOUT_MS);
   if (signal) {
     if (signal.aborted) controller.abort();
     else signal.addEventListener("abort", () => controller.abort(), { once: true });
@@ -306,12 +325,19 @@ export async function loadLaunches({ signal, allowApi = true } = {}) {
   try {
     const snapshot = await fetchSnapshot(SNAPSHOT_LAUNCHES, { signal });
     if (isSnapshotUsable(snapshot)) {
-      saveLaunchCache({ launches: snapshot.launches, truncated: snapshot.truncated });
+      // generatedAt travels with the data so a reload's first paint already
+      // shows the right countdown, before the snapshot has been re-read.
+      saveLaunchCache({
+        launches: snapshot.launches,
+        truncated: snapshot.truncated,
+        generatedAt: snapshot.generatedAt
+      });
       return {
         launches: snapshot.launches,
         truncated: snapshot.truncated,
         generatedAt: snapshot.generatedAt,
         counts: snapshot.counts,
+        apiUsage: snapshot.apiUsage,
         source: "snapshot",
         partial: false,
         failedFeeds: []
@@ -334,6 +360,7 @@ export async function loadLaunches({ signal, allowApi = true } = {}) {
         truncated: stale.truncated,
         generatedAt: stale.generatedAt,
         counts: stale.counts,
+        apiUsage: stale.apiUsage,
         source: "snapshot-stale",
         partial: false,
         failedFeeds: []
@@ -351,26 +378,29 @@ export async function loadLaunches({ signal, allowApi = true } = {}) {
   } catch (error) {
     if (error?.name === "AbortError") throw error;
     if (stale) {
-      saveLaunchCache({ launches: stale.launches, truncated: stale.truncated });
+      saveLaunchCache({
+        launches: stale.launches,
+        truncated: stale.truncated,
+        generatedAt: stale.generatedAt
+      });
       return {
         launches: stale.launches,
         truncated: stale.truncated,
         generatedAt: stale.generatedAt,
         counts: stale.counts,
+        apiUsage: stale.apiUsage,
         source: "snapshot-stale",
         partial: false,
         failedFeeds: []
       };
     }
 
-    // Production refused or failed and we have nothing to show. The development
-    // mirror is the last resort: possibly out of date, but a dashboard with
-    // dated launches beats an empty one, and the UI says which it is.
-    try {
-      return await fetchDevLaunches({ signal });
-    } catch {
-      throw error; // report the original failure, not the fallback's
-    }
+    // The development mirror is NOT a fallback. It serves a cached dataset that
+    // can be days behind and, when one of its feeds is short, produces exactly
+    // the NASA-only list this app must never show. It is reached only when the
+    // Debug data button is pressed, so nobody is served dated records without
+    // asking for them.
+    throw error;
   }
 }
 
@@ -379,7 +409,7 @@ export async function loadLaunches({ signal, allowApi = true } = {}) {
 // fixed-size rolling store so reopening it costs no extra LL2 request and any
 // recorded weather already fetched is reused instead of refetched.
 
-export async function fetchPreviousLaunches({ signal, force = false } = {}) {
+export async function fetchPreviousLaunches({ signal, force = false, allowApi = true } = {}) {
   const stored = readPreviousStore();
   if (!force && stored.fresh && stored.launches.length > 0) return stored.launches;
 
@@ -396,6 +426,17 @@ export async function fetchPreviousLaunches({ signal, force = false } = {}) {
   } catch (error) {
     if (error?.name === "AbortError") throw error;
     // Fall through to LL2.
+  }
+
+  // Same budget rule as the upcoming feed: the background sync that runs on the
+  // 30-minute cycle reads the published file and stops there. Only opening the
+  // panel is allowed to spend a request, and only when nothing is stored.
+  if (!allowApi) {
+    if (stored.launches.length > 0) return stored.launches;
+    const error = new Error("No published previous launches, and the API was not permitted");
+    error.name = "NoSnapshotError";
+    error.noSnapshot = true;
+    throw error;
   }
 
   // Cooling off: a stored window is far better than an error the user can do
@@ -421,16 +462,10 @@ export async function fetchPreviousLaunches({ signal, force = false } = {}) {
     writePreviousStore(merged);
     return merged;
   } catch (error) {
-    // A failed refresh should not empty a window the user can still read.
+    // A failed refresh should not empty a window the user can still read. The
+    // development mirror is deliberately not consulted here either.
     if (stored.launches.length > 0) return stored.launches;
-    // Nothing stored either, so try the development mirror before giving up.
-    try {
-      const merged = mergePreviousLaunches([], await fetchDevPreviousLaunches({ signal: controller.signal }));
-      writePreviousStore(merged);
-      return merged;
-    } catch {
-      throw error;
-    }
+    throw error;
   } finally {
     clearTimeout(timeout);
   }

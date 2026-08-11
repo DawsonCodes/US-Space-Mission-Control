@@ -54,14 +54,17 @@ check("a single-organization launch gets one solid band", () => {
 check("a shared NASA-on-provider mission splits into two bands", () => {
   const stripe = accentStripe(nasaOnSpacex);
   assert.equal(stripe.bands, 2);
-  assert.match(stripe.style, /--accent-1:var\(--org-spacex\)/);
-  assert.match(stripe.style, /--accent-2:var\(--org-nasa\)/);
+  assert.match(stripe.style, /--accent-1:var\(--org-nasa\)/);
+  assert.match(stripe.style, /--accent-2:var\(--org-spacex\)/);
 });
 
-check("the provider leads the stripe, NASA follows", () => {
-  // Keeps the primary accent the same colour it was before the split existed.
-  assert.equal(accentStripe(nasaOnSpacex).primary, "spacex");
-  assert.equal(accentStripe({ ...rocketLab, agencies: [{ id: 44, name: "NASA" }] }).primary, "rocket-lab");
+check("NASA leads the stripe, the provider follows", () => {
+  // The agency whose payload is flying names the top band.
+  assert.equal(accentStripe(nasaOnSpacex).primary, "nasa");
+  assert.equal(accentStripe({ ...rocketLab, agencies: [{ id: 44, name: "NASA" }] }).primary, "nasa");
+  // A provider-only launch is unaffected.
+  assert.equal(accentStripe(spacex).primary, "spacex");
+  assert.equal(accentStripe(rocketLab).primary, "rocket-lab");
 });
 
 check("a launch matching no tracked organization gets no stripe", () => {
@@ -80,9 +83,10 @@ check("bands reference CSS tokens, never baked-in hex values", () => {
 // ---------- markup ---------------------------------------------------------
 check("a previous-launch row carries the band count for the stylesheet", () => {
   const html = buildPreviousContent([{ ...nasaOnSpacex, statusId: 3, statusName: "Launch Successful" }]);
-  assert.match(html, /data-accent="spacex"/);
+  assert.match(html, /data-accent="nasa"/);
   assert.match(html, /data-accent-bands="2"/);
-  assert.match(html, /--accent-2:var\(--org-nasa\)/);
+  assert.match(html, /--accent-1:var\(--org-nasa\)/);
+  assert.match(html, /--accent-2:var\(--org-spacex\)/);
 });
 
 check("a single-provider row is marked as one band, not two", () => {

@@ -492,6 +492,19 @@ select optgroup {
 .status[data-tone="removed"],
 .status[data-tone="danger"] { border-color: rgba(255, 128, 142, 0.36); color: #ffc1c9; }
 .status[data-tone="loading"] { border-color: rgba(115, 182, 255, 0.28); color: #cfe2ff; }
+
+/* Debug messages read as a warning, not as ordinary information: amber text,
+   an amber rule, and a dashed edge so a debug session is obvious at a glance. */
+.status[data-tone="debug"] {
+  border-style: dashed;
+  border-color: rgba(255, 193, 64, 0.55);
+  background-color: rgba(255, 193, 64, 0.08);
+  color: #ffd98a;
+}
+.status[data-tone="debug"] .status-progress {
+  background: linear-gradient(90deg, #ffc140, #ffe7a5);
+}
+.status[data-tone="debug"] .status-close { color: #ffd98a; }
 .status[data-tone="success"] .status-progress { background: linear-gradient(90deg, var(--success), #8be0bb); }
 .status[data-tone="warning"] .status-progress { background: linear-gradient(90deg, var(--warning), #ffe7a5); }
 .status[data-tone="error"] .status-progress,
@@ -589,7 +602,44 @@ select optgroup {
     box-shadow: var(--shadow-card-hover);
   }
 
-  .launch-card:hover[data-accent]::before { opacity: 0.9; }
+  .launch-card:hover[data-accent]::before { opacity: 1; }
+
+  /* A shared mission keeps both colours on hover. Recolouring the whole border
+     to a single accent said "SpaceX" on a card that is NASA and SpaceX, so the
+     split is carried into the border too: NASA above, the provider below.
+     Drawn as a masked gradient ring rather than border-image, because
+     border-image would square off the card's rounded corners. */
+  .launch-card[data-accent-bands="2"]:hover::after,
+  .launch-card[data-accent-bands="3"]:hover::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      180deg,
+      var(--accent-1) 0 50%,
+      var(--accent-2) 50% 100%
+    );
+    opacity: 0.55;
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask-composite: exclude;
+  }
+}
+
+/* Without mask support the ring would paint as a solid block over the card, so
+   it is not drawn at all; the split edge stripe still carries the meaning. */
+@supports not ((mask-composite: exclude) or (-webkit-mask-composite: xor)) {
+  .launch-card[data-accent-bands="2"]:hover::after,
+  .launch-card[data-accent-bands="3"]:hover::after { display: none; }
 }
 
 .launch-card:focus-within {
@@ -1572,6 +1622,28 @@ select optgroup {
   color: var(--warning);
 }
 
+/* Pressed but still waiting on the mirror. Shown immediately on click so the
+   button can never look like it did nothing. */
+.debug-toggle.is-busy {
+  opacity: 1;
+  cursor: progress;
+  border-color: rgba(255, 193, 64, 0.45);
+  color: #ffd98a;
+  animation: debugBusy 1.1s var(--ease-standard) infinite;
+}
+
+.debug-toggle:disabled { pointer-events: none; }
+
+/* ANIM-31 — the debug toggle breathes only while a debug load is in flight. */
+@keyframes debugBusy {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .debug-toggle.is-busy { animation: none; }
+}
+
 @supports not (color: color-mix(in srgb, red 50%, blue)) {
   .debug-toggle.is-active { border-color: rgba(255, 209, 102, 0.55); }
 }
@@ -2359,17 +2431,29 @@ html.is-booting .boot[hidden] { display: grid; }
    position, so most of the text sat outside the gradient box and — because the
    glyphs are painted from that background — went transparent. Tiling the
    gradient guarantees every glyph always has paint under it. */
+/* Two layers, because the highlight and the base colour have different jobs.
+   The bottom layer is a flat wash that covers the whole title, so with
+   -webkit-text-fill-color: transparent every glyph always has paint. The top
+   layer is the moving glow: narrow, non-repeating, and positioned entirely off
+   the left edge at rest, so the sweep always begins outside the text instead of
+   sitting on top of it. The previous tiled gradient could not do this: a
+   repeating image has a copy over the glyphs at every offset, so the glow was
+   already mid-text the moment the animation started. */
 .boot-title.is-shimmering {
-  background-image: linear-gradient(
-    100deg,
-    #8b94a3 0%,
-    #8b94a3 35%,
-    #ffffff 50%,
-    #8b94a3 65%,
-    #8b94a3 100%
-  );
-  background-size: 200% 100%;
-  background-repeat: repeat;
+  background-image:
+    linear-gradient(
+      100deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.35) 35%,
+      rgba(255, 255, 255, 1) 50%,
+      rgba(255, 255, 255, 0.35) 65%,
+      rgba(255, 255, 255, 0) 100%
+    ),
+    linear-gradient(#8b94a3, #8b94a3);
+  background-size: 60% 100%, 100% 100%;
+  background-repeat: no-repeat, no-repeat;
+  /* -160% puts the 60%-wide glow fully clear of the left edge before it moves. */
+  background-position: -160% 0, 0 0;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -2377,9 +2461,11 @@ html.is-booting .boot[hidden] { display: grid; }
   animation: bootShimmer 1600ms linear infinite;
 }
 
+/* Off the left edge, across, and off the right edge. The base layer never
+   moves, so the letters stay painted for the whole sweep. */
 @keyframes bootShimmer {
-  from { background-position: 100% 0; }
-  to   { background-position: -100% 0; }
+  from { background-position: -160% 0, 0 0; }
+  to   { background-position: 260% 0, 0 0; }
 }
 
 /* Engines without text background-clip keep solid, readable text. */

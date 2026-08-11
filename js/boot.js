@@ -42,6 +42,34 @@ export function signalBootReady() {
   markReady();
 }
 
+// The overlay covers the dashboard for at least MIN_PHASE_MS, so anything
+// time-limited that appears underneath it is already partly spent by the time
+// it can be seen. Callers register here to be told when the dashboard is
+// actually visible.
+let revealed = false;
+const revealCallbacks = [];
+
+export function onBootRevealed(fn) {
+  if (typeof fn !== "function") return;
+  if (revealed) {
+    fn();
+    return;
+  }
+  revealCallbacks.push(fn);
+}
+
+function announceRevealed() {
+  if (revealed) return;
+  revealed = true;
+  while (revealCallbacks.length) {
+    try {
+      revealCallbacks.shift()();
+    } catch {
+      /* a listener must never break the boot sequence */
+    }
+  }
+}
+
 function prefersReducedMotion() {
   try {
     return Boolean(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
@@ -132,6 +160,9 @@ export function setupBoot() {
     root?.classList?.remove?.("is-booting");
     overlay?.remove?.();
     markBooted();
+    // The dashboard is visible immediately on this path, so listeners waiting
+    // for the reveal must not be left hanging.
+    announceRevealed();
     return;
   }
 
@@ -156,6 +187,7 @@ export function setupBoot() {
     root.classList.add("is-booted"); // drives the section reveal stagger (ANIM-02)
     overlay.classList.add("is-done");
     window.setTimeout(() => overlay.remove?.(), 420);
+    announceRevealed();
   }
 
   function skip() {

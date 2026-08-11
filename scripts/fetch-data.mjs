@@ -23,6 +23,9 @@ import {
   API_PREVIOUS,
   SNAPSHOT_SCHEMA,
   WORKFLOW_MAX_PAGES,
+  WORKFLOW_REQUEST_BUDGET,
+  LL2_HOURLY_BUDGET,
+  WORKFLOW_RUNS_PER_HOUR,
   WORKFLOW_RETRIES,
   WORKFLOW_RETRY_BASE_MS,
   WORKFLOW_REQUEST_GAP_MS
@@ -48,9 +51,26 @@ function log(message) {
   console.log(`[fetch-data] ${message}`);
 }
 
+// Every call this run makes, so the cost of the schedule is a published number
+// rather than a guess. Retries count: they are real requests against the same
+// allowance.
+const usage = { total: 0, byFeed: {}, retries: 0 };
+
+function countRequest(url, { retry = false } = {}) {
+  usage.total += 1;
+  if (retry) usage.retries += 1;
+  const feed = url.includes("/previous/")
+    ? "previous"
+    : url.includes("mission__agency__ids")
+      ? "nasa"
+      : "providers";
+  usage.byFeed[feed] = (usage.byFeed[feed] || 0) + 1;
+}
+
 // One request, with retries. A 429 or a 5xx on a CI runner is worth waiting out;
 // publishing a partial list would leave every visitor with it for half an hour.
 async function request(url, attempt = 0) {
+  countRequest(url, { retry: attempt > 0 });
   try {
     const response = await fetch(url, {
       headers: { "User-Agent": "US-Space-Mission-Control data refresh (github.com/DawsonCodes)" }
@@ -77,13 +97,21 @@ async function request(url, attempt = 0) {
 }
 
 // Page a feed until it is exhausted. Bounded so a misreported count cannot loop.
-async function fetchAll(url, label) {
+// `reserve` is how many first-page requests are still owed to the feeds after
+// this one. Every feed's first page is mandatory, so paging has to leave room
+// for them or the run overshoots the budget on the last feed.
+async function fetchAll(url, label, { reserve = 0 } = {}) {
   const first = await request(url);
   const total = Number(first?.count) || 0;
   let results = Array.isArray(first?.results) ? first.results : [];
 
+  let stoppedForBudget = false;
   for (let page = 1; page < WORKFLOW_MAX_PAGES; page += 1) {
     if (results.length === 0 || total <= results.length) break;
+    if (usage.total + reserve >= WORKFLOW_REQUEST_BUDGET) {
+      stoppedForBudget = true;
+      break;
+    }
     await sleep(REQUEST_GAP_MS);
     const next = await request(`${url}&offset=${results.length}`);
     const batch = Array.isArray(next?.results) ? next.results : [];
@@ -92,7 +120,10 @@ async function fetchAll(url, label) {
   }
 
   const complete = results.length >= total;
-  log(`${label}: ${results.length} of ${total} records${complete ? "" : " (truncated)"}`);
+  log(
+    `${label}: ${results.length} of ${total} records${complete ? "" : " (truncated)"}` +
+      (stoppedForBudget ? ` — stopped early to stay inside the ${WORKFLOW_REQUEST_BUDGET}-request run budget` : "")
+  );
   return { results, count: total, complete };
 }
 
@@ -107,16 +138,19 @@ function stableStringify(value) {
   return JSON.stringify(value === undefined ? null : value);
 }
 
-// Write only when the payload actually differs, ignoring the timestamp. A
-// no-op run then leaves the working tree clean and the workflow commits
-// nothing, so the repository does not churn 48 times a day.
+// Write only when the launch data actually differs. The timestamp and the
+// request accounting change on every run by definition, so both are excluded
+// from the comparison; otherwise a no-op run would still commit and the
+// repository would churn 48 times a day.
+const VOLATILE_FIELDS = { generatedAt: null, apiUsage: null };
+
 async function writeSnapshot(path, payload) {
-  const body = stableStringify({ ...payload, generatedAt: null });
+  const body = stableStringify({ ...payload, ...VOLATILE_FIELDS });
 
   let previousBody = null;
   try {
     const existing = JSON.parse(await readFile(path, "utf8"));
-    previousBody = stableStringify({ ...existing, generatedAt: null });
+    previousBody = stableStringify({ ...existing, ...VOLATILE_FIELDS });
   } catch {
     /* no usable previous file */
   }
@@ -137,9 +171,10 @@ async function main() {
 
   // Sequential rather than concurrent: there is no deadline here, and one
   // caller at a time is the polite way to sweep an API that rate limits.
-  const providers = await fetchAll(API_PROVIDERS, "providers");
+  // Two first pages still to come after this one: NASA and previous.
+  const providers = await fetchAll(API_PROVIDERS, "providers", { reserve: 2 });
   await sleep(REQUEST_GAP_MS);
-  const nasa = await fetchAll(API_NASA, "nasa");
+  const nasa = await fetchAll(API_NASA, "nasa", { reserve: 1 });
 
   const launches = dedupeMerge(
     providers.results.map(simplifyLaunch),
@@ -152,15 +187,44 @@ async function main() {
     throw new Error("Refusing to publish an empty upcoming-launch snapshot");
   }
 
+  // Never publish a one-feed result either. If the provider feed comes back
+  // empty while NASA does not, what would ship is every NASA mission and
+  // nothing else, and every visitor would see a NASA-only dashboard for the
+  // next half hour. Failing the run leaves the last good snapshot in place,
+  // which is strictly better.
+  if (providers.results.length === 0) {
+    throw new Error(
+      "Refusing to publish: the provider feed returned nothing, which would ship a NASA-only list"
+    );
+  }
+
   await sleep(REQUEST_GAP_MS);
-  const previousFeed = await fetchAll(API_PREVIOUS, "previous");
+  const previousFeed = await fetchAll(API_PREVIOUS, "previous", { reserve: 0 });
   const previous = previousFeed.results.map(simplifyLaunch);
+
+  // Recorded before the write so the published number covers the whole run.
+  const apiUsage = {
+    requests: usage.total,
+    byFeed: { ...usage.byFeed },
+    retries: usage.retries,
+    // LL2's anonymous allowance, for context on how much headroom is left.
+    hourlyBudget: LL2_HOURLY_BUDGET,
+    runsPerHour: WORKFLOW_RUNS_PER_HOUR,
+    runBudget: WORKFLOW_REQUEST_BUDGET
+  };
+  log(
+    `API requests this run: ${apiUsage.requests}` +
+      ` (${Object.entries(apiUsage.byFeed).map(([k, v]) => `${k} ${v}`).join(", ")})` +
+      `${apiUsage.retries ? `, including ${apiUsage.retries} retries` : ""}` +
+      `. About ${apiUsage.requests * apiUsage.runsPerHour} an hour against a budget of ${apiUsage.hourlyBudget}.`
+  );
 
   const changedLaunches = await writeSnapshot(OUT_LAUNCHES, {
     schema: SNAPSHOT_SCHEMA,
     generatedAt,
     truncated: !providers.complete || !nasa.complete,
     counts: { providers: providers.count, nasa: nasa.count, published: launches.length },
+    apiUsage,
     launches
   });
 

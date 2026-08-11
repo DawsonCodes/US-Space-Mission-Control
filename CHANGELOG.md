@@ -2,6 +2,50 @@
 
 Release history for U.S. Space Mission Control, newest first.
 
+## v3.6.0 — Sync, Timing & API Accounting
+
+- Fixed the NASA-only dashboard, again, at its remaining source. The development
+  mirror was standing in when production was refused, and when one of its feeds
+  came back short the result was every NASA mission and nothing else, labelled
+  as published data. The mirror is no longer a fallback of any kind: it is
+  reached only when the Debug data button is pressed
+- The scheduled workflow now refuses to publish a snapshot whose provider feed
+  returned nothing, so a NASA-only list cannot be shipped to everyone either
+- The update countdown is anchored to when the data was published rather than to
+  when the tab opened, so it reads the same in every tab and continues across a
+  reload instead of restarting at thirty minutes. The publish time travels
+  through the saved copy, so even the first paint of a reload is correct
+- Fixed the saved-data banner flashing and vanishing. Withholding an API request
+  counted as a failure and dismissed the banner a few hundred milliseconds after
+  raising it. It now settles on a final wording instead
+- A banner raised during startup no longer spends its ten seconds behind the
+  boot overlay: the countdown is held until the dashboard is actually visible
+- Debug data responds immediately. The button shows a pressed and loading state
+  before any network work starts, and gives up on the mirror after five seconds
+  instead of the fifteen-second page timeout
+- Debug messages have their own amber, dashed style rather than looking like
+  ordinary information
+- Completed launches now ride the same 30-minute cycle as everything else,
+  reading the published file in the background, so opening the panel shows
+  current data rather than fetching on demand. That background read never spends
+  an API request
+- The accent edge leads with NASA, so a shared mission reads rose over the
+  provider's colour, and hovering keeps both colours instead of collapsing the
+  border to one
+- Fixed the startup glow starting on top of the title. A tiled gradient always
+  has a copy over the glyphs, so it could never begin off-text; the glow is now
+  a separate non-repeating layer over a flat base, starting fully clear of the
+  left edge
+- Every API request is now counted and published. The About panel reports what
+  the scheduled run spent, what that works out to per hour against the
+  allowance, and how many requests this browser has made, which should be zero
+- The workflow will not exceed a seven-request budget per run. If a feed grows
+  past that it stops paging, reports the list as truncated and says so in the
+  log rather than quietly spending the next run's allowance
+- The project audit now imports every module under a DOM shim, so a missing
+  function reference fails the build. Two such bugs reached the browser during
+  development because `node --check` cannot see them
+
 ## v3.5.3 — Development Mirror
 
 - Debug data now pulls real missions from The Space Devs' development mirror at

@@ -82,7 +82,8 @@ Reliability
 - Renders saved data instantly, so the dashboard is never empty while it checks
   for an update
 - Falls back to calling the API directly if the published data ever goes stale
-- A one-feed failure never replaces the complete list with a partial one
+- A one-feed failure never replaces the complete list with a partial one, in the
+  browser or in the published file
 - Debug data at the foot of the page loads real missions from the development
   mirror, falling back to bundled samples with no network at all
 
@@ -121,9 +122,16 @@ of showing an empty page while that file loads.
 The Space Devs also run a development mirror at `lldev.thespacedevs.com`, meant
 for building and testing rather than production traffic. It is not meaningfully
 rate limited, and in exchange it serves a cached dataset that can be days out of
-date. Debug data at the foot of the page reads from it, and it stands in as a
-last resort when production has refused and there is nothing else to show. It is
-labelled wherever it appears and is never written to the cache.
+date. Debug data at the foot of the page reads from it, and nothing else does.
+It is deliberately not a fallback: when one of its feeds comes back short the
+result is every NASA mission and nothing else, which must never appear unasked.
+It is labelled wherever it appears and is never written to the cache.
+
+Every request is counted. The workflow records what it spent into the snapshot,
+and the About panel shows it alongside what this browser has spent, which should
+read zero. The workflow will not exceed seven requests per run, which is two
+runs an hour against Launch Library's fifteen; if a feed grows past that it stops
+paging and reports the list as truncated rather than overspending.
 
 To run the fetch yourself:
 

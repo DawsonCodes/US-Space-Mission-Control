@@ -141,8 +141,10 @@ check("there is no refresh control left in the page", () => {
 });
 
 check("the rolling window reports where the cycle stands", () => {
+  // The seeded data is three hours old, so the honest reading is that an update
+  // is overdue rather than a made-up countdown.
   const text = nodes.get("refreshWindowText").textContent;
-  assert.match(text, /Next check in \d+ minutes?/, `unexpected readout: ${text}`);
+  assert.match(text, /Updated .* ago\. Next update (due now|in \d+ minutes?)\./, `unexpected readout: ${text}`);
 });
 
 check("an automatic check is actually scheduled", () => {

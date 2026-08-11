@@ -80,6 +80,14 @@ export const FEED_MAX_PAGES = 2;
 // cannot loop.
 export const WORKFLOW_MAX_PAGES = 8;
 
+// ...but not past the hourly allowance. Two runs an hour against LL2's 15 leaves
+// seven requests per run, so a growing schedule cannot quietly push the workflow
+// over the limit. When the budget runs out the feed is reported as truncated
+// rather than silently short.
+export const WORKFLOW_REQUEST_BUDGET = 7;
+export const LL2_HOURLY_BUDGET = 15;
+export const WORKFLOW_RUNS_PER_HOUR = 2;
+
 // Feed A — all tracked provider launches (orbital + suborbital so New Shepard
 // flights are not missed). A single request covers every provider because
 // LL2 2.3.0 lsp__id accepts comma-separated values.
@@ -159,6 +167,11 @@ export const CACHE_STALE_MS = 1000 * 60 * 60 * 24;
 // Abort a live request that takes longer than this so the UI can fall back to
 // cache/demo instead of hanging.
 export const NETWORK_TIMEOUT_MS = 1000 * 15;
+
+// The Debug switch is an interaction, not a page load: waiting out the full
+// network timeout felt like the button had done nothing at all. It gives up
+// quickly and falls back to the bundled sample missions instead.
+export const DEBUG_TIMEOUT_MS = 1000 * 5;
 
 // LL2 allows roughly 15 requests an hour to anonymous callers. When it answers
 // 429 we stop asking for a while rather than spending every reload on a request

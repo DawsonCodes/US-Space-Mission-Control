@@ -14,6 +14,9 @@ export const state = {
   lastUpdated: null,
   // True when an LL2 feed reported more records than it returned (coverage note).
   truncated: false,
+  // What the scheduled workflow spent producing the data on screen, as reported
+  // by the published snapshot. Null when the data did not come from one.
+  apiUsage: null,
   // Time display mode: local | utc | site (launch-site timezone).
   dateMode: "local",
   // Active organization tab/tile filter (all | nasa | spacex | blue-origin |

@@ -168,10 +168,16 @@ export function getLaunchCache(now = Date.now()) {
 
   const savedAt = Number(parsed.savedAt || 0);
   const ageMs = Math.max(0, now - savedAt);
+  // When the data was published, as opposed to when this browser saved it. The
+  // rolling-window countdown anchors to the publish time so it reads the same
+  // in every tab, and the first paint of a reload comes from here, before the
+  // snapshot has loaded.
+  const publishedAt = Number(parsed.payload.generatedAt) || 0;
   return {
     launches: parsed.payload.launches,
     truncated: Boolean(parsed.payload.truncated),
     savedAt,
+    publishedAt,
     ageMs,
     freshness: classifyCacheAge(ageMs)
   };
