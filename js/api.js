@@ -240,7 +240,7 @@ export async function fetchLiveLaunches({ signal } = {}) {
 // Returns { launches, truncated, source, generatedAt, partial, failedFeeds }.
 // `source` is "snapshot" normally, "snapshot-stale" when the workflow has
 // clearly stopped and LL2 could not stand in, or "live" when LL2 answered.
-export async function loadLaunches({ signal } = {}) {
+export async function loadLaunches({ signal, allowApi = true } = {}) {
   let stale = null;
 
   try {
@@ -262,6 +262,27 @@ export async function loadLaunches({ signal } = {}) {
     if (error?.name === "AbortError") throw error;
     // No snapshot at all: a fork that has never run the workflow, or a local
     // checkout. Fall through to LL2.
+  }
+
+  // The API is the fallback, and it is the only path with a budget. The caller
+  // withholds permission when it already has something usable to show, so a
+  // reload cannot spend a request just to redraw what is already on screen.
+  if (!allowApi) {
+    if (stale) {
+      return {
+        launches: stale.launches,
+        truncated: stale.truncated,
+        generatedAt: stale.generatedAt,
+        counts: stale.counts,
+        source: "snapshot-stale",
+        partial: false,
+        failedFeeds: []
+      };
+    }
+    const error = new Error("No published data, and the API was not permitted");
+    error.name = "NoSnapshotError";
+    error.noSnapshot = true;
+    throw error;
   }
 
   try {

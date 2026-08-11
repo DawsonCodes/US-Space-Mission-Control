@@ -15,6 +15,13 @@ on:
   schedule:
     - cron: "0,30 * * * *"
   workflow_dispatch:
+  # Also run on a push to main, so a fresh checkout has a snapshot immediately
+  # rather than sending everyone to the API until the next half hour. Changes to
+  # data/ are ignored, otherwise this workflow's own commit would retrigger it.
+  push:
+    branches: [main]
+    paths-ignore:
+      - "data/**"
 
 # Only the commit below needs write access.
 permissions:

@@ -65,6 +65,9 @@ jobs:
       - name: Automatic refresh + partial-feed protection
         run: node tests/auto-refresh.test.mjs
 
+      - name: API budget (reloads cost nothing)
+        run: node tests/api-budget.test.mjs
+
       - name: Status-banner lifecycle tests
         run: node tests/status.test.mjs
 
