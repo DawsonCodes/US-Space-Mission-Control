@@ -23,7 +23,11 @@ import {
   cacheAgeLabel
 } from "./storage.js";
 import { applyFilters } from "./filters.js";
-import { loadLaunches as loadLaunchData, fetchPreviousLaunches } from "./api.js";
+import {
+  loadLaunches as loadLaunchData,
+  fetchPreviousLaunches,
+  fetchDevLaunches
+} from "./api.js";
 import { ORG, ORG_LABELS } from "./organizations.js";
 import { applyOrgColors } from "./org-theme.js";
 import { buildColorCustomizerContent, wireColorCustomizer } from "./customize.js";
@@ -588,7 +592,7 @@ function toggleDebugData() {
       dataTime: state.lastUpdated
     };
   }
-  useDemoData();
+  useDebugData();
   syncDebugToggle();
 }
 
@@ -600,17 +604,38 @@ function syncDebugToggle() {
   btn.textContent = state.usingDemo ? "Debug data on" : "Debug data";
 }
 
-function useDemoData() {
-  // Demo must never overwrite the live cache or be clobbered by a late live
-  // response, so cancel any in-flight refresh first. renderManifest does not
-  // write the cache for non-live sources.
+// Debug data now comes from The Space Devs' development mirror, which they run
+// for exactly this purpose and which is not meaningfully rate limited. It
+// carries real missions rather than the handful of bundled samples, at the cost
+// of being a cached dataset that can be days out of date. The bundled set stays
+// as the offline fallback, so the switch still works with no network at all.
+//
+// Neither source is ever written to the launch cache: renderManifest only does
+// that for a live source, so debug data cannot contaminate the real dashboard.
+async function useDebugData() {
   if (state.activeRequest) {
     state.activeRequest.abort();
     state.activeRequest = null;
   }
-  renderManifest(getDemoLaunches(), false, "demo", Date.now(), { entrance: "stagger" });
+  setStatus("Loading debug data from the development mirror\u2026", "loading");
+
+  try {
+    const result = await fetchDevLaunches({});
+    renderManifest(result.launches, result.truncated, "demo", result.generatedAt, { entrance: "stagger" });
+    setStatus(
+      `Debug data: ${result.launches.length} launches from the development mirror. That dataset can be out of date.`,
+      "warning"
+    );
+  } catch {
+    renderManifest(getDemoLaunches(), false, "demo", Date.now(), { entrance: "stagger" });
+    setStatus(
+      `Debug data: the development mirror is unreachable, so ${state.launches.length} bundled sample missions are shown.`,
+      "warning"
+    );
+  }
+
   setRefreshWindow();
-  setStatus(`Debug data active with ${state.launches.length} sample missions.`, "warning");
+  syncDebugToggle();
   openMissionFromUrl();
 }
 

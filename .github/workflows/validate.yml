@@ -68,6 +68,9 @@ jobs:
       - name: API budget (reloads cost nothing)
         run: node tests/api-budget.test.mjs
 
+      - name: Development mirror (debug source + last-resort fallback)
+        run: node tests/dev-endpoint.test.mjs
+
       - name: Status-banner lifecycle tests
         run: node tests/status.test.mjs
 

@@ -2,6 +2,18 @@
 
 Release history for U.S. Space Mission Control, newest first.
 
+## v3.5.3 — Development Mirror
+
+- Debug data now pulls real missions from The Space Devs' development mirror at
+  lldev, which they run for exactly this purpose and which is not meaningfully
+  rate limited. The bundled sample missions remain as the offline fallback, so
+  the switch still works with no network
+- That mirror also stands in when the production API has refused us and there is
+  nothing else to show. It serves a cached dataset that can be days behind, so
+  it is labelled wherever it appears and is never written to the launch cache
+- Production is still preferred whenever it answers, and the published snapshot
+  is still preferred over both
+
 ## v3.5.0 — Automatic Data
 
 The launch data no longer comes from each visitor's browser, and there is
