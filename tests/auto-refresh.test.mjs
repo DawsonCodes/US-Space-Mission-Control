@@ -80,7 +80,7 @@ const complete = [
 ];
 mem.set(STORAGE_KEYS.manifest, JSON.stringify({
   schema: MANIFEST_CACHE_SCHEMA,
-  savedAt: Date.now() - 20 * 60 * 1000,
+  savedAt: Date.now() - 3 * 60 * 60 * 1000,
   payload: { launches: complete, truncated: false }
 }));
 
@@ -106,7 +106,12 @@ const check = (label, fn) => {
   try { fn(); console.log(`ok  - ${label}`); } catch (e) { failures++; console.error(`FAIL - ${label}: ${e.message}`); }
 };
 
-await new Promise((r) => setTimeout(r, 150));
+// Boot renders the saved data without touching the API. The provider-feed
+// failure is then exercised by an automatic check, which is permitted to use the
+// API because the saved data has aged past the fallback threshold.
+await new Promise((r) => setTimeout(r, 200));
+autoTicks.forEach((tick) => tick());
+await new Promise((r) => setTimeout(r, 400));
 
 // ---------- the NASA-only bug ---------------------------------------------
 check("a provider-feed failure does not leave a NASA-only dashboard", () => {

@@ -1,5 +1,10 @@
-// Integration: a STALE-but-usable cache stays visible (non-destructively) when
-// the background live refresh fails, with an honest "from N ago" message.
+// Integration: a stale-but-usable cache stays visible (non-destructively) when
+// the refresh fails, with an honest "from N ago" message.
+//
+// The cache is seeded old enough to pass API_FALLBACK_MIN_AGE_MS, because that
+// is the only condition under which the app spends an API request at all. A
+// merely stale cache is served without touching the network, which is covered
+// by visitor-requests.test.mjs.
 
 function makeEl() {
   const classes = new Set();
@@ -43,12 +48,15 @@ const cached = [
 ];
 store.set(STORAGE_KEYS.manifest, JSON.stringify({
   schema: MANIFEST_CACHE_SCHEMA,
-  savedAt: Date.now() - 40 * 60 * 1000,
+  savedAt: Date.now() - 5 * 60 * 60 * 1000,
   payload: { launches: cached, truncated: false }
 }));
 
-// Live refresh always fails.
-globalThis.fetch = async () => { throw new Error("refresh failed"); };
+// No published snapshot, and the API refresh always fails.
+globalThis.fetch = async (url) => {
+  if (String(url).includes(".json")) return { ok: false, status: 404, json: async () => ({}) };
+  throw new Error("refresh failed");
+};
 
 await import("../js/main.js");
 

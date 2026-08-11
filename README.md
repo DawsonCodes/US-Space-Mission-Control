@@ -109,7 +109,14 @@ The workflow likewise commits nothing when the data has not changed.
 
 Calling the API directly is still in the code as a fallback, for a fresh fork, a
 local checkout, or a workflow that has stopped running. That path keeps the
-rate-limit handling, since it is the only one that can be refused.
+rate-limit handling, since it is the only one that can be refused, and it is
+rationed: reloading the page never spends a request, and the fallback only
+fires when there is nothing to show or what is shown is over an hour old.
+
+The published file is the shared cache. Everyone who opens the page reads the
+same one, so the 30-minute cycle applies to everybody rather than per browser.
+The copy in `localStorage` exists only so the dashboard paints instantly instead
+of showing an empty page while that file loads.
 
 To run the fetch yourself:
 

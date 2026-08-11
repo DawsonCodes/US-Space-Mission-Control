@@ -18,7 +18,14 @@ nothing to press to update it.
   for example "Updated 6 minutes ago. Next check in 24 minutes"
 - Demo data is now Debug data and lives at the bottom of the page next to the
   credits, not in the More menu. It is a debugging aid, not a feature, and it
-  toggles back off
+  toggles back off with no request
+- Reloading the page no longer costs an API request. Reading the published data
+  is free and always happens; falling back to the API only happens when there is
+  nothing to show or what is shown is over an hour old. Before this, every
+  reload spent two or three requests against a budget of fifteen an hour, so it
+  was possible to be rate limited before finishing the first visit
+- The data workflow also runs on a push to main, so a snapshot exists straight
+  away instead of everyone using the API fallback until the next half hour
 
 Launch Library 2 allows roughly 15 requests an hour per caller. Every visitor
 calling it directly ran that out quickly, which is what caused the partial

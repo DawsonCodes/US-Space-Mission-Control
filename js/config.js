@@ -46,6 +46,12 @@ export const AUTO_REFRESH_MS = 1000 * 60 * 30;
 // stale data. Three hours is six missed runs.
 export const SNAPSHOT_MAX_AGE_MS = 1000 * 60 * 60 * 3;
 
+// When there is no published snapshot at all, the API is the only source, and
+// it has a per-browser budget. Reloading is free either way; the API is only
+// worth spending once what we are showing is genuinely this old. That caps the
+// fallback at roughly one request an hour instead of two or three per reload.
+export const API_FALLBACK_MIN_AGE_MS = 1000 * 60 * 60;
+
 // ---- Direct LL2 access (fallback only) -----------------------------------
 // LL2 caps `limit` at 100 records per request, so a feed with more upcoming
 // launches than that has to be paged. In the browser fallback we follow at most

@@ -2,7 +2,12 @@
 // loading, filters, reveal, overlays, weather orchestration, organization tabs),
 // wires DOM events, and boots the app.
 
-import { DEFAULT_VISIBLE, LOAD_MORE_STEP, AUTO_REFRESH_MS } from "./config.js";
+import {
+  DEFAULT_VISIBLE,
+  LOAD_MORE_STEP,
+  AUTO_REFRESH_MS,
+  API_FALLBACK_MIN_AGE_MS
+} from "./config.js";
 import { state } from "./state.js";
 import { getDemoLaunches } from "./demo-data.js";
 import {
@@ -282,12 +287,16 @@ function startInitialLoad() {
   if (isUsableCache(cache)) {
     renderManifest(cache.launches, cache.truncated, "cache", cache.savedAt, { entrance: "none" });
     setStatus(`Showing saved launch data from ${cacheAgeLabel(cache.ageMs)}. Checking for an update…`, "info");
-    refreshData({ background: true });
+    // Reading the published snapshot is free, so that always happens. Falling
+    // back to the API is not, so it is withheld unless what we are showing has
+    // genuinely aged: reloading with recent data must never cost a request.
+    refreshData({ background: true, allowApi: cache.ageMs > API_FALLBACK_MIN_AGE_MS });
   } else {
     if (cache && cache.freshness === "expired") {
       clearLaunchCache();
     }
     setLoadingState();
+    // Nothing to show at all, so the API is worth one attempt.
     refreshData({ background: false });
   }
 }
@@ -301,6 +310,15 @@ function startInitialLoad() {
 let autoRefreshTimer = null;
 let windowTicker = null;
 let lastRefreshAt = 0;
+
+// The API fallback costs budget, so it is only worth spending when there is
+// nothing on screen, or what is on screen has aged past the point where showing
+// it is doing the reader a disservice. Reloading never qualifies on its own.
+function apiWorthSpending() {
+  if (state.launches.length === 0) return true;
+  const age = Date.now() - (state.lastUpdated || 0);
+  return age > API_FALLBACK_MIN_AGE_MS;
+}
 
 function markRefreshed() {
   lastRefreshAt = Date.now();
@@ -352,7 +370,7 @@ function setupAutoRefresh() {
   if (autoRefreshTimer) window.clearInterval(autoRefreshTimer);
   autoRefreshTimer = window.setInterval(() => {
     if (state.usingDemo) return;
-    refreshData({ background: true, auto: true });
+    refreshData({ background: true, auto: true, allowApi: apiWorthSpending() });
   }, AUTO_REFRESH_MS);
 
   // Keep the countdown honest between refreshes without re-rendering anything.
@@ -364,7 +382,7 @@ function setupAutoRefresh() {
     setRefreshWindow();
     if (state.usingDemo) return;
     if (Date.now() - lastRefreshAt < AUTO_REFRESH_MS) return;
-    refreshData({ background: true, auto: true });
+    refreshData({ background: true, auto: true, allowApi: apiWorthSpending() });
   });
 
   setRefreshWindow();
@@ -420,7 +438,7 @@ function sourceMessage({ source, launches, truncated, generatedAt }) {
 // refreshing; otherwise skeletons are already showing. A new refresh aborts any
 // in-flight one (no duplicate loads); a superseded request resolves silently.
 // `attempt` guards the one-time uncached-startup retry.
-async function refreshData({ background = false, manual = false, auto = false, attempt = 0 } = {}) {
+async function refreshData({ background = false, manual = false, auto = false, attempt = 0, allowApi = true } = {}) {
   if (state.activeRequest) state.activeRequest.abort();
   const controller = new AbortController();
   state.activeRequest = controller;
@@ -430,7 +448,7 @@ async function refreshData({ background = false, manual = false, auto = false, a
   setRefreshWindow({ checking: true });
 
   try {
-    const result = await loadLaunchData({ signal: controller.signal });
+    const result = await loadLaunchData({ signal: controller.signal, allowApi });
     if (state.activeRequest !== controller) return; // superseded by a newer refresh
     markRefreshed();
 
@@ -484,6 +502,15 @@ async function refreshData({ background = false, manual = false, auto = false, a
     // A request we deliberately aborted because a newer one started: ignore.
     if (error?.name === "AbortError" && controller.signal.aborted) return;
 
+    // No published snapshot yet, and we withheld the API because there is
+    // already something usable on screen. That is the intended outcome, not a
+    // failure: leave the page exactly as it is.
+    if (error?.noSnapshot) {
+      markRefreshed();
+      dismissStatus();
+      return;
+    }
+
     const cache = getLaunchCache();
     if (isUsableCache(cache)) {
       // Stale-but-usable cache stays visible with an honest, non-destructive note.
@@ -532,12 +559,34 @@ function loadLaunches(forceRefresh = false) {
 // Debug only. Lives in the footer rather than the More menu because it is not a
 // feature: it swaps the real launch data for the bundled sample missions so the
 // whole UI can be exercised offline. Toggling it off returns to real data.
+// The real manifest, held in memory while debug data is on, so switching back
+// is instant and costs nothing. Toggling debug must never spend a request.
+let realManifest = null;
+
 function toggleDebugData() {
   if (state.usingDemo) {
-    setStatus("Debug data off. Loading real launch data…", "loading");
-    startInitialLoad();
+    if (realManifest) {
+      renderManifest(realManifest.launches, realManifest.truncated, realManifest.source, realManifest.dataTime, {
+        entrance: "fade"
+      });
+      setStatus("Debug data off.", "info");
+    } else {
+      // Nothing was loaded before debug was switched on, so there is nothing to
+      // restore; go through the normal path, which prefers the saved data.
+      startInitialLoad();
+    }
+    setRefreshWindow();
     syncDebugToggle();
     return;
+  }
+
+  if (!state.usingDemo && state.launches.length > 0) {
+    realManifest = {
+      launches: state.launches,
+      truncated: state.truncated,
+      source: state.dataSource,
+      dataTime: state.lastUpdated
+    };
   }
   useDemoData();
   syncDebugToggle();
