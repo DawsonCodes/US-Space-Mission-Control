@@ -222,7 +222,13 @@ export async function fetchLiveLaunches({ signal } = {}) {
     if (!nasaOk) failedFeeds.push("nasa");
     const partial = failedFeeds.length > 0;
 
-    saveLaunchCache({ launches, truncated });
+    // A partial result must never be cached. When the provider feed fails, what
+    // survives is the NASA feed alone, which is every NASA mission and nothing
+    // else. Saving that made the dashboard NASA-only on the next visit before a
+    // single request was even sent, and it stayed that way until a full load
+    // happened to succeed. The caller decides what to show; the cache keeps the
+    // last complete manifest.
+    if (!partial) saveLaunchCache({ launches, truncated });
     return { launches, truncated, available, partial, failedFeeds };
   } finally {
     clearTimeout(timeout);

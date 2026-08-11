@@ -69,10 +69,10 @@ export const els = {
   nextLaunchCard: document.getElementById("nextLaunchCard"),
   dataSource: document.getElementById("dataSource"),
   lastUpdated: document.getElementById("lastUpdated"),
+  refreshWindow: document.getElementById("refreshWindow"),
+  refreshWindowText: document.getElementById("refreshWindowText"),
   footerMeta: document.getElementById("footerMeta"),
-  btnRefresh: document.getElementById("btnRefresh"),
   btnUseDemo: document.getElementById("btnUseDemo"),
-  btnReloadLive: document.getElementById("btnReloadLive"),
   btnResetMenu: document.getElementById("btnResetMenu"),
   btnAbout: document.getElementById("btnAbout"),
   btnLegend: document.getElementById("btnLegend"),
@@ -476,7 +476,7 @@ export function setLoadingState() {
 
 export function renderHeroMeta() {
   const source = state.usingDemo
-    ? "Demo data"
+    ? "Debug data"
     : state.dataSource === "live"
       ? "Live data"
       : state.dataSource === "cache"
@@ -904,7 +904,7 @@ export function renderResults({ append = false, entrance = "none" } = {}) {
     els.results.innerHTML = `
       <div class="empty-state motion-fade-in">
         <strong>No launches loaded yet</strong>
-        <span>Use Refresh to bring the tracker to life, or try demo data.</span>
+        <span>Launch data is loading. It updates automatically.</span>
       </div>
     `;
     els.resultsMeta.textContent = "Nothing loaded yet.";
@@ -1187,7 +1187,7 @@ export function buildAboutContent() {
   const loaded = state.launches.length;
   const filtered = state.filteredLaunches.length;
   const source = state.usingDemo
-    ? "Demo data"
+    ? "Debug data"
     : state.dataSource === "live"
       ? "Live data"
       : state.dataSource === "cache"
@@ -1348,7 +1348,7 @@ function updateCountdownUnits() {
 
 export function refreshFooterMeta() {
   const pieces = [];
-  pieces.push(state.usingDemo ? "Demo mode" : `Source: ${state.dataSource || "unknown"}`);
+  pieces.push(state.usingDemo ? "Debug data" : `Source: ${state.dataSource || "unknown"}`);
   pieces.push(`Time mode: ${state.dateMode.toUpperCase()}`);
   pieces.push(`Clock: ${new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(new Date())}`);
   els.footerMeta.textContent = pieces.join(" • ");

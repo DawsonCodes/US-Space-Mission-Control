@@ -83,13 +83,16 @@
           </div>
 
           <div class="hero-actions">
-            <button id="btnRefresh" class="btn btn-primary" type="button">Refresh data</button>
+            <!-- Updating is automatic on a rolling 30-minute window, so there is
+                 no refresh button; this reports where that window stands. -->
+            <div class="refresh-window" id="refreshWindow" aria-live="polite">
+              <span class="refresh-window-dot" aria-hidden="true"></span>
+              <span class="refresh-window-text" id="refreshWindowText">Loading launch data…</span>
+            </div>
             <details class="more-menu" id="moreMenu">
               <summary class="btn btn-ghost">More</summary>
               <div class="more-menu-list" role="menu">
-                <button id="btnReloadLive" class="more-menu-item" type="button" role="menuitem">Reload live data</button>
                 <button id="btnResetMenu" class="more-menu-item" type="button" role="menuitem">Reset filters</button>
-                <button id="btnUseDemo" class="more-menu-item" type="button" role="menuitem">Use demo data</button>
                 <button id="btnAbout" class="more-menu-item" type="button" role="menuitem">About this data</button>
                 <button id="btnPrevious" class="more-menu-item" type="button" role="menuitem">Previous launches</button>
                 <button id="btnLegend" class="more-menu-item" type="button" role="menuitem">Mission status legend</button>
@@ -276,7 +279,7 @@
         <div id="activeFilters" class="active-filters" aria-label="Active filters" hidden></div>
 
         <div id="status" class="status" role="status" aria-live="polite">
-          <span class="status-text">Ready. Refresh to load launches, or use demo data.</span>
+          <span class="status-text">Loading launches…</span>
         </div>
       </section>
 
@@ -321,6 +324,12 @@
             <a href="CONTRIBUTING.md" target="_blank" rel="noopener">Contributing</a>
           </nav>
           <span class="footer-copy">© 2026 DawsonCodes</span>
+          <!-- Debug only: swaps in the bundled sample missions so the whole UI
+               can be exercised without the launch data. Deliberately out of the
+               way, since it is not a feature. -->
+          <button id="btnUseDemo" class="debug-toggle" type="button">
+            Debug data
+          </button>
         </div>
         <span id="footerMeta" class="footer-meta">Awaiting live data.</span>
       </footer>
