@@ -77,11 +77,14 @@ Reliability
 
 - Data is published on a schedule, so visitors never call the launch API and
   cannot be rate limited
-- Refreshes itself every 30 minutes and when you return to a backgrounded tab
+- Updates itself every 30 minutes and when you return to a backgrounded tab.
+  There is no refresh button; the hero shows where the window stands
 - Renders saved data instantly, so the dashboard is never empty while it checks
   for an update
 - Falls back to calling the API directly if the published data ever goes stale
-- Demo mode under the More menu, so the whole UI works with the API offline
+- A one-feed failure never replaces the complete list with a partial one
+- Debug data at the foot of the page swaps in sample missions, so the whole UI
+  works offline
 
 ## How the data gets here
 
@@ -100,7 +103,7 @@ loads those files from its own origin, which means:
   fails, rather than publishing a partial list
 
 The page re-reads the snapshot every 30 minutes and when you come back to a
-backgrounded tab. It uses a conditional request, so when nothing has been
+backgrounded tab. There is no refresh button. It uses a conditional request, so when nothing has been
 published since last time the server answers 304 and no data is transferred.
 The workflow likewise commits nothing when the data has not changed.
 

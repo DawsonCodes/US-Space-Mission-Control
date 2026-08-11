@@ -212,7 +212,7 @@ function renderLoadError() {
   els.results.innerHTML = `
     <div class="empty-state">
       <strong>Couldn't load live launches</strong>
-      <span>The launch API didn't respond. Try again, or switch to demo data.</span>
+      <span>The launch data didn't load. It will retry automatically.</span>
       <button class="btn btn-primary" data-retry type="button">Retry</button>
     </div>
   `;
@@ -299,8 +299,55 @@ function startInitialLoad() {
 // data until someone noticed.
 
 let autoRefreshTimer = null;
+let windowTicker = null;
 let lastRefreshAt = 0;
 
+function markRefreshed() {
+  lastRefreshAt = Date.now();
+  setRefreshWindow();
+}
+
+// Whole minutes, rounded so the reading never sits on "0 minutes" while there
+// is still time on the clock.
+function minutesLabel(ms) {
+  const minutes = Math.max(1, Math.round(ms / 60000));
+  return minutes === 1 ? "1 minute" : `${minutes} minutes`;
+}
+
+// The rolling window, in words. This replaced the Refresh button: there is
+// nothing to press, so the UI's job is to show where the cycle stands.
+function setRefreshWindow({ checking = false } = {}) {
+  const el = els.refreshWindowText;
+  if (!el) return;
+
+  if (state.usingDemo) {
+    els.refreshWindow?.setAttribute("data-state", "paused");
+    el.textContent = "Debug data. Automatic updates paused.";
+    return;
+  }
+  if (checking) {
+    els.refreshWindow?.setAttribute("data-state", "checking");
+    el.textContent = "Checking for new launch data…";
+    return;
+  }
+  if (!lastRefreshAt) {
+    els.refreshWindow?.setAttribute("data-state", "checking");
+    el.textContent = "Loading launch data…";
+    return;
+  }
+
+  const since = Date.now() - lastRefreshAt;
+  const until = Math.max(0, AUTO_REFRESH_MS - since);
+  els.refreshWindow?.setAttribute("data-state", "idle");
+  el.textContent =
+    since < 60000
+      ? `Updated just now. Next check in ${minutesLabel(until)}.`
+      : `Updated ${minutesLabel(since)} ago. Next check in ${minutesLabel(until)}.`;
+}
+
+// Updating is automatic on a rolling window: a timer while the tab is open, plus
+// a check when a backgrounded tab comes back, which is the case that used to
+// leave hours-old data on screen until someone pressed Refresh.
 function setupAutoRefresh() {
   if (autoRefreshTimer) window.clearInterval(autoRefreshTimer);
   autoRefreshTimer = window.setInterval(() => {
@@ -308,12 +355,19 @@ function setupAutoRefresh() {
     refreshData({ background: true, auto: true });
   }, AUTO_REFRESH_MS);
 
+  // Keep the countdown honest between refreshes without re-rendering anything.
+  if (windowTicker) window.clearInterval(windowTicker);
+  windowTicker = window.setInterval(() => setRefreshWindow(), 30000);
+
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState !== "visible") return;
+    setRefreshWindow();
     if (state.usingDemo) return;
     if (Date.now() - lastRefreshAt < AUTO_REFRESH_MS) return;
     refreshData({ background: true, auto: true });
   });
+
+  setRefreshWindow();
 }
 
 // Short conservative delay before a single automatic retry when the very first
@@ -331,11 +385,14 @@ function rateLimitMessage(error) {
   return `Launch Library is rate limiting this browser. It allows about 15 requests an hour. Try again in ${cooldownLabel(error.until || Date.now())}.`;
 }
 
-function partialCoverageMessage(failedFeeds) {
-  if (failedFeeds.includes("providers")) {
-    return "Partial list. The provider feed didn't respond, so some launches are missing. The next scheduled update should fill it in.";
+function partialCoverageMessage(failedFeeds, { kept = false } = {}) {
+  const which = failedFeeds.includes("providers") ? "provider" : "NASA";
+  if (kept) {
+    return `The ${which} feed didn't respond, so the last complete list is still shown. The next check should fill it in.`;
   }
-  return "Partial list. The NASA feed didn't respond, so some NASA overlaps may be missing.";
+  return failedFeeds.includes("providers")
+    ? "Partial list. The provider feed didn't respond, so only NASA missions came through. The next check should fill it in."
+    : "Partial list. The NASA feed didn't respond, so some NASA overlaps may be missing.";
 }
 
 // How the loaded data should be described, given where it came from.
@@ -370,19 +427,42 @@ async function refreshData({ background = false, manual = false, auto = false, a
 
   if (manual) setStatus("Checking for new launch data…", "loading");
   else if (!background) setStatus(attempt > 0 ? "Retrying…" : "Loading launches…", "loading");
-  els.btnRefresh?.classList?.add("is-refreshing"); // ANIM-23
+  setRefreshWindow({ checking: true });
 
   try {
     const result = await loadLaunchData({ signal: controller.signal });
     if (state.activeRequest !== controller) return; // superseded by a newer refresh
-    lastRefreshAt = Date.now();
+    markRefreshed();
 
     const { launches, truncated, partial, failedFeeds = [], source, generatedAt } = result;
+
+    // A one-feed result is not a smaller version of the list, it is a different
+    // list. When the provider feed fails, what comes back is every NASA mission
+    // and nothing else, which reads as "the dashboard only has NASA now". If we
+    // still hold something more complete, keep showing that and say why.
+    if (partial) {
+      const cache = getLaunchCache();
+      const betterOnScreen = !failedFeeds.includes("nasa") && state.launches.length > launches.length;
+      const betterCached = isUsableCache(cache) && cache.launches.length > launches.length;
+
+      if (betterOnScreen) {
+        setStatus(partialCoverageMessage(failedFeeds, { kept: true }), "warning");
+        return;
+      }
+      if (betterCached) {
+        renderManifest(cache.launches, cache.truncated, "cache", cache.savedAt, { entrance: "none" });
+        setStatus(partialCoverageMessage(failedFeeds, { kept: true }), "warning");
+        return;
+      }
+    }
 
     // An automatic tick that found nothing new should not disturb the page:
     // no re-render, no status banner, no scroll or pagination reset.
     const unchanged = auto && isSameManifest(launches, state.launches);
-    if (unchanged) return;
+    if (unchanged) {
+      markRefreshed();
+      return;
+    }
 
     const replacing = state.launches.length > 0 && state.dataSource !== "none";
     renderManifest(launches, truncated, source === "live" ? "live" : "snapshot", generatedAt, {
@@ -418,7 +498,7 @@ async function refreshData({ background = false, manual = false, auto = false, a
       );
     } else if (error?.rateLimited) {
       // Retrying is guaranteed to fail and would extend the cooldown, so stop.
-      setStatus(`${rateLimitMessage(error)} Demo data works in the meantime.`, "error");
+      setStatus(rateLimitMessage(error), "error");
       if (state.launches.length === 0) renderLoadError();
       signalBootReady();
     } else if (!background && !manual && attempt === 0) {
@@ -430,14 +510,14 @@ async function refreshData({ background = false, manual = false, auto = false, a
         }
       }, STARTUP_RETRY_DELAY_MS);
     } else {
-      setStatus("Couldn't load launch data. Try again or switch to demo data.", "error");
+      setStatus("Couldn't load launch data. It will try again automatically.", "error");
       if (state.launches.length === 0) renderLoadError();
       signalBootReady();
     }
   } finally {
     if (state.activeRequest === controller) {
       state.activeRequest = null;
-      els.btnRefresh?.classList?.remove("is-refreshing"); // ANIM-23
+      setRefreshWindow();
     }
   }
 }
@@ -449,6 +529,28 @@ function loadLaunches(forceRefresh = false) {
   else startInitialLoad();
 }
 
+// Debug only. Lives in the footer rather than the More menu because it is not a
+// feature: it swaps the real launch data for the bundled sample missions so the
+// whole UI can be exercised offline. Toggling it off returns to real data.
+function toggleDebugData() {
+  if (state.usingDemo) {
+    setStatus("Debug data off. Loading real launch data…", "loading");
+    startInitialLoad();
+    syncDebugToggle();
+    return;
+  }
+  useDemoData();
+  syncDebugToggle();
+}
+
+function syncDebugToggle() {
+  const btn = els.btnUseDemo;
+  if (!btn) return;
+  btn.classList.toggle("is-active", state.usingDemo);
+  btn.setAttribute("aria-pressed", String(state.usingDemo));
+  btn.textContent = state.usingDemo ? "Debug data on" : "Debug data";
+}
+
 function useDemoData() {
   // Demo must never overwrite the live cache or be clobbered by a late live
   // response, so cancel any in-flight refresh first. renderManifest does not
@@ -458,7 +560,8 @@ function useDemoData() {
     state.activeRequest = null;
   }
   renderManifest(getDemoLaunches(), false, "demo", Date.now(), { entrance: "stagger" });
-  setStatus(`Demo mode active with ${state.launches.length} missions.`, "warning");
+  setRefreshWindow();
+  setStatus(`Debug data active with ${state.launches.length} sample missions.`, "warning");
   openMissionFromUrl();
 }
 
@@ -998,17 +1101,7 @@ function setupInsights() {
 }
 
 function attachEventListeners() {
-  els.btnRefresh.addEventListener("click", () => loadLaunches(true));
-  if (els.btnUseDemo)
-    els.btnUseDemo.addEventListener("click", () => {
-      closeMoreMenu();
-      useDemoData();
-    });
-  if (els.btnReloadLive)
-    els.btnReloadLive.addEventListener("click", () => {
-      closeMoreMenu();
-      loadLaunches(true);
-    });
+  if (els.btnUseDemo) els.btnUseDemo.addEventListener("click", () => toggleDebugData());
   if (els.btnResetMenu)
     els.btnResetMenu.addEventListener("click", () => {
       closeMoreMenu();
@@ -1249,6 +1342,7 @@ function init() {
   setupStarfield();
   loadLaunches(false);
   setupAutoRefresh();
+  syncDebugToggle();
 }
 
 init();

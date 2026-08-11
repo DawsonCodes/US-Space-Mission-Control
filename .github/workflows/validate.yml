@@ -62,6 +62,9 @@ jobs:
       - name: Launch API rate-limit handling
         run: node tests/rate-limit.test.mjs
 
+      - name: Automatic refresh + partial-feed protection
+        run: node tests/auto-refresh.test.mjs
+
       - name: Status-banner lifecycle tests
         run: node tests/status.test.mjs
 

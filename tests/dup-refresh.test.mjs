@@ -20,17 +20,25 @@ function makeEl(id = "") {
 }
 const store = new Map();
 const els = new Map();
+const docListeners = {};
+const autoTicks = [];
 globalThis.document = {
   getElementById(id) { if (!els.has(id)) els.set(id, makeEl(id)); return els.get(id); },
   querySelector() { return null; }, querySelectorAll() { return []; },
   createElement() { return makeEl(); }, createDocumentFragment() { return makeEl(); },
-  addEventListener() {}, get body() { return makeEl(); }
+  addEventListener(type, fn) { (docListeners[type] ||= []).push(fn); },
+  fire(type) { (docListeners[type] || []).forEach((fn) => fn({ type })); },
+  visibilityState: "visible",
+  get body() { return makeEl(); }
 };
 globalThis.localStorage = { getItem: (k) => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)), removeItem: (k) => store.delete(k) };
 globalThis.sessionStorage = { getItem: () => null, setItem() {}, removeItem() {} };
 globalThis.window = {
   addEventListener() {}, matchMedia: () => ({ matches: false, addEventListener() {} }),
-  setInterval: setInterval.bind(globalThis), clearInterval: clearInterval.bind(globalThis),
+  // Capture the auto-refresh callback so the test can drive it, instead of
+  // waiting out the real 30-minute interval.
+  setInterval: (fn, ms) => { if (ms >= 60000) autoTicks.push(fn); return setInterval(fn, 1e9); },
+  clearInterval: clearInterval.bind(globalThis),
   setTimeout: setTimeout.bind(globalThis), clearTimeout: clearTimeout.bind(globalThis),
   requestAnimationFrame: () => 0, cancelAnimationFrame() {}, devicePixelRatio: 1, innerWidth: 1280, innerHeight: 800,
   location: { href: "https://x.dev/app/", search: "", pathname: "/app/", hash: "" }
@@ -83,13 +91,16 @@ const check = (label, fn) => { try { fn(); console.log(`ok  - ${label}`); } catc
 // Let the initial cache-first background refresh settle.
 await new Promise((r) => setTimeout(r, 160));
 
-// Burst: two manual refreshes back-to-back.
+// There is no refresh button any more; updating is automatic. The equivalent
+// burst is two automatic checks landing back to back, which is what happens when
+// a backgrounded tab is revealed just as the interval fires.
 signals.length = 0;
-const btn = document.getElementById("btnRefresh");
-btn.fire("click");
-btn.fire("click");
+autoTicks.forEach((tick) => tick());
+autoTicks.forEach((tick) => tick());
 
 // Synchronously after the burst, the first request's signal must be aborted.
+// (Driven through the captured interval callback, since the real one fires on a
+// 30-minute cadence.)
 check("two rapid refreshes: the earlier request is aborted (no duplicate in-flight)", () => {
   assert.ok(signals.length >= 2, `expected >=2 snapshot calls across two rounds, got ${signals.length}`);
   assert.ok(signals[0].aborted, "first round aborted");

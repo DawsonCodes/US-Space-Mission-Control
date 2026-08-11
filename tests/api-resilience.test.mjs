@@ -52,7 +52,9 @@ await check("NASA feed fails → provider data still renders, partial=true", asy
   assert.equal(res.partial, true);
   assert.deepEqual(res.failedFeeds, ["nasa"]);
   assert.equal(res.launches.length, 2, "provider launches present");
-  assert.ok(mem.has(STORAGE_KEYS.manifest), "usable partial cached");
+  // A partial result is never cached. Caching the NASA-only list is what made
+  // the dashboard show nothing but NASA on the next visit.
+  assert.ok(!mem.has(STORAGE_KEYS.manifest), "a partial result must not be cached");
 });
 
 await check("provider feed fails → NASA data still renders, partial=true", async () => {
@@ -61,6 +63,29 @@ await check("provider feed fails → NASA data still renders, partial=true", asy
   assert.equal(res.partial, true);
   assert.deepEqual(res.failedFeeds, ["providers"]);
   assert.equal(res.launches.length, 1, "NASA launch present");
+});
+
+await check("a NASA-only result never poisons the cache", async () => {
+  // The failure that made the whole dashboard look NASA-only: with the provider
+  // feed down, the NASA feed is all that survives. Caching it meant the next
+  // visit rendered NASA-only before any request was sent, and it stayed that
+  // way until a complete load happened to succeed.
+  mem.clear();
+  mode = "both-ok";
+  await fetchLiveLaunches();
+  const complete = JSON.parse(mem.get(STORAGE_KEYS.manifest));
+  assert.equal(complete.payload.launches.length, 3);
+
+  mode = "providers-fail";
+  const res = await fetchLiveLaunches();
+  assert.equal(res.launches.length, 1, "only NASA came back");
+
+  const after = JSON.parse(mem.get(STORAGE_KEYS.manifest));
+  assert.equal(after.payload.launches.length, 3, "the complete manifest survived");
+  assert.ok(
+    after.payload.launches.some((l) => l.id === "p-1"),
+    "provider launches are still cached"
+  );
 });
 
 await check("both feeds fail → throws (caller falls back to cache/demo/error)", async () => {

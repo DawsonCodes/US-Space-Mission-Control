@@ -2,9 +2,23 @@
 
 Release history for U.S. Space Mission Control, newest first.
 
-## v3.5.0 — Scheduled Data
+## v3.5.0 — Automatic Data
 
-The launch data no longer comes from each visitor's browser.
+The launch data no longer comes from each visitor's browser, and there is
+nothing to press to update it.
+
+- Fixed the dashboard showing NASA missions and nothing else. When the provider
+  feed failed, the NASA feed was all that answered, and the app both rendered
+  that as the full list and saved it to the cache. From then on every visit
+  started NASA-only, before a single request was sent, until a complete load
+  happened to succeed. A one-feed result is now never cached, and never replaces
+  a more complete list already on screen or in the cache
+- Removed the Refresh data button and Reload live data. Updating is automatic on
+  a rolling 30-minute window, and the hero now shows where that window stands,
+  for example "Updated 6 minutes ago. Next check in 24 minutes"
+- Demo data is now Debug data and lives at the bottom of the page next to the
+  credits, not in the More menu. It is a debugging aid, not a feature, and it
+  toggles back off
 
 Launch Library 2 allows roughly 15 requests an hour per caller. Every visitor
 calling it directly ran that out quickly, which is what caused the partial
