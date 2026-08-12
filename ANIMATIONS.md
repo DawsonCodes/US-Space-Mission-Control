@@ -48,7 +48,7 @@ the source with the same id, and listed here.
 | **ANIM-29** | Segmented countdown roll | `.cd-value.is-rolling` | Each changed D/H/M/S digit — hero, cards, details modal and saved drawer | `--motion-fast` roll-up | Digits update, no roll |
 | **ANIM-30** | Refresh-window pulse | `.refresh-window[data-state="checking"] .refresh-window-dot` | An automatic data check is in flight | 1.4s opacity loop | No pulse, dot stays solid |
 | **ANIM-31** | Debug toggle busy | `.debug-toggle.is-busy` | Debug data pressed, mirror not yet answered | 1.1s opacity loop | No pulse, label still changes |
-| **ANIM-32** | Status toast float | `.status` | Any status message appears | 280ms slide-in, then a 5.5s drift loop | Appears instantly, no drift |
+| **ANIM-32** | Status toast slide | `.status` | Any status message appears or leaves | 260ms slide in from the right, 200ms out | Appears and leaves instantly |
 
 ## Notes on the two most involved ones
 

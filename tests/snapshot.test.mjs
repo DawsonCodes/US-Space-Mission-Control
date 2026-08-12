@@ -142,19 +142,33 @@ await check("no snapshot at all falls back to the API", async () => {
   assert.ok(apiCalls > 0);
 });
 
-await check("an abandoned snapshot prefers fresh API data", async () => {
+await check("an old published file is used, not swapped for a truncated API list", async () => {
+  // The workflow leaves the file byte-identical when nothing has changed, so
+  // generatedAt is the last time a launch actually moved and is routinely many
+  // hours old while the workflow itself ran twenty minutes ago. Judging
+  // usability by that age threw away a complete list and sent every visitor to
+  // the API for a shorter one.
   reset(snapshot({ generatedAt: new Date(Date.now() - SNAPSHOT_MAX_AGE_MS - 60_000).toISOString() }));
+  const result = await loadLaunches();
+  assert.equal(result.source, "snapshot");
+  assert.equal(result.launches.length, 2);
+  assert.equal(apiCalls, 0, "the API was called for data we already had");
+});
+
+await check("a very old published file is still preferred to the API", async () => {
+  reset(snapshot({ generatedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString() }));
+  const result = await loadLaunches();
+  assert.equal(result.source, "snapshot");
+  assert.equal(apiCalls, 0);
+  assert.ok(result.generatedAt < Date.now(), "its real age is still reported honestly");
+});
+
+await check("an empty published file does fall through to the API", async () => {
+  // Age is not a reason to reject it; having no launches in it is.
+  reset(snapshot({ launches: [] }));
   const result = await loadLaunches();
   assert.equal(result.source, "live");
   assert.ok(apiCalls > 0);
-});
-
-await check("an abandoned snapshot is still better than nothing when the API is down", async () => {
-  reset(snapshot({ generatedAt: new Date(Date.now() - SNAPSHOT_MAX_AGE_MS - 60_000).toISOString() }), "fail");
-  const result = await loadLaunches();
-  assert.equal(result.source, "snapshot-stale");
-  assert.equal(result.launches.length, 2, "the old list is shown rather than an error");
-  assert.ok(result.generatedAt < Date.now(), "its real age is reported, not faked as now");
 });
 
 await check("no snapshot and a dead API surfaces the failure", async () => {

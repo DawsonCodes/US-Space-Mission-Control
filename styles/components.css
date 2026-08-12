@@ -442,21 +442,16 @@ select optgroup {
     0 2px 0 rgba(255, 255, 255, 0.04) inset;
   color: var(--text);
   font-size: 0.92rem;
-  animation:
-    toastIn var(--motion-normal) var(--ease-out) both,
-    toastFloat 5.5s var(--ease-standard) 0.4s infinite;
+  /* Slides in, then sits perfectly still. The drift loop it used to run read as
+     jitter rather than as floating, and a permanently animating fixed element
+     kept its own compositor layer awake for the life of the page. */
+  animation: toastIn 260ms var(--ease-out) both;
 }
 
-/* ANIM-32 — the toast arrives from the right, then breathes so it reads as
-   floating rather than pinned. */
+/* ANIM-32 — the toast slides in from the right and stays put. */
 @keyframes toastIn {
-  from { opacity: 0; transform: translate3d(18px, 8px, 0) scale(0.98); }
-  to   { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
-}
-
-@keyframes toastFloat {
-  0%, 100% { transform: translate3d(0, 0, 0); }
-  50%      { transform: translate3d(0, -5px, 0); }
+  from { opacity: 0; transform: translate3d(28px, 0, 0); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -645,9 +640,9 @@ select optgroup {
      half. The line makes the split unambiguous. */
   background: linear-gradient(
     180deg,
-    var(--accent-1) 0 calc(50% - 1px),
-    rgba(0, 0, 0, 0.55) calc(50% - 1px) calc(50% + 1px),
-    var(--accent-2) calc(50% + 1px) 100%
+    var(--accent-1) 0 calc(50% - 0.5px),
+    rgba(0, 0, 0, 0.35) calc(50% - 0.5px) calc(50% + 0.5px),
+    var(--accent-2) calc(50% + 0.5px) 100%
   );
 }
 
@@ -663,16 +658,10 @@ select optgroup {
   );
 }
 
-/* A split edge earns a little more presence so the division is obvious. */
-.launch-card[data-accent-bands="2"]::before,
-.launch-card[data-accent-bands="3"]::before,
-.previous-item[data-accent-bands="2"]::before,
-.previous-item[data-accent-bands="3"]::before,
-.saved-card[data-accent-bands="2"]::before,
-.saved-card[data-accent-bands="3"]::before {
-  width: 4px;
-  opacity: 0.8;
-}
+/* A split edge is the SAME weight as a single one: same width, same opacity.
+   It used to be wider and brighter so the division would read, but that made a
+   shared mission shout next to its neighbours, which is not what the edge is
+   for. The two colours are the difference; the emphasis should not be. */
 
 /* Hover lift only on pointer-capable devices (never on touch). */
 @media (hover: hover) {
@@ -711,11 +700,12 @@ select optgroup {
     padding: 1px;
     background: linear-gradient(
       180deg,
-      var(--accent-1) 0 calc(50% - 1px),
-      rgba(0, 0, 0, 0.5) calc(50% - 1px) calc(50% + 1px),
-      var(--accent-2) calc(50% + 1px) 100%
+      var(--accent-1) 0 calc(50% - 0.5px),
+      rgba(0, 0, 0, 0.35) calc(50% - 0.5px) calc(50% + 0.5px),
+      var(--accent-2) calc(50% + 0.5px) 100%
     );
-    opacity: 0.9;
+    /* Matched to the single-accent hover border, which is a 45% mix. */
+    opacity: 0.45;
     -webkit-mask:
       linear-gradient(#000 0 0) content-box,
       linear-gradient(#000 0 0);
@@ -754,7 +744,7 @@ select optgroup {
 
 .launch-card-media {
   position: relative;
-  height: 150px;
+  height: 190px;
   overflow: hidden;
   isolation: isolate;
   transform: translateZ(0); /* crisp clipping for the scaled image (ANIM-05) */
@@ -773,30 +763,17 @@ select optgroup {
    frame. Promoting the image to its own compositor layer (translateZ + explicit
    backface/perspective hints) makes the scale crisp, and `display:block` kills
    the inline baseline gap that let a 1px sliver of the container show through. */
-/* A blurred, over-scaled copy of the same photo fills the frame behind the
-   real one. LL2's launch photography is mostly tall portrait shots of a rocket
-   on the pad, so cropping them to a 150px landscape strip cut the vehicle in
-   half. The image is now shown whole, and the blur fills the leftover space so
-   it still reads as a full-bleed photo rather than a letterboxed one. */
-.launch-card-media .media-fill {
-  position: absolute;
-  inset: -12%;
-  background-image: var(--media-src);
-  background-size: cover;
-  background-position: center;
-  filter: blur(18px) saturate(1.1) brightness(0.55);
-  transform: translateZ(0);
-  pointer-events: none;
-}
-
+/* The photo fills the frame. Showing it whole over a blurred copy of itself
+   was worse in practice: the rocket shrank to the middle third and the blurred
+   bars either side dominated the card. A taller frame is the honest fix, so
+   less is cropped without letterboxing anything. */
 .launch-card-media img {
-  position: relative;
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
   object-position: center;
-  opacity: 0.98;
+  opacity: 0.95;
   transform: scale(1) translateZ(0);
   transform-origin: center center;
   backface-visibility: hidden;
@@ -1243,7 +1220,7 @@ select optgroup {
 .details-media {
   position: relative;
   margin: 0;
-  height: 200px;
+  height: 260px;
   overflow: hidden;
   isolation: isolate;
   border-radius: var(--radius-md);
@@ -1253,23 +1230,11 @@ select optgroup {
     var(--bg-2);
 }
 
-.details-media .media-fill {
-  position: absolute;
-  inset: -12%;
-  background-image: var(--media-src);
-  background-size: cover;
-  background-position: center;
-  filter: blur(20px) saturate(1.1) brightness(0.5);
-  transform: translateZ(0);
-  pointer-events: none;
-}
-
 .details-media img {
-  position: relative;
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
   /* Own compositor layer, so the bitmap is never resampled mid-transition. */
   transform: translateZ(0);
   backface-visibility: hidden;

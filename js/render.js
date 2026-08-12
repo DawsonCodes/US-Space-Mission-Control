@@ -899,8 +899,7 @@ function buildLaunchCard(launch, index, { enter = false } = {}) {
   // preserves the card's media dimensions. Broken loads fall back to the same
   // panel via the global error handler in main.js.
   const media = image.src
-    ? `<span class="media-fill" aria-hidden="true" style="--media-src:${escapeHtml(cssUrl(image.src))}"></span>` +
-      `<img src="${escapeHtml(image.src)}" alt="${escapeHtml(launchImageAlt(launch))}" loading="lazy" />`
+    ? `<img src="${escapeHtml(image.src)}" alt="${escapeHtml(launchImageAlt(launch))}" loading="lazy" />`
     : `<div class="media-fallback">No mission image available</div>`;
 
   const enterClass = enter ? " motion-card-enter" : "";
@@ -1103,13 +1102,6 @@ export function renderDrawer() {
 // Mission or rocket imagery for the detail views. Same resolver the cards use,
 // so it falls back to the neutral placeholder rather than stand-in artwork, and
 // it carries the compositor hints that keep the bitmap from resampling.
-// A CSS url() value for a background, built only from an already-validated
-// URL. Quoted and with quotes/parentheses stripped so the value can never break
-// out of the declaration.
-function cssUrl(src) {
-  return `url("${String(src).replace(/["'()\\]/g, "")}")`;
-}
-
 function detailsMediaHtml(launch) {
   const { src, kind } = resolveLaunchImage(launch);
   if (!src) {
@@ -1120,7 +1112,6 @@ function detailsMediaHtml(launch) {
   }
   return `
     <figure class="details-media">
-      <span class="media-fill" aria-hidden="true" style="--media-src:${escapeHtml(cssUrl(src))}"></span>
       <img src="${src}" alt="${escapeHtml(launchImageAlt(launch))}" loading="lazy" decoding="async" />
       <figcaption>${escapeHtml(launchImageLabel(kind))} from Launch Library 2</figcaption>
     </figure>`;

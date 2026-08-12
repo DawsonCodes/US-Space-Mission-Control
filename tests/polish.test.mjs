@@ -46,39 +46,42 @@ const check = (label, fn) => {
 // ---------- image variety ---------------------------------------------------
 // LL2's launch `image` is the rocket-configuration photo, so 100 Falcon 9
 // flights all resolved to one picture. Anything mission-specific wins.
-check("a mission patch beats the shared rocket photo", () => {
-  const withPatch = {
+check("a mission patch is never used as the picture", () => {
+  // A patch is a circular logo, not a photograph. Preferring it meant a card
+  // that should show a rocket showed a Starlink roundel instead.
+  const resolved = resolveLaunchImage({
     patchImage: "https://example.test/patch.png",
     image: "https://example.test/falcon9.jpg"
-  };
-  const resolved = resolveLaunchImage(withPatch);
-  assert.equal(resolved.kind, "patch");
-  assert.equal(resolved.src, "https://example.test/patch.png");
+  });
+  assert.equal(resolved.kind, "mission");
+  assert.equal(resolved.src, "https://example.test/falcon9.jpg");
 });
 
-check("the order runs most specific to least", () => {
+check("a patch is not even a last resort", () => {
+  const resolved = resolveLaunchImage({ patchImage: "https://example.test/patch.png" });
+  assert.equal(resolved.kind, "placeholder", "a logo is worse than an honest empty panel");
+});
+
+check("the order runs most specific to least, photographs only", () => {
   const all = {
-    patchImage: "https://example.test/patch.png",
     missionImage: "https://example.test/mission.jpg",
     padImage: "https://example.test/pad.jpg",
-    programImage: "https://example.test/program.jpg",
     rocketImage: "https://example.test/rocket.jpg"
   };
-  assert.equal(resolveLaunchImage(all).kind, "patch");
-  assert.equal(resolveLaunchImage({ ...all, patchImage: "" }).kind, "mission");
-  assert.equal(resolveLaunchImage({ ...all, patchImage: "", missionImage: "", image: "" }).kind, "pad");
+  assert.equal(resolveLaunchImage(all).kind, "mission");
+  assert.equal(resolveLaunchImage({ ...all, missionImage: "", image: "" }).kind, "pad");
   assert.equal(
-    resolveLaunchImage({ patchImage: "", missionImage: "", padImage: "", rocketImage: all.rocketImage }).kind,
+    resolveLaunchImage({ missionImage: "", padImage: "", rocketImage: all.rocketImage }).kind,
     "rocket"
   );
 });
 
 check("an unsafe image URL is skipped, not rendered", () => {
   const resolved = resolveLaunchImage({
-    patchImage: "javascript:alert(1)",
-    missionImage: "https://example.test/ok.jpg"
+    missionImage: "javascript:alert(1)",
+    padImage: "https://example.test/ok.jpg"
   });
-  assert.equal(resolved.kind, "mission", "the unsafe candidate must be stepped over");
+  assert.equal(resolved.kind, "pad", "the unsafe candidate must be stepped over");
 });
 
 check("no image at all still resolves to the neutral placeholder", () => {
@@ -87,7 +90,7 @@ check("no image at all still resolves to the neutral placeholder", () => {
 });
 
 check("every source kind has a caption", () => {
-  for (const kind of ["patch", "mission", "pad", "program", "rocket"]) {
+  for (const kind of ["mission", "pad", "rocket"]) {
     assert.ok(launchImageLabel(kind).length > 3, kind);
   }
 });
@@ -120,38 +123,42 @@ check("a record with none of the new fields normalizes without throwing", () => 
 });
 
 // ---------- image framing ---------------------------------------------------
-check("photos are shown whole, over a blurred fill of themselves", () => {
-  // LL2 photography is mostly tall portrait shots; cropping them to a 150px
-  // landscape strip cut the rocket in half.
+check("photos fill the frame rather than letterboxing", () => {
+  // Showing the photo whole over a blurred copy of itself was worse in
+  // practice: the rocket shrank to the middle third and the blurred bars either
+  // side dominated the card. A taller frame is the honest fix.
   const cardImg = /\.launch-card-media img \{[^}]*\}/s.exec(css);
   assert.ok(cardImg, "card image rule present");
-  assert.match(cardImg[0], /object-fit:\s*contain/, "cover crops the vehicle out of frame");
+  assert.match(cardImg[0], /object-fit:\s*cover/, "contain letterboxes the photo");
+  assert.ok(!/media-fill/.test(css), "the blurred backdrop is back");
+});
 
-  assert.match(css, /\.launch-card-media \.media-fill \{/, "no blurred backdrop; the photo would letterbox");
-  const fill = /\.launch-card-media \.media-fill \{[^}]*\}/s.exec(css)[0];
-  assert.match(fill, /filter:\s*blur\(/);
-  assert.match(fill, /background-image:\s*var\(--media-src\)/);
+check("the frames are tall enough that cropping takes less of the vehicle", () => {
+  const cardMedia = /\.launch-card-media \{[^}]*\}/s.exec(css)[0];
+  const cardHeight = Number(/height:\s*(\d+)px/.exec(cardMedia)[1]);
+  assert.ok(cardHeight >= 180, `card media is only ${cardHeight}px tall`);
+
+  const detailMedia = /\.details-media \{[^}]*\}/s.exec(css)[0];
+  const detailHeight = Number(/height:\s*(\d+)px/.exec(detailMedia)[1]);
+  assert.ok(detailHeight >= 240, `detail media is only ${detailHeight}px tall`);
 });
 
 check("the detail view frames its image the same way", () => {
   const detailImg = /\.details-media img \{[^}]*\}/s.exec(css)[0];
-  assert.match(detailImg, /object-fit:\s*contain/);
-  assert.match(css, /\.details-media \.media-fill \{/);
-});
-
-check("the backdrop URL is built from the validated source, and cannot break out", () => {
-  const built = buildPreviousDetail({
-    id: "a", name: "M", net: "2026-01-01T00:00:00Z", agencies: [],
-    statusId: 3, statusName: "Launch Successful",
-    image: 'https://example.test/a.jpg?x=1'
-  });
-  assert.match(built, /--media-src:url\(/);
-  // Quotes and parentheses are stripped before the value reaches the style.
-  const value = /--media-src:([^"]*)"/.exec(built.replace(/&quot;/g, '"'));
-  assert.ok(value, "no --media-src emitted");
+  assert.match(detailImg, /object-fit:\s*cover/);
 });
 
 // ---------- the floating toast ---------------------------------------------
+check("the toast sits still once it has arrived", () => {
+  // A permanent drift loop read as jitter rather than as floating, and kept a
+  // fixed-position compositor layer awake for the life of the page.
+  const rule = /\n\.status \{[^}]*\}/s.exec(css)[0];
+  const animation = /animation:\s*([^;]+);/.exec(rule);
+  assert.ok(animation, "the toast still needs an entrance");
+  assert.ok(!/infinite/.test(animation[1]), "the toast is still animating forever");
+  assert.ok(!/toastFloat/.test(css), "the drift keyframes are back");
+});
+
 check("the status toast floats over the page instead of scrolling with it", () => {
   const rule = /\n\.status \{[^}]*\}/s.exec(css);
   assert.ok(rule, ".status rule present");
