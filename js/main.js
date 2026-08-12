@@ -762,6 +762,10 @@ function randomMission() {
     renderOverview();
   }
 
+  // Open it. Scrolling to a highlighted card asked the reader to work out what
+  // had just been chosen, and on a long list the flash was often off-screen by
+  // the time the smooth scroll finished. The mission itself is the answer, so
+  // show it.
   const card = document.querySelector(`[data-launch-id=${JSON.stringify(pick.id)}]`);
   if (card) {
     card.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -770,7 +774,9 @@ function randomMission() {
     void card.offsetWidth;
     card.classList.add("is-flash");
   }
-  setStatus(`Random pick: "${pick.name}".`, "success");
+
+  setStatus(`Random pick: ${pick.name}`, "success");
+  openDetails(pick.id, els.btnRandom);
 }
 
 function openAbout(opener) {
@@ -1235,11 +1241,6 @@ function setupInsights() {
 
 function attachEventListeners() {
   if (els.btnUseDemo) els.btnUseDemo.addEventListener("click", () => toggleDebugData());
-  if (els.btnResetMenu)
-    els.btnResetMenu.addEventListener("click", () => {
-      closeMoreMenu();
-      resetFilters();
-    });
   if (els.btnAbout)
     els.btnAbout.addEventListener("click", (e) => {
       closeMoreMenu();

@@ -55,6 +55,18 @@ export function simplifyLaunch(raw) {
   const rocketImage = config?.image_url || "";
   const providerImage = lsp?.image_url || lsp?.logo_url || "";
 
+  // LL2's launch `image` is nearly always the ROCKET CONFIGURATION photo, so a
+  // hundred Falcon 9 flights all resolve to the same picture. These are the
+  // genuinely per-mission assets it also publishes. Field shapes vary between
+  // records, so each is read defensively and anything missing is simply absent.
+  const patches = Array.isArray(raw?.mission_patches) ? raw.mission_patches : [];
+  const patchImage = patches.map((p) => p?.image_url).find(Boolean) || "";
+  const padImage =
+    raw?.pad?.image_url || raw?.pad?.image?.image_url || raw?.pad?.map_image || "";
+  const programImage = Array.isArray(raw?.program)
+    ? raw.program.map((p) => p?.image_url).find(Boolean) || ""
+    : raw?.program?.image_url || "";
+
   const missionName = mission?.name || "";
   const missionType = mission?.type || "";
 
@@ -99,6 +111,9 @@ export function simplifyLaunch(raw) {
     image: missionImage,
     missionImage,
     missionThumb,
+    patchImage,
+    padImage,
+    programImage,
     rocketImage,
     providerImage,
     imageCredit: raw?.image?.credit || "",
@@ -184,6 +199,9 @@ export function mergeLaunch(a, b) {
     image: nonEmpty(a.image, b.image),
     missionImage: nonEmpty(a.missionImage, b.missionImage),
     missionThumb: nonEmpty(a.missionThumb, b.missionThumb),
+    patchImage: nonEmpty(a.patchImage, b.patchImage),
+    padImage: nonEmpty(a.padImage, b.padImage),
+    programImage: nonEmpty(a.programImage, b.programImage),
     rocketImage: nonEmpty(a.rocketImage, b.rocketImage),
     providerImage: nonEmpty(a.providerImage, b.providerImage),
     webcast: nonEmpty(a.webcast, b.webcast),

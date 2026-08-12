@@ -1,9 +1,12 @@
 // Launch-image resolver.
 //
 // Priority order (deterministic — the same launch always resolves the same way):
-//  1. LL2 mission-specific image
-//  2. LL2 rocket-configuration image
-//  3. Neutral placeholder (no local artwork): the renderer shows a quiet, dark
+//  1. Mission patch (unique per mission)
+//  2. LL2 mission image
+//  3. Launch-pad photo (unique per pad)
+//  4. Program image
+//  5. Rocket-configuration image (shared by every flight of that rocket)
+//  6. Neutral placeholder (no local artwork): the renderer shows a quiet, dark
 //     "No mission image available" panel that matches the cinematic UI.
 //
 // The previous illustrated SVG fallbacks were removed in v3.1.0 — stylized
@@ -17,13 +20,34 @@ import { safeUrl } from "./utils.js";
 // of an <img>, which also covers missing and malformed URLs (safeUrl rejects
 // non-http(s) values).
 export function resolveLaunchImage(launch) {
-  const mission = safeUrl(launch?.missionImage || launch?.image);
-  if (mission) return { src: mission, kind: "mission" };
-
-  const rocket = safeUrl(launch?.rocketImage);
-  if (rocket) return { src: rocket, kind: "rocket" };
+  // Most specific first. LL2's launch `image` is nearly always the rocket
+  // CONFIGURATION photo, which is why a hundred Falcon 9 flights all showed the
+  // same picture; a mission patch or a pad photo actually distinguishes them.
+  for (const [kind, value] of [
+    ["patch", launch?.patchImage],
+    ["mission", launch?.missionImage || launch?.image],
+    ["pad", launch?.padImage],
+    ["program", launch?.programImage],
+    ["rocket", launch?.rocketImage]
+  ]) {
+    const src = safeUrl(value);
+    if (src) return { src, kind };
+  }
 
   return { src: null, kind: "placeholder" };
+}
+
+// How to describe where a picture came from, for the caption under it.
+const IMAGE_SOURCE_LABEL = {
+  patch: "Mission patch",
+  mission: "Mission image",
+  pad: "Launch pad",
+  program: "Program image",
+  rocket: "Rocket image"
+};
+
+export function launchImageLabel(kind) {
+  return IMAGE_SOURCE_LABEL[kind] || "Mission image";
 }
 
 // Meaningful alt text: mission name plus provider context when available.

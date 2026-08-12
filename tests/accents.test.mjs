@@ -199,7 +199,7 @@ function selectorsSettingStripeBackground(pattern) {
 
 check("the split gradient out-specifies the solid single-colour stripe", () => {
   const solid = selectorsSettingStripeBackground(/background:\s*var\(--accent-1/);
-  const split = selectorsSettingStripeBackground(/background:\s*linear-gradient\(\s*\n?\s*180deg,\s*\n?\s*var\(--accent-1\)\s+0\s+50%/);
+  const split = selectorsSettingStripeBackground(/background:\s*linear-gradient\(\s*\n?\s*180deg,\s*\n?\s*var\(--accent-1\)\s+0\s+calc\(50%/);
 
   assert.ok(solid.length > 0, "no solid stripe rule found");
   assert.ok(split.length > 0, "no split stripe rule found");
@@ -225,7 +225,29 @@ check("every element type that can carry a stripe can also carry a split one", (
 check("the stripe bands use hard stops rather than a blend", () => {
   // A gradient without repeated stops fades between colours; the design calls
   // for a clean division at the midpoint.
-  assert.match(css, /var\(--accent-1\)\s+0\s+50%,\s*\n?\s*var\(--accent-2\)\s+50%\s+100%/);
+  assert.match(css, /var\(--accent-1\)\s+0\s+calc\(50% - 1px\)/);
+  assert.match(css, /var\(--accent-2\)\s+calc\(50% \+ 1px\)\s+100%/);
+});
+
+check("a divider separates the two bands, so neither colour bleeds", () => {
+  // NASA's rose is far brighter than any provider colour on this background,
+  // so without a hard line between them an exact 50/50 still read as rose
+  // owning more than half.
+  assert.match(
+    css,
+    /rgba\(0,\s*0,\s*0,\s*0?\.\d+\)\s+calc\(50% - 1px\)\s+calc\(50% \+ 1px\)/,
+    "no divider between the bands"
+  );
+});
+
+check("a split card does not also tint its whole border with one accent", () => {
+  // The hover rule sets border-color from --card-accent, which is accent-1, so
+  // the entire border went rose and the split ring was composited on top of it.
+  assert.match(
+    cssSource,
+    /\.launch-card\[data-accent-bands="2"\]:hover,[\s\S]{0,120}\{[\s\S]{0,120}border-color:\s*var\(--line\)/,
+    "the base border still takes the first accent on a split card"
+  );
 });
 
 // ---------- detail imagery -------------------------------------------------

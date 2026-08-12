@@ -2,6 +2,35 @@
 
 Release history for U.S. Space Mission Control, newest first.
 
+## v3.7.0 — Presentation Polish
+
+- Launch photos are shown whole instead of cropped. Launch Library's pictures
+  are mostly tall shots of a rocket on the pad, and fitting them to a short
+  landscape strip cut the vehicle in half. The picture now sits over a blurred
+  copy of itself, so it still fills the frame
+- More variety in those pictures. Launch Library's launch image is nearly always
+  the rocket-configuration photo, so a hundred Falcon 9 flights all showed the
+  same one. Mission patches, pad photos and program images are now used when
+  they exist, in that order, with the shared rocket photo as the last resort
+- Fixed a split accent edge reading as one colour. On hover the whole border was
+  being tinted with the first accent and the split ring was drawn on top of it,
+  so the lower half looked like the first colour showing through. There is also
+  a hard divider between the bands now, because NASA's rose is much brighter
+  than any provider colour and bled across an exact half
+- Status messages are a floating panel in the corner rather than a strip in the
+  toolbar, where they scrolled out of view and were missed. They drift gently,
+  stay above everything, and have a real close button
+- Random mission opens the mission it picked. Scrolling to a highlighted card
+  asked you to work out what had been chosen, and on a long list the highlight
+  was often off-screen by the time the scroll finished
+- Removed Reset filters from the More menu; the toolbar already has it
+- Detail views are wider and taller on desktop, with a fourth column of facts on
+  a large screen, so they usually fit without scrolling
+- Visibility, wind and gusts read in miles and mph first, then metric, matching
+  how temperature has always been shown
+- Fixed the saved drawer's scrollbar flashing in and out when a mission is
+  removed, which shifted the list sideways
+
 ## v3.6.1 — The Snapshot Actually Publishes
 
 - Fixed the reason no published data ever appeared. The workflow ran eight times

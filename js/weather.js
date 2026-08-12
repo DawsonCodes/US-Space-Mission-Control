@@ -65,6 +65,32 @@ export function formatTemperature(celsius) {
   return { c: roundedC, f: roundedF, text: `${roundedF}°F / ${roundedC}°C` };
 }
 
+// Speed, American first then metric, matching how temperature is shown. This is
+// a U.S. spaceflight dashboard reading km/h next to °F, which was inconsistent.
+// Open-Meteo returns km/h unless asked otherwise.
+export function formatSpeed(kmh) {
+  if (kmh === null || kmh === undefined) return null;
+  const k = Number(kmh);
+  if (Number.isNaN(k)) return null;
+  return {
+    kmh: Math.round(k),
+    mph: Math.round(k * 0.621371),
+    text: `${Math.round(k * 0.621371)} mph / ${Math.round(k)} km/h`
+  };
+}
+
+// Distance the same way. Open-Meteo reports visibility in metres.
+export function formatDistance(metres) {
+  if (metres === null || metres === undefined) return null;
+  const m = Number(metres);
+  if (Number.isNaN(m)) return null;
+  return {
+    km: Math.round(m / 1000),
+    miles: Math.round(m / 1609.344),
+    text: `${Math.round(m / 1609.344)} mi / ${Math.round(m / 1000)} km`
+  };
+}
+
 // In-memory de-dupe of concurrent requests for the same cache key.
 const inflight = new Map();
 

@@ -57,6 +57,17 @@ body {
   }
 }
 
+/* The floating status toast spans the width on a phone, where a 420px card
+   pinned to one corner would crowd the content it sits over. */
+@media (max-width: 600px) {
+  .status {
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    width: auto;
+  }
+}
+
 /* Modal/drawer become full-height sheets on small screens (internal scroll). */
 @media (max-width: 600px) {
   .modal-overlay {
