@@ -343,7 +343,10 @@ function publishedAt() {
 }
 
 // Whole minutes, rounded so the reading never sits on "0 minutes" while there
-// is still time on the clock.
+// is still time on the clock. Only used for the countdown, which is bounded by
+// the schedule and never exceeds half an hour. The age is a different problem:
+// a file that has not changed in six hours was reading "344 minutes ago", so
+// that one goes through cacheAgeLabel and rolls up into hours and days.
 function minutesLabel(ms) {
   const minutes = Math.max(1, Math.round(ms / 60000));
   return minutes === 1 ? "1 minute" : `${minutes} minutes`;
@@ -383,7 +386,7 @@ function setRefreshWindow({ checking = false } = {}) {
   const until = msUntilNextScheduledCheck();
 
   els.refreshWindow?.setAttribute("data-state", "idle");
-  const age = since < 60000 ? "Updated just now" : `Updated ${minutesLabel(since)} ago`;
+  const age = `Updated ${cacheAgeLabel(since)}`;
   el.textContent = `${age}. Next check in ${minutesLabel(until)}.`;
 }
 

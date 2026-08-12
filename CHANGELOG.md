@@ -2,6 +2,15 @@
 
 Release history for U.S. Space Mission Control, newest first.
 
+## v3.7.3 — Readable Ages
+
+- The rolling window says how old the data is in hours and days instead of
+  counting minutes forever. A file that had not changed in nearly six hours read
+  "Updated 344 minutes ago" and now reads "Updated 5 hours ago". The countdown
+  keeps its minutes, since the schedule bounds it at thirty
+- The wording now comes from the same formatter the saved-data messages use, so
+  the two agree instead of drifting apart
+
 ## v3.7.2 — Fixes
 
 - Fixed "Partial" and the drop back to the launch API. The published file is
