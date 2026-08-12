@@ -159,7 +159,14 @@ check("boot shimmer keeps every glyph painted for the whole sweep", () => {
   assert.ok(sizes, "background-size present");
   const layers = sizes[1].split(",").map((s) => s.trim());
   assert.equal(layers.length, 2, "expected a glow layer over a flat base layer");
-  assert.match(layers[1], /^100%/, "the base layer must span the whole title");
+  const baseWidth = Number(/^(\d+)%/.exec(layers[1])[1]);
+  const baseHeight = Number(/\s(\d+)%$/.exec(layers[1])[1]);
+  assert.ok(baseWidth >= 100, `base layer is ${baseWidth}% wide, narrower than the title`);
+  assert.ok(
+    baseHeight > 100,
+    `base layer is ${baseHeight}% tall; line-height is under the font's content area, ` +
+      "so a box-height wash leaves descender ink unpainted"
+  );
 
   const images = /background-image:([\s\S]*?);/.exec(block[0]);
   assert.ok(images, "background-image present");

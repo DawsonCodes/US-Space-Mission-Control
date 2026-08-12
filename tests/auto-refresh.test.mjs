@@ -51,10 +51,14 @@ globalThis.localStorage = {
 globalThis.sessionStorage = { getItem: () => null, setItem() {}, removeItem() {} };
 globalThis.window = {
   addEventListener() {}, matchMedia: () => ({ matches: false, addEventListener() {} }),
-  // Capture the long interval (the auto-refresh) so the test can drive it.
-  setInterval: (fn, ms) => { if (ms >= 60000) autoTicks.push(fn); return setInterval(fn, 1e9); },
+  // The auto-refresh is a self-rescheduling long timeout now, not an interval.
+  setInterval: (fn, ms) => setInterval(fn, ms >= 60000 ? 1e9 : ms),
   clearInterval: clearInterval.bind(globalThis),
-  setTimeout: setTimeout.bind(globalThis), clearTimeout: clearTimeout.bind(globalThis),
+  setTimeout: (fn, ms) => {
+    if (ms >= 60000) { autoTicks.push(fn); return 0; }
+    return setTimeout(fn, ms);
+  },
+  clearTimeout: clearTimeout.bind(globalThis),
   requestAnimationFrame: () => 0, cancelAnimationFrame() {},
   devicePixelRatio: 1, innerWidth: 1280, innerHeight: 800,
   location: { href: "https://dawsoncodes.github.io/US-Space-Mission-Control/", search: "", pathname: "/US-Space-Mission-Control/", hash: "" }
@@ -144,11 +148,11 @@ check("the rolling window reports where the cycle stands", () => {
   // The seeded data is three hours old, so the honest reading is that an update
   // is overdue rather than a made-up countdown.
   const text = nodes.get("refreshWindowText").textContent;
-  assert.match(text, /Updated .* ago\. Next update (due now|in \d+ minutes?)\./, `unexpected readout: ${text}`);
+  assert.match(text, /Updated .* ago\. Next check in \d+ minutes?\./, `unexpected readout: ${text}`);
 });
 
 check("an automatic check is actually scheduled", () => {
-  assert.ok(autoTicks.length > 0, "no auto-refresh interval was registered");
+  assert.ok(autoTicks.length > 0, "no auto-refresh timer was registered");
 });
 
 check("the interval matches the documented 30-minute window", () => {

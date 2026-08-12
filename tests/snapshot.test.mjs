@@ -169,5 +169,49 @@ await check("the snapshot paths are relative, for the Pages project subpath", ()
   }
 });
 
+// ---------- completed launches age differently ------------------------------
+// data/previous.json is left byte-identical when nothing has changed, so its
+// generatedAt is the last time a provider actually flew, which is routinely
+// days old. Judging it by the upcoming-snapshot staleness rule sent the panel
+// to the API on open, which is exactly what publishing it exists to prevent.
+const { fetchPreviousLaunches } = await import("../js/api.js");
+const { readPreviousStore } = await import("../js/previous-store.js");
+
+await check("an old published previous.json is used, not treated as stale", async () => {
+  mem.clear();
+  apiCalls = 0;
+  apiMode = "ok";
+  snapshotResponse = {
+    schema: SNAPSHOT_SCHEMA,
+    // Far past SNAPSHOT_MAX_AGE_MS. Completed launches do not go out of date.
+    generatedAt: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString(),
+    truncated: false,
+    launches: [{ id: "flown-1", name: "Already flown", net: "2026-01-01T00:00:00Z" }]
+  };
+
+  const launches = await fetchPreviousLaunches({ force: true });
+  assert.equal(launches.length, 1);
+  assert.equal(launches[0].id, "flown-1");
+  assert.equal(apiCalls, 0, "the panel fell back to the API for data it already had");
+});
+
+await check("the published completed launches land in the rolling store", async () => {
+  assert.ok(readPreviousStore().launches.some((l) => l.id === "flown-1"));
+});
+
+await check("a fresh local store does not skip reading the published file", async () => {
+  // Reading it is free, and skipping it is how the panel went stale.
+  apiCalls = 0;
+  snapshotResponse = {
+    schema: SNAPSHOT_SCHEMA,
+    generatedAt: new Date().toISOString(),
+    truncated: false,
+    launches: [{ id: "flown-2", name: "Newer flight", net: "2026-02-01T00:00:00Z" }]
+  };
+  const launches = await fetchPreviousLaunches({});
+  assert.ok(launches.some((l) => l.id === "flown-2"), "the newly published launch was not picked up");
+  assert.equal(apiCalls, 0);
+});
+
 if (failures > 0) { console.error(`\n${failures} snapshot test(s) failed.`); process.exit(1); }
 console.log("\nAll snapshot tests passed.");

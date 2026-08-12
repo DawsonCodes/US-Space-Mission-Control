@@ -35,11 +35,16 @@ globalThis.localStorage = { getItem: (k) => (store.has(k) ? store.get(k) : null)
 globalThis.sessionStorage = { getItem: () => null, setItem() {}, removeItem() {} };
 globalThis.window = {
   addEventListener() {}, matchMedia: () => ({ matches: false, addEventListener() {} }),
-  // Capture the auto-refresh callback so the test can drive it, instead of
-  // waiting out the real 30-minute interval.
-  setInterval: (fn, ms) => { if (ms >= 60000) autoTicks.push(fn); return setInterval(fn, 1e9); },
+  // The auto-refresh is a self-rescheduling long timeout now, not an interval,
+  // so the test captures that instead of waiting out the real cycle. Short
+  // timers still run normally.
+  setInterval: (fn, ms) => setInterval(fn, ms >= 60000 ? 1e9 : ms),
   clearInterval: clearInterval.bind(globalThis),
-  setTimeout: setTimeout.bind(globalThis), clearTimeout: clearTimeout.bind(globalThis),
+  setTimeout: (fn, ms) => {
+    if (ms >= 60000) { autoTicks.push(fn); return 0; }
+    return setTimeout(fn, ms);
+  },
+  clearTimeout: clearTimeout.bind(globalThis),
   requestAnimationFrame: () => 0, cancelAnimationFrame() {}, devicePixelRatio: 1, innerWidth: 1280, innerHeight: 800,
   location: { href: "https://x.dev/app/", search: "", pathname: "/app/", hash: "" }
 };

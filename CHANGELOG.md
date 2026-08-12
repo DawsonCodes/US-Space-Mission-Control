@@ -2,6 +2,24 @@
 
 Release history for U.S. Space Mission Control, newest first.
 
+## v3.7.1 — Aligned Checks
+
+- The page now checks for new data on the workflow's own schedule rather than on
+  a timer started when the tab opened. A tab opened at five past next looked at
+  ten past the half hour, five minutes after the data had already been
+  republished, and sat reading "due now" in between. Every tab now checks just
+  after each scheduled publish, so they all agree
+- The countdown reads from that schedule too. It was derived from the age of the
+  data, but a run that finds nothing changed publishes nothing, so the age keeps
+  growing while the next check is still minutes away and the countdown parked on
+  "due now". Age and countdown are now two separate facts
+- Restored four fixes that were left behind. They were pushed to the v3.6.0
+  branch after that pull request had already been merged, so they never reached
+  the site: the saved-copy schema bump, completed launches no longer being judged
+  by the upcoming-data staleness rule, the guard that stops a scheduled update
+  cancelling debug mode, and the oversized title wash that keeps descenders
+  painted
+
 ## v3.7.0 — Presentation Polish
 
 - Launch photos are shown whole instead of cropped. Launch Library's pictures
@@ -110,6 +128,22 @@ Release history for U.S. Space Mission Control, newest first.
 - The project audit now imports every module under a DOM shim, so a missing
   function reference fails the build. Two such bugs reached the browser during
   development because `node --check` cannot see them
+
+Four further gaps, found by reviewing the fixes above rather than by using them:
+
+- The saved-copy schema was bumped. A copy written before the publish stamp
+  existed still validated, so it fell back to the local save time and read
+  "just now" on every reload, which is the bug the stamp exists to fix
+- Completed launches are no longer judged by the upcoming-data staleness rule.
+  The workflow leaves that file untouched when nothing has changed, so its
+  timestamp is the last time a provider actually flew, routinely days old.
+  Treating that as stale sent the panel to the API on open
+- Pressing Debug now claims debug mode before any network work. It was only
+  claimed once the data painted, so a scheduled update landing during the wait
+  could repaint over it and drop you back out with no message
+- The startup title's base wash is oversized rather than exactly the text box.
+  Line height is smaller than the font's content area, so a descender could fall
+  outside a box-sized wash and lose its paint
 
 ## v3.5.3 — Development Mirror
 

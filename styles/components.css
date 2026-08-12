@@ -2599,10 +2599,15 @@ html.is-booting .boot[hidden] { display: grid; }
       rgba(255, 255, 255, 0) 100%
     ),
     linear-gradient(#8b94a3, #8b94a3);
-  background-size: 60% 100%, 100% 100%;
+  /* The wash is oversized and centred rather than exactly the padding box.
+     line-height is 1.05 while the font's content area is nearer 1.2em, so a
+     descender can sit below the box; a box-sized wash would leave that ink
+     unpainted, which is the same disappearing-glyph failure the old tiled
+     gradient was guarding against. */
+  background-size: 60% 100%, 140% 200%;
   background-repeat: no-repeat, no-repeat;
   /* -160% puts the 60%-wide glow fully clear of the left edge before it moves. */
-  background-position: -160% 0, 0 0;
+  background-position: -160% 0, center center;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -2613,8 +2618,8 @@ html.is-booting .boot[hidden] { display: grid; }
 /* Off the left edge, across, and off the right edge. The base layer never
    moves, so the letters stay painted for the whole sweep. */
 @keyframes bootShimmer {
-  from { background-position: -160% 0, 0 0; }
-  to   { background-position: 260% 0, 0 0; }
+  from { background-position: -160% 0, center center; }
+  to   { background-position: 260% 0, center center; }
 }
 
 /* Engines without text background-clip keep solid, readable text. */

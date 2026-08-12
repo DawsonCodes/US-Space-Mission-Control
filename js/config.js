@@ -56,6 +56,17 @@ export const SNAPSHOT_SCHEMA = 1;
 // the same origin, not an API call.
 export const AUTO_REFRESH_MS = 1000 * 60 * 30;
 
+// The workflow's cron is "0,30 * * * *", so checks are aligned to those wall
+// clock boundaries rather than to whenever a tab happened to open. Anchoring to
+// page load meant a tab opened at :05 next checked at :35, five minutes after
+// the :30 publish, and sat reading "due now" in between.
+export const SCHEDULE_MINUTES = [0, 30];
+
+// GitHub's scheduled runs are frequently a few minutes late, and the run itself
+// takes about a minute. Checking a little after the boundary avoids a wasted
+// look at a file that has not been rewritten yet.
+export const SCHEDULE_GRACE_MS = 1000 * 90;
+
 // A snapshot older than this means the workflow has stopped running, so the
 // dashboard falls back to calling LL2 directly rather than quietly serving
 // stale data. Three hours is six missed runs.
@@ -160,7 +171,12 @@ export const STORAGE_KEYS = {
 
 // Schema version for the cached manifest payload. Bump when the normalized
 // launch shape changes so old caches are ignored safely.
-export const MANIFEST_CACHE_SCHEMA = 1;
+//
+// v2 added generatedAt, the publish time the rolling-window countdown anchors
+// to. A v1 cache validates structurally but has no such stamp, so it would fall
+// back to the local save time and read "just now" on every reload, which is the
+// exact bug the stamp exists to fix. Bumping discards those once.
+export const MANIFEST_CACHE_SCHEMA = 2;
 
 // Cache-first freshness model:
 //   fresh   : < 15 min  — render immediately, refresh quietly in the background

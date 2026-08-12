@@ -162,5 +162,38 @@ check("a nonsense stored value is ignored rather than trusted", () => {
   assert.equal(state.insightsOpen, null);
 });
 
+// ---- the publish stamp travels with the cache -----------------------------
+// Added in v3.6.0 so the rolling-window countdown is right on the first paint
+// of a reload. A cache written before that has no stamp, so the schema was
+// bumped to discard those once rather than let them read "just now" forever.
+check("the manifest schema was bumped when generatedAt was added", () => {
+  assert.ok(MANIFEST_CACHE_SCHEMA >= 2, "a pre-generatedAt cache would still validate");
+});
+
+check("a cache from the previous schema is discarded, not trusted", () => {
+  mem.clear();
+  mem.set(STORAGE_KEYS.manifest, JSON.stringify({
+    schema: MANIFEST_CACHE_SCHEMA - 1,
+    savedAt: Date.now() - 60_000,
+    payload: { launches: [{ id: "old" }], truncated: false }
+  }));
+  assert.equal(getLaunchCache(), null, "an older-schema cache must not be used");
+});
+
+check("the publish stamp is read back, separately from the save time", () => {
+  mem.clear();
+  const published = Date.now() - 25 * 60 * 1000;
+  saveLaunchCache({ launches: [{ id: "a" }], truncated: false, generatedAt: published });
+  const cache = getLaunchCache();
+  assert.equal(cache.publishedAt, published);
+  assert.ok(cache.savedAt >= published, "save time is its own thing");
+});
+
+check("a cache with no publish stamp reads as zero rather than guessing", () => {
+  mem.clear();
+  saveLaunchCache({ launches: [{ id: "a" }], truncated: false });
+  assert.equal(getLaunchCache().publishedAt, 0, "callers fall back to savedAt on their own");
+});
+
 if (failures > 0) { console.error(`\n${failures} cache test(s) failed.`); process.exit(1); }
 console.log("\nAll cache tests passed.");
