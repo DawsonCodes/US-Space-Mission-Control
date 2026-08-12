@@ -80,6 +80,9 @@ jobs:
       - name: Saved-data banner persistence
         run: node tests/status-persistence.test.mjs
 
+      - name: Presentation polish (images, toast, random mission)
+        run: node tests/polish.test.mjs
+
       - name: Status-banner lifecycle tests
         run: node tests/status.test.mjs
 

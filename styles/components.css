@@ -416,20 +416,55 @@ select optgroup {
 }
 
 /* Status banner ---------------------------------------------------------- */
+/* A floating toast, not a strip in the toolbar. It used to sit inside the
+   filter panel, where it scrolled off with the page and was missed more often
+   than it was read. Pinned to the bottom-right, above everything, and it drifts
+   gently so it reads as hovering rather than stuck on. */
 .status {
-  position: relative;
+  position: fixed;
+  z-index: 60;
+  right: clamp(12px, 2.5vw, 28px);
+  bottom: clamp(12px, 2.5vw, 28px);
+  width: min(420px, calc(100vw - 24px));
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-top: 14px;
-  padding: 13px 15px;
+  padding: 14px 16px;
   border-radius: var(--radius-md);
-  border: 1px dashed rgba(255, 255, 255, 0.12);
-  background-color: rgba(255, 255, 255, 0.035);
-  color: var(--muted);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  /* Opaque enough to stay legible over cards, images and the starfield. */
+  background-color: rgba(16, 19, 26, 0.94);
+  backdrop-filter: blur(10px);
+  box-shadow:
+    0 18px 40px rgba(0, 0, 0, 0.55),
+    0 2px 0 rgba(255, 255, 255, 0.04) inset;
+  color: var(--text);
   font-size: 0.92rem;
+  animation:
+    toastIn var(--motion-normal) var(--ease-out) both,
+    toastFloat 5.5s var(--ease-standard) 0.4s infinite;
+}
+
+/* ANIM-32 — the toast arrives from the right, then breathes so it reads as
+   floating rather than pinned. */
+@keyframes toastIn {
+  from { opacity: 0; transform: translate3d(18px, 8px, 0) scale(0.98); }
+  to   { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+@keyframes toastFloat {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50%      { transform: translate3d(0, -5px, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status { animation: none; }
+}
+
+@supports not (backdrop-filter: blur(10px)) {
+  .status { background-color: rgba(16, 19, 26, 0.985); }
 }
 
 /* Per-second countdown for auto-dismissing messages (decorative; aria-hidden). */
@@ -464,7 +499,8 @@ select optgroup {
 }
 
 .status.is-leaving {
-  animation: statusOut 0.2s ease forwards;
+  /* Overrides the float loop, which would otherwise fight the exit. */
+  animation: statusOut 0.2s var(--ease-standard) forwards;
 }
 
 .status-text {
@@ -522,6 +558,24 @@ select optgroup {
   background: linear-gradient(90deg, #ffc140, #ffe7a5);
 }
 .status[data-tone="debug"] .status-close { color: #ffd98a; }
+
+/* A floating toast needs an obvious way out, so the close control is a real
+   button rather than a faint glyph. */
+.status-close {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+.status-close:hover,
+.status-close:focus-visible {
+  background-color: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: var(--text);
+}
 .status[data-tone="success"] .status-progress { background: linear-gradient(90deg, var(--success), #8be0bb); }
 .status[data-tone="warning"] .status-progress { background: linear-gradient(90deg, var(--warning), #ffe7a5); }
 .status[data-tone="error"] .status-progress,
@@ -585,10 +639,15 @@ select optgroup {
 .previous-item[data-accent-bands="2"]::before,
 .saved-card[data-accent-bands="2"]::before,
 .previous-detail-head[data-accent-bands="2"]::before {
+  /* A dark hairline at the midpoint. The bands are exactly equal, but NASA's
+     rose is far brighter than any provider colour on this background, so
+     without a divider it visually bleeds and reads as if it owns more than
+     half. The line makes the split unambiguous. */
   background: linear-gradient(
     180deg,
-    var(--accent-1) 0 50%,
-    var(--accent-2) 50% 100%
+    var(--accent-1) 0 calc(50% - 1px),
+    rgba(0, 0, 0, 0.55) calc(50% - 1px) calc(50% + 1px),
+    var(--accent-2) calc(50% + 1px) 100%
   );
 }
 
@@ -625,6 +684,17 @@ select optgroup {
 
   .launch-card:hover[data-accent]::before { opacity: 1; }
 
+  /* A split card must NOT also tint its whole border with the first accent.
+     The rule above sets border-color from --card-accent, which is accent-1, so
+     the entire border went NASA rose and the split ring was then composited on
+     top of it: the lower half read as rose showing through blue rather than as
+     blue. With two or more bands the border steps back and the ring alone
+     carries the colour. */
+  .launch-card[data-accent-bands="2"]:hover,
+  .launch-card[data-accent-bands="3"]:hover {
+    border-color: var(--line);
+  }
+
   /* A shared mission keeps both colours on hover. Recolouring the whole border
      to a single accent said "SpaceX" on a card that is NASA and SpaceX, so the
      split is carried into the border too: NASA above, the provider below.
@@ -641,10 +711,11 @@ select optgroup {
     padding: 1px;
     background: linear-gradient(
       180deg,
-      var(--accent-1) 0 50%,
-      var(--accent-2) 50% 100%
+      var(--accent-1) 0 calc(50% - 1px),
+      rgba(0, 0, 0, 0.5) calc(50% - 1px) calc(50% + 1px),
+      var(--accent-2) calc(50% + 1px) 100%
     );
-    opacity: 0.75;
+    opacity: 0.9;
     -webkit-mask:
       linear-gradient(#000 0 0) content-box,
       linear-gradient(#000 0 0);
@@ -668,6 +739,11 @@ select optgroup {
    inside the card, leaving it highlighted with no way to clear it. */
 .launch-card:has(:focus-visible) {
   border-color: color-mix(in srgb, var(--card-accent, var(--accent)) 55%, transparent);
+}
+
+.launch-card[data-accent-bands="2"]:has(:focus-visible),
+.launch-card[data-accent-bands="3"]:has(:focus-visible) {
+  border-color: var(--line-strong);
 }
 
 @supports not selector(:has(*)) {
@@ -697,13 +773,30 @@ select optgroup {
    frame. Promoting the image to its own compositor layer (translateZ + explicit
    backface/perspective hints) makes the scale crisp, and `display:block` kills
    the inline baseline gap that let a 1px sliver of the container show through. */
+/* A blurred, over-scaled copy of the same photo fills the frame behind the
+   real one. LL2's launch photography is mostly tall portrait shots of a rocket
+   on the pad, so cropping them to a 150px landscape strip cut the vehicle in
+   half. The image is now shown whole, and the blur fills the leftover space so
+   it still reads as a full-bleed photo rather than a letterboxed one. */
+.launch-card-media .media-fill {
+  position: absolute;
+  inset: -12%;
+  background-image: var(--media-src);
+  background-size: cover;
+  background-position: center;
+  filter: blur(18px) saturate(1.1) brightness(0.55);
+  transform: translateZ(0);
+  pointer-events: none;
+}
+
 .launch-card-media img {
+  position: relative;
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   object-position: center;
-  opacity: 0.9;
+  opacity: 0.98;
   transform: scale(1) translateZ(0);
   transform-origin: center center;
   backface-visibility: hidden;
@@ -1061,9 +1154,11 @@ select optgroup {
 }
 
 .modal-panel {
-  width: min(920px, calc(100vw - 48px));
-  max-height: 90vh;
-  max-height: 90dvh; /* progressive: avoids mobile browser-chrome clipping */
+  width: min(1120px, calc(100vw - 48px));
+  /* Taller on desktop too. At 90vh with a 1120px column the details view still
+     scrolled inside a short window, which is the cramped feeling reported. */
+  max-height: 92vh;
+  max-height: 92dvh; /* progressive: avoids mobile browser-chrome clipping */
   overflow: auto;
   overscroll-behavior: contain;
   border-radius: var(--radius-lg);
@@ -1099,7 +1194,11 @@ select optgroup {
 
 .drawer-list {
   flex: 1;
-  overflow: auto;
+  /* stable gutter: removing a saved mission briefly shortens the list past the
+     overflow threshold, so the scrollbar was disappearing and reappearing and
+     the content jumped sideways with it. The gutter is now always reserved. */
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -1154,11 +1253,23 @@ select optgroup {
     var(--bg-2);
 }
 
+.details-media .media-fill {
+  position: absolute;
+  inset: -12%;
+  background-image: var(--media-src);
+  background-size: cover;
+  background-position: center;
+  filter: blur(20px) saturate(1.1) brightness(0.5);
+  transform: translateZ(0);
+  pointer-events: none;
+}
+
 .details-media img {
+  position: relative;
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   /* Own compositor layer, so the bitmap is never resampled mid-transition. */
   transform: translateZ(0);
   backface-visibility: hidden;
@@ -1353,6 +1464,9 @@ select optgroup {
     background-color: rgba(255, 255, 255, 0.06);
     border-color: color-mix(in srgb, var(--card-accent, var(--accent)) 40%, transparent);
   }
+
+  .saved-card[data-accent-bands="2"]:hover,
+  .saved-card[data-accent-bands="3"]:hover { border-color: var(--line-strong); }
 }
 
 /* A launch whose time has passed stays readable but stops competing. */
@@ -3023,4 +3137,10 @@ html.is-booting .boot[hidden] { display: grid; }
 /* The wider desktop modal can afford a two-column detail grid. */
 @media (min-width: 900px) {
   .details-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+/* The panel is wide enough for a fourth column at this size, which shortens the
+   details view enough that it usually fits without scrolling. */
+@media (min-width: 1180px) {
+  .details-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }

@@ -40,8 +40,13 @@ import {
   OUTCOME_LABELS,
   OUTCOME_MEANING
 } from "./organizations.js";
-import { resolveLaunchImage, launchImageAlt } from "./images.js";
-import { weatherCodeLabel, formatTemperature } from "./weather.js";
+import { resolveLaunchImage, launchImageAlt, launchImageLabel } from "./images.js";
+import {
+  weatherCodeLabel,
+  formatTemperature,
+  formatSpeed,
+  formatDistance
+} from "./weather.js";
 import { createStatusTimer, STATUS_DURATION_MS } from "./status-timer.js";
 
 export const els = {
@@ -74,7 +79,6 @@ export const els = {
   refreshWindowText: document.getElementById("refreshWindowText"),
   footerMeta: document.getElementById("footerMeta"),
   btnUseDemo: document.getElementById("btnUseDemo"),
-  btnResetMenu: document.getElementById("btnResetMenu"),
   btnAbout: document.getElementById("btnAbout"),
   btnLegend: document.getElementById("btnLegend"),
   aboutModal: document.getElementById("aboutModal"),
@@ -895,7 +899,8 @@ function buildLaunchCard(launch, index, { enter = false } = {}) {
   // preserves the card's media dimensions. Broken loads fall back to the same
   // panel via the global error handler in main.js.
   const media = image.src
-    ? `<img src="${escapeHtml(image.src)}" alt="${escapeHtml(launchImageAlt(launch))}" loading="lazy" />`
+    ? `<span class="media-fill" aria-hidden="true" style="--media-src:${escapeHtml(cssUrl(image.src))}"></span>` +
+      `<img src="${escapeHtml(image.src)}" alt="${escapeHtml(launchImageAlt(launch))}" loading="lazy" />`
     : `<div class="media-fallback">No mission image available</div>`;
 
   const enterClass = enter ? " motion-card-enter" : "";
@@ -1098,6 +1103,13 @@ export function renderDrawer() {
 // Mission or rocket imagery for the detail views. Same resolver the cards use,
 // so it falls back to the neutral placeholder rather than stand-in artwork, and
 // it carries the compositor hints that keep the bitmap from resampling.
+// A CSS url() value for a background, built only from an already-validated
+// URL. Quoted and with quotes/parentheses stripped so the value can never break
+// out of the declaration.
+function cssUrl(src) {
+  return `url("${String(src).replace(/["'()\\]/g, "")}")`;
+}
+
 function detailsMediaHtml(launch) {
   const { src, kind } = resolveLaunchImage(launch);
   if (!src) {
@@ -1106,11 +1118,11 @@ function detailsMediaHtml(launch) {
         <span>No mission image available</span>
       </div>`;
   }
-  const caption = kind === "rocket" ? "Rocket" : "Mission";
   return `
     <figure class="details-media">
+      <span class="media-fill" aria-hidden="true" style="--media-src:${escapeHtml(cssUrl(src))}"></span>
       <img src="${src}" alt="${escapeHtml(launchImageAlt(launch))}" loading="lazy" decoding="async" />
-      <figcaption>${caption} image from Launch Library 2</figcaption>
+      <figcaption>${escapeHtml(launchImageLabel(kind))} from Launch Library 2</figcaption>
     </figure>`;
 }
 
@@ -1338,7 +1350,6 @@ export function buildWeatherHtml(result, { compact = false, recorded = false } =
   }
   if (result.status === "ok" && result.data) {
     const d = result.data;
-    const u = d.units || {};
     const fmt = (v, unit) => (v === null || v === undefined ? "—" : `${Math.round(Number(v))}${unit || ""}`);
     const tempParts = formatTemperature(d.temperature);
     const temp = tempParts ? tempParts.text : "—";
@@ -1355,18 +1366,18 @@ export function buildWeatherHtml(result, { compact = false, recorded = false } =
       );
     }
 
-    const visKm =
-      d.visibility === null || d.visibility === undefined
-        ? "—"
-        : `${Math.round(Number(d.visibility) / 1000)} km`;
+    // American units first, then metric, the same way temperature is shown.
+    const visibility = formatDistance(d.visibility);
+    const wind = formatSpeed(d.windSpeed);
+    const gusts = formatSpeed(d.windGusts);
     const rows = [
       weatherRow("Conditions", condition),
       weatherRow("Temperature", temp),
       weatherRow("Precipitation", d.precipitationProbability === null ? "—" : `${fmt(d.precipitationProbability, "%")}`),
       weatherRow("Cloud cover", d.cloudCover === null ? "—" : `${fmt(d.cloudCover, "%")}`),
-      weatherRow("Visibility", visKm),
-      weatherRow("Wind", fmt(d.windSpeed, ` ${u.wind_speed_10m || "km/h"}`)),
-      weatherRow("Gusts", fmt(d.windGusts, ` ${u.wind_gusts_10m || "km/h"}`))
+      weatherRow("Visibility", visibility ? visibility.text : "—"),
+      weatherRow("Wind", wind ? wind.text : "—"),
+      weatherRow("Gusts", gusts ? gusts.text : "—")
     ].join("");
     return wrap(`<dl class="weather-grid">${rows}</dl>`, true);
   }
