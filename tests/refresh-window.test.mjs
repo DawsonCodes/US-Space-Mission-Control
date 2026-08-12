@@ -94,6 +94,7 @@ globalThis.fetch = async (url) => {
 
 const { msUntilNextScheduledCheck } = await import("../js/main.js");
 const { state } = await import("../js/state.js");
+const { cacheAgeLabel } = await import("../js/storage.js");
 const render = await import("../js/render.js");
 
 let failures = 0;
@@ -148,6 +149,19 @@ check("the age shown matches how long ago the data was published", () => {
   const text = nodes.get("refreshWindowText").textContent;
   const ago = Number(/Updated (\d+) minutes? ago/.exec(text)?.[1]);
   assert.ok(Math.abs(ago - PUBLISHED_MINUTES_AGO) <= 1, `expected ~${PUBLISHED_MINUTES_AGO}, got ${ago} (${text})`);
+});
+
+check("a long gap reads in hours and days, not hundreds of minutes", () => {
+  // The workflow leaves the file byte-identical when nothing has moved, so the
+  // age is routinely hours old and read as "Updated 344 minutes ago". The
+  // countdown keeps its minutes because the schedule bounds it at thirty.
+  assert.equal(cacheAgeLabel(344 * 60 * 1000), "5 hours ago");
+  assert.equal(cacheAgeLabel(30 * 60 * 60 * 1000), "1 day ago");
+
+  const src = readFileSync("js/main.js", "utf8");
+  const fn = /function setRefreshWindow\([\s\S]*?\n}/.exec(src)[0];
+  assert.match(fn, /Updated \$\{cacheAgeLabel\(since\)\}/, "the age is formatted minutes-only again");
+  assert.ok(!/minutesLabel\(since\)/.test(fn), "the minutes-only formatter is back on the age");
 });
 
 check("a reload does not restart the countdown at thirty minutes", () => {
