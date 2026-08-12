@@ -2,6 +2,26 @@
 
 Release history for U.S. Space Mission Control, newest first.
 
+## v3.7.2 — Fixes
+
+- Fixed "Partial" and the drop back to the launch API. The published file is
+  only rewritten when the launch data actually changes, so its timestamp is the
+  last time something moved, routinely many hours ago even though the workflow
+  ran twenty minutes back. Judging the file by that age threw away a complete
+  226-launch list and sent every visitor to the API for a truncated 206, which
+  is the opposite of the point. A file that exists and validates is now used
+  whatever its age; the age is reported, not acted on
+- The status message sits still. The drift loop read as jitter rather than as
+  floating, so it slides in, stays put, and slides out
+- Launch photos fill the frame again. Showing them whole over a blurred copy of
+  themselves shrank the rocket to the middle third and let the blurred bars
+  dominate the card. The frames are taller instead, so cropping takes less
+- Mission patches are no longer used as the picture. A patch is a circular logo,
+  so cards that should have shown a rocket showed a Starlink roundel
+- A split accent edge is the same weight as a single one. It was wider and
+  brighter so the division would read, which made a shared mission shout next to
+  its neighbours
+
 ## v3.7.1 — Aligned Checks
 
 - The page now checks for new data on the workflow's own schedule rather than on

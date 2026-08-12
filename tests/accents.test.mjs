@@ -225,8 +225,18 @@ check("every element type that can carry a stripe can also carry a split one", (
 check("the stripe bands use hard stops rather than a blend", () => {
   // A gradient without repeated stops fades between colours; the design calls
   // for a clean division at the midpoint.
-  assert.match(css, /var\(--accent-1\)\s+0\s+calc\(50% - 1px\)/);
-  assert.match(css, /var\(--accent-2\)\s+calc\(50% \+ 1px\)\s+100%/);
+  assert.match(css, /var\(--accent-1\)\s+0\s+calc\(50% - 0\.5px\)/);
+  assert.match(css, /var\(--accent-2\)\s+calc\(50% \+ 0\.5px\)\s+100%/);
+});
+
+check("a split edge is no heavier than a single one", () => {
+  // It used to be wider and brighter so the division would read, which made a
+  // shared mission shout next to its neighbours. The two colours are the
+  // difference; the emphasis should not be.
+  assert.ok(
+    !/\[data-accent-bands="2"\]::before,[\s\S]{0,300}?width:\s*4px/.test(cssSource),
+    "a split stripe is still wider than a single one"
+  );
 });
 
 check("a divider separates the two bands, so neither colour bleeds", () => {
@@ -235,7 +245,7 @@ check("a divider separates the two bands, so neither colour bleeds", () => {
   // owning more than half.
   assert.match(
     css,
-    /rgba\(0,\s*0,\s*0,\s*0?\.\d+\)\s+calc\(50% - 1px\)\s+calc\(50% \+ 1px\)/,
+    /rgba\(0,\s*0,\s*0,\s*0?\.\d+\)\s+calc\(50% - 0\.5px\)\s+calc\(50% \+ 0\.5px\)/,
     "no divider between the bands"
   );
 });

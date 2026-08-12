@@ -324,7 +324,14 @@ export async function loadLaunches({ signal, allowApi = true } = {}) {
 
   try {
     const snapshot = await fetchSnapshot(SNAPSHOT_LAUNCHES, { signal });
-    if (isSnapshotUsable(snapshot)) {
+    // Deliberately NOT gated on age. The workflow leaves the file byte-identical
+    // when the launch data has not changed, so generatedAt is the last time
+    // something actually moved, which is routinely many hours ago even though
+    // the workflow ran twenty minutes back. Treating that as unusable threw away
+    // a complete 226-launch list and sent every visitor to the API for a
+    // truncated 206, which is the opposite of the point. A file that exists and
+    // validates is the best data available; its age is reported, not acted on.
+    if (snapshot.launches.length > 0) {
       // generatedAt travels with the data so a reload's first paint already
       // shows the right countdown, before the snapshot has been re-read.
       saveLaunchCache({

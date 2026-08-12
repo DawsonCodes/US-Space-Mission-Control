@@ -1,12 +1,14 @@
 // Launch-image resolver.
 //
 // Priority order (deterministic — the same launch always resolves the same way):
-//  1. Mission patch (unique per mission)
-//  2. LL2 mission image
-//  3. Launch-pad photo (unique per pad)
-//  4. Program image
-//  5. Rocket-configuration image (shared by every flight of that rocket)
-//  6. Neutral placeholder (no local artwork): the renderer shows a quiet, dark
+//  1. LL2 mission image (a photograph)
+//  2. Launch-pad photo
+//  3. Rocket-configuration image (shared by every flight of that rocket)
+//  4. Neutral placeholder
+//
+// Mission patches and program logos are deliberately excluded. They are
+// artwork, not photographs, and a circular logo in a landscape photo frame
+// looks like a mistake next to the cards either side of it. (no local artwork): the renderer shows a quiet, dark
 //     "No mission image available" panel that matches the cinematic UI.
 //
 // The previous illustrated SVG fallbacks were removed in v3.1.0 — stylized
@@ -20,14 +22,14 @@ import { safeUrl } from "./utils.js";
 // of an <img>, which also covers missing and malformed URLs (safeUrl rejects
 // non-http(s) values).
 export function resolveLaunchImage(launch) {
-  // Most specific first. LL2's launch `image` is nearly always the rocket
-  // CONFIGURATION photo, which is why a hundred Falcon 9 flights all showed the
-  // same picture; a mission patch or a pad photo actually distinguishes them.
+  // Photographs only, most specific first. Mission patches were tried above the
+  // photo and it was a mistake: a patch is a circular logo, so a card that
+  // should show a rocket showed a Starlink roundel instead. Patches are not used
+  // at all; a repeated photo of the right vehicle beats a crisp picture of the
+  // wrong thing.
   for (const [kind, value] of [
-    ["patch", launch?.patchImage],
     ["mission", launch?.missionImage || launch?.image],
     ["pad", launch?.padImage],
-    ["program", launch?.programImage],
     ["rocket", launch?.rocketImage]
   ]) {
     const src = safeUrl(value);
