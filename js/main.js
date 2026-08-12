@@ -6,7 +6,9 @@ import {
   DEFAULT_VISIBLE,
   LOAD_MORE_STEP,
   AUTO_REFRESH_MS,
-  API_FALLBACK_MIN_AGE_MS
+  API_FALLBACK_MIN_AGE_MS,
+  SCHEDULE_MINUTES,
+  SCHEDULE_GRACE_MS
 } from "./config.js";
 import { state } from "./state.js";
 import { getDemoLaunches } from "./demo-data.js";
@@ -353,7 +355,7 @@ function setRefreshWindow({ checking = false } = {}) {
   const el = els.refreshWindowText;
   if (!el) return;
 
-  if (state.usingDemo) {
+  if (inDebugMode()) {
     els.refreshWindow?.setAttribute("data-state", "paused");
     el.textContent = "Debug data. Automatic updates paused.";
     return;
@@ -370,31 +372,57 @@ function setRefreshWindow({ checking = false } = {}) {
     return;
   }
 
-  // Anchored to the publish time, not to when this tab happened to open, so a
-  // reload or a second tab continues the same countdown instead of restarting
-  // it at thirty minutes.
+  // Two separate facts, and they were being conflated. The AGE comes from when
+  // the data was published, which is honest and identical for everyone. The
+  // COUNTDOWN comes from the workflow's own schedule, not from the age: a run
+  // that finds nothing changed publishes nothing, so the age keeps growing while
+  // the next check is still minutes away. Deriving the countdown from the age
+  // meant it stuck on "due now" until something happened to change.
   const anchor = published || lastRefreshAt;
   const since = Math.max(0, Date.now() - anchor);
-  const until = Math.max(0, AUTO_REFRESH_MS - (since % AUTO_REFRESH_MS));
+  const until = msUntilNextScheduledCheck();
 
   els.refreshWindow?.setAttribute("data-state", "idle");
   const age = since < 60000 ? "Updated just now" : `Updated ${minutesLabel(since)} ago`;
-  el.textContent =
-    since >= AUTO_REFRESH_MS
-      ? `${age}. Next update due now.`
-      : `${age}. Next update in ${minutesLabel(until)}.`;
+  el.textContent = `${age}. Next check in ${minutesLabel(until)}.`;
 }
 
 // Updating is automatic on a rolling window: a timer while the tab is open, plus
 // a check when a backgrounded tab comes back, which is the case that used to
 // leave hours-old data on screen until someone pressed Refresh.
+// When the next scheduled publish should be readable, in wall-clock terms.
+// Everyone computes the same answer from the clock alone, so two tabs agree and
+// a reload does not shift it.
+export function msUntilNextScheduledCheck(now = Date.now()) {
+  const d = new Date(now);
+  let best = Infinity;
+  // Today's remaining boundaries, plus the first of the next hour, so the last
+  // slot of an hour rolls over correctly.
+  for (const minute of [...SCHEDULE_MINUTES, 60 + SCHEDULE_MINUTES[0]]) {
+    const at = new Date(d);
+    at.setMinutes(minute, 0, 0);
+    const delta = at.getTime() + SCHEDULE_GRACE_MS - now;
+    if (delta > 0 && delta < best) best = delta;
+  }
+  // Never busier than a minute, and never longer than the cycle itself.
+  return Math.min(Math.max(best, 60000), AUTO_REFRESH_MS);
+}
+
 function setupAutoRefresh() {
-  if (autoRefreshTimer) window.clearInterval(autoRefreshTimer);
-  autoRefreshTimer = window.setInterval(() => {
-    if (state.usingDemo) return;
-    refreshData({ background: true, auto: true, allowApi: apiWorthSpending() });
-    syncPreviousWindow();
-  }, AUTO_REFRESH_MS);
+  // A self-rescheduling timeout rather than a fixed interval, so each check
+  // lands just after the workflow's next publish instead of drifting away from
+  // it by however long ago this tab was opened.
+  const scheduleNext = () => {
+    if (autoRefreshTimer) window.clearTimeout(autoRefreshTimer);
+    autoRefreshTimer = window.setTimeout(() => {
+      if (!inDebugMode()) {
+        refreshData({ background: true, auto: true, allowApi: apiWorthSpending() });
+        syncPreviousWindow();
+      }
+      scheduleNext();
+    }, msUntilNextScheduledCheck());
+  };
+  scheduleNext();
 
   // Keep the countdown honest between refreshes without re-rendering anything.
   if (windowTicker) window.clearInterval(windowTicker);
@@ -409,7 +437,7 @@ function setupAutoRefresh() {
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState !== "visible") return;
     setRefreshWindow();
-    if (state.usingDemo) return;
+    if (inDebugMode()) return;
     if (Date.now() - lastRefreshAt < AUTO_REFRESH_MS) return;
     refreshData({ background: true, auto: true, allowApi: apiWorthSpending() });
   });
@@ -598,6 +626,17 @@ function loadLaunches(forceRefresh = false) {
 // is instant and costs nothing. Toggling debug must never spend a request.
 let realManifest = null;
 
+// True from the moment Debug is pressed until its data has painted. state.usingDemo
+// only flips inside renderManifest, so during the wait every "are we in debug
+// mode?" check would answer no: an automatic tick could fire, and its live
+// result could land on top of the debug render and silently drop the user back
+// out. This closes that window from both sides.
+let debugPending = false;
+
+function inDebugMode() {
+  return state.usingDemo || debugPending;
+}
+
 function toggleDebugData() {
   if (state.usingDemo) {
     if (realManifest) {
@@ -649,8 +688,11 @@ async function useDebugData() {
     state.activeRequest = null;
   }
 
-  // Paint the pressed state before awaiting anything. Previously the label only
-  // changed once the mirror answered, so a slow response read as a dead button.
+  // Claim debug mode before awaiting anything, so a scheduled tick during the
+  // wait cannot race in and repaint over the result.
+  debugPending = true;
+  // Paint the pressed state immediately too: the label used to change only once
+  // the mirror answered, so a slow response read as a dead button.
   syncDebugToggle({ busy: true });
   setStatus("Loading debug data from the development mirror\u2026", "debug");
 
@@ -667,6 +709,11 @@ async function useDebugData() {
       `Debug data: the development mirror is unreachable, so ${state.launches.length} bundled sample missions are shown.`,
       "debug"
     );
+  } finally {
+    // In a finally block: leaving this set would pause automatic updating for
+    // the rest of the session, which is a far worse failure than a debug load
+    // that did not work.
+    debugPending = false;
   }
 
   setRefreshWindow();
@@ -882,7 +929,7 @@ function showPreviousList() {
 // is a static same-origin request, so this is free and safe to do on the cycle
 // rather than waiting for someone to open the panel.
 async function syncPreviousWindow() {
-  if (state.usingDemo) return;
+  if (inDebugMode()) return;
   try {
     // Background sync: read the published file, never spend an API request.
     previousLaunches = await fetchPreviousLaunches({ allowApi: false });

@@ -411,22 +411,29 @@ export async function loadLaunches({ signal, allowApi = true } = {}) {
 
 export async function fetchPreviousLaunches({ signal, force = false, allowApi = true } = {}) {
   const stored = readPreviousStore();
-  if (!force && stored.fresh && stored.launches.length > 0) return stored.launches;
 
-  // The workflow publishes completed launches too, so the normal path spends no
-  // LL2 request here either. The rolling store still wraps it, because that is
-  // what carries recorded weather forward and bounds what we keep.
+  // The published file is read first and unconditionally. It is a static
+  // same-origin request, so a fresh local store is no reason to skip it, and
+  // reading it is what keeps the panel current without anyone opening it.
   try {
     const snapshot = await fetchSnapshot(SNAPSHOT_PREVIOUS, { signal });
-    if (isSnapshotUsable(snapshot)) {
+    if (snapshot.launches.length > 0) {
+      // Deliberately NOT gated on snapshot age. The workflow leaves this file
+      // byte-identical when nothing has changed, so its generatedAt is the last
+      // time a tracked provider actually flew, which is routinely days old.
+      // Treating that as stale sent the panel to the API on open, which is
+      // precisely what publishing the file exists to avoid. Completed launches
+      // do not go out of date; that is what makes them completed.
       const merged = mergePreviousLaunches(stored.launches, snapshot.launches);
       writePreviousStore(merged);
       return merged;
     }
   } catch (error) {
     if (error?.name === "AbortError") throw error;
-    // Fall through to LL2.
+    // Nothing published: fall through to the store, then to LL2.
   }
+
+  if (!force && stored.fresh && stored.launches.length > 0) return stored.launches;
 
   // Same budget rule as the upcoming feed: the background sync that runs on the
   // 30-minute cycle reads the published file and stops there. Only opening the

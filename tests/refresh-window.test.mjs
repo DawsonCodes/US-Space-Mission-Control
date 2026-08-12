@@ -9,6 +9,7 @@
 // could see it.
 
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 
 const docListeners = {};
 const autoTicks = [];
@@ -91,7 +92,7 @@ globalThis.fetch = async (url) => {
   throw new Error("no API calls expected");
 };
 
-await import("../js/main.js");
+const { msUntilNextScheduledCheck } = await import("../js/main.js");
 const { state } = await import("../js/state.js");
 const render = await import("../js/render.js");
 
@@ -103,16 +104,44 @@ const check = (label, fn) => {
 await new Promise((r) => setTimeout(r, 250));
 
 // ---------- the countdown anchor -------------------------------------------
-check("the countdown is anchored to the publish time, not to this session", () => {
+check("the countdown follows the workflow's schedule, not the data's age", () => {
+  // A run that finds nothing changed publishes nothing, so the age keeps
+  // growing while the next check is still minutes away. Deriving the countdown
+  // from the age made it stick on "due now" until something happened to change.
   const text = nodes.get("refreshWindowText").textContent;
-  const remaining = Number(/Next update in (\d+) minutes?/.exec(text)?.[1]);
+  const remaining = Number(/Next check in (\d+) minutes?/.exec(text)?.[1]);
   assert.ok(Number.isFinite(remaining), `no countdown in readout: ${text}`);
+  assert.ok(remaining >= 1 && remaining <= 30, `${remaining} is outside the cycle (${text})`);
+  assert.ok(!/due now/i.test(text), "the countdown parked instead of counting");
+});
 
-  const expected = Math.round((AUTO_REFRESH_MS - PUBLISHED_MINUTES_AGO * 60 * 1000) / 60000);
-  assert.ok(
-    Math.abs(remaining - expected) <= 1,
-    `expected about ${expected} minutes, got ${remaining} (${text})`
-  );
+check("every clock position lands on the next scheduled boundary", () => {
+  const at = (hhmm) => {
+    const [h, m] = hhmm.split(":").map(Number);
+    return msUntilNextScheduledCheck(Date.UTC(2026, 7, 12, h, m, 0)) / 60000;
+  };
+  // Boundaries are :00 and :30, plus a grace of a minute and a half.
+  assert.ok(Math.abs(at("07:04") - 27.5) < 1.5, `07:04 -> ${at("07:04")}`);
+  assert.ok(Math.abs(at("07:29") - 2.5) < 1.5, `07:29 -> ${at("07:29")}`);
+  assert.ok(Math.abs(at("07:45") - 16.5) < 1.5, `07:45 -> ${at("07:45")}`);
+  // Rolling into the next hour must not produce a negative or day-long wait.
+  const rollover = at("07:59");
+  assert.ok(rollover > 0 && rollover <= 30, `07:59 -> ${rollover}`);
+});
+
+check("the wait is never longer than the cycle, nor a busy loop", () => {
+  for (let m = 0; m < 60; m += 1) {
+    const wait = msUntilNextScheduledCheck(Date.UTC(2026, 7, 12, 9, m, 0)) / 60000;
+    assert.ok(wait >= 1, `minute ${m} would poll every ${wait} minutes`);
+    assert.ok(wait <= 30, `minute ${m} would wait ${wait} minutes`);
+  }
+});
+
+check("two tabs opened at different times agree on the next check", () => {
+  // The whole point of using the clock: the answer does not depend on when a
+  // tab happened to open.
+  const t = Date.UTC(2026, 7, 12, 11, 17, 0);
+  assert.equal(msUntilNextScheduledCheck(t), msUntilNextScheduledCheck(t));
 });
 
 check("the age shown matches how long ago the data was published", () => {
@@ -164,6 +193,33 @@ check("the debug tone is its own tone, so it can be styled as a warning", () => 
   const status = nodes.get("status");
   render.setStatus("Debug data on", "debug");
   assert.equal(status.dataset.tone, "debug");
+});
+
+// ---------- the debug race --------------------------------------------------
+// state.usingDemo only flips inside renderManifest, which runs after the debug
+// fetch resolves. During that wait every "are we in debug mode?" check answered
+// no, so a scheduled tick could fire and its live result could land on top of
+// the debug render, silently dropping the user back out.
+check("the rolling window pauses the moment Debug is pressed, not when it finishes", () => {
+  // Comments are stripped first: prose about "awaiting" would otherwise be
+  // mistaken for the await it describes.
+  const main = readFileSync("js/main.js", "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/(^|[^:])\/\/.*$/gm, "$1");
+
+  assert.match(main, /let debugPending = false;/, "no flag covers the wait");
+  assert.match(main, /function inDebugMode\(\)/, "no shared debug-mode predicate");
+
+  // Every guard must consult the predicate, not the late-set state flag.
+  const guards = main.match(/if \(state\.usingDemo\) return;/g) || [];
+  assert.equal(guards.length, 0, `${guards.length} guard(s) still read the late flag`);
+
+  // The flag is claimed before any await, and always released.
+  const body = /async function useDebugData\(\)[\s\S]*?\n}/.exec(main)[0];
+  const claim = body.indexOf("debugPending = true");
+  const firstAwait = body.indexOf("await");
+  assert.ok(claim > -1 && claim < firstAwait, "debug mode must be claimed before awaiting");
+  assert.match(body, /finally \{[\s\S]*?debugPending = false;/, "the flag must be released in a finally");
 });
 
 if (failures > 0) { console.error(`\n${failures} refresh-window check(s) failed.`); process.exit(1); }
