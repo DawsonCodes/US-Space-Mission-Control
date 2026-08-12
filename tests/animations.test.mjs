@@ -166,6 +166,28 @@ check("boot shimmer keeps every glyph painted for the whole sweep", () => {
   assert.match(images[1], /linear-gradient\(#[0-9a-f]{6},\s*#[0-9a-f]{6}\)/i, "base layer must be a solid wash");
 });
 
+check("the boot title never paints solid white before the shimmer arrives", () => {
+  // The gradient used to arrive with a JS-added class 420ms in, so the first
+  // frames were solid --text white and the title visibly flipped when the
+  // animation started. The resting colour must already be the dimmed tone the
+  // shimmer sweeps over.
+  const base = css.match(/\.boot-title \{[^}]*\}/s);
+  assert.ok(base, ".boot-title rule present");
+  assert.ok(
+    !/color:\s*var\(--text\)/.test(base[0]),
+    "the title still starts at full white, which is the flash"
+  );
+
+  const resting = /color:\s*(#[0-9a-f]{6})/i.exec(base[0]);
+  assert.ok(resting, "no explicit resting colour on .boot-title");
+
+  const shimmer = css.match(/\.boot-title\.is-shimmering \{[^}]*\}/s)[0];
+  assert.ok(
+    shimmer.includes(resting[1]),
+    `resting colour ${resting[1]} is not the tone the shimmer sweeps over, so the two still differ`
+  );
+});
+
 check("the shimmer glow starts fully off the text, not on top of it", () => {
   const block = css.match(/\.boot-title\.is-shimmering \{[^}]*\}/s);
   const frames = css.match(/@keyframes bootShimmer \{[\s\S]*?\n\}/);

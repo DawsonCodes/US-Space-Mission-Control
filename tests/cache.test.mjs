@@ -26,8 +26,11 @@ const {
   getLaunchCache,
   saveLaunchCache,
   isUsableCache,
-  clearLaunchCache
+  clearLaunchCache,
+  savePreferences,
+  loadPreferences
 } = storage;
+const { state } = await import("../js/state.js");
 
 const MIN = 60 * 1000;
 const HOUR = 60 * MIN;
@@ -128,6 +131,35 @@ check("clearLaunchCache removes the entry", () => {
   saveLaunchCache(sample, Date.now());
   clearLaunchCache();
   assert.equal(mem.has(STORAGE_KEYS.manifest), false);
+});
+
+// ---- the insights strip remembers being collapsed --------------------------
+check("a collapsed insights strip is remembered, an untouched one is not", () => {
+  mem.clear();
+  state.insightsOpen = null;
+  savePreferences();
+  loadPreferences();
+  assert.equal(state.insightsOpen, null, "an untouched strip must keep the screen-size default");
+
+  state.insightsOpen = false;
+  savePreferences();
+  state.insightsOpen = null; // as if the page had just reloaded
+  loadPreferences();
+  assert.equal(state.insightsOpen, false, "the collapse was forgotten on reload");
+
+  state.insightsOpen = true;
+  savePreferences();
+  state.insightsOpen = null;
+  loadPreferences();
+  assert.equal(state.insightsOpen, true);
+});
+
+check("a nonsense stored value is ignored rather than trusted", () => {
+  mem.clear();
+  mem.set(STORAGE_KEYS.prefs, JSON.stringify({ insightsOpen: "yes please" }));
+  state.insightsOpen = null;
+  loadPreferences();
+  assert.equal(state.insightsOpen, null);
 });
 
 if (failures > 0) { console.error(`\n${failures} cache test(s) failed.`); process.exit(1); }

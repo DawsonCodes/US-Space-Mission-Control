@@ -68,6 +68,7 @@ export function loadPreferences() {
     if (DATE_RANGE_VALUES.has(parsed.dateRange)) state.dateRange = parsed.dateRange;
     if (LAUNCH_SITE_VALUES.has(parsed.launchSite)) state.launchSite = parsed.launchSite;
     if (ORBIT_VALUES.has(parsed.orbit)) state.orbit = parsed.orbit;
+    if (typeof parsed.insightsOpen === "boolean") state.insightsOpen = parsed.insightsOpen;
   } catch {
     // ignore bad local storage
   }
@@ -83,7 +84,8 @@ export function savePreferences() {
     flightType: state.flightType,
     dateRange: state.dateRange,
     launchSite: state.launchSite,
-    orbit: state.orbit
+    orbit: state.orbit,
+    insightsOpen: state.insightsOpen
   };
 
   localStorage.setItem(STORAGE_KEYS.prefs, JSON.stringify(prefs));

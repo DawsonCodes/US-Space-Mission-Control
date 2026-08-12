@@ -149,6 +149,10 @@ Forecasts are fetched only for the spotlight and the open mission details, not
 for every card. Weather recorded at a past launch is fetched once and stored
 with that launch. This is not an official launch forecast.
 
+Recorded weather for a completed launch is fetched by the workflow and published
+with it, and carried forward between runs, so a launch is looked up once and
+every visitor reads the same stored reading.
+
 The Previous launches panel keeps a rolling window of the 20 most recent
 completed launches. When a provider flies again the new launch enters the top
 and the oldest drops off, taking its stored weather with it, so the saved data

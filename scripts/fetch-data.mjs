@@ -31,6 +31,7 @@ import {
   WORKFLOW_REQUEST_GAP_MS
 } from "../js/config.js";
 import { simplifyLaunch, dedupeMerge } from "../js/normalize.js";
+import { getRecordedWeatherForLaunch } from "../js/weather.js";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -100,13 +101,13 @@ async function request(url, attempt = 0) {
 // `reserve` is how many first-page requests are still owed to the feeds after
 // this one. Every feed's first page is mandatory, so paging has to leave room
 // for them or the run overshoots the budget on the last feed.
-async function fetchAll(url, label, { reserve = 0 } = {}) {
+async function fetchAll(url, label, { reserve = 0, maxPages = WORKFLOW_MAX_PAGES } = {}) {
   const first = await request(url);
   const total = Number(first?.count) || 0;
   let results = Array.isArray(first?.results) ? first.results : [];
 
   let stoppedForBudget = false;
-  for (let page = 1; page < WORKFLOW_MAX_PAGES; page += 1) {
+  for (let page = 1; page < maxPages; page += 1) {
     if (results.length === 0 || total <= results.length) break;
     if (usage.total + reserve >= WORKFLOW_REQUEST_BUDGET) {
       stoppedForBudget = true;
@@ -119,7 +120,8 @@ async function fetchAll(url, label, { reserve = 0 } = {}) {
     results = results.concat(batch);
   }
 
-  const complete = results.length >= total;
+  // A feed we deliberately only take the head of is complete by definition.
+  const complete = maxPages === 1 ? true : results.length >= total;
   log(
     `${label}: ${results.length} of ${total} records${complete ? "" : " (truncated)"}` +
       (stoppedForBudget ? ` — stopped early to stay inside the ${WORKFLOW_REQUEST_BUDGET}-request run budget` : "")
@@ -166,6 +168,45 @@ async function writeSnapshot(path, payload) {
   return true;
 }
 
+// Recorded conditions for the completed launches, fetched here so every visitor
+// reads the same stored reading instead of each browser calling Open-Meteo for
+// itself. Carried forward from the previous publish, so a launch is looked up
+// once and never again: a steady run costs nothing here, and the first one
+// costs at most PREVIOUS_LIMIT lookups.
+async function attachRecordedWeather(launches, existingPath) {
+  const known = new Map();
+  try {
+    const existing = JSON.parse(await readFile(existingPath, "utf8"));
+    for (const launch of existing.launches || []) {
+      if (launch?.id && launch.weather) known.set(launch.id, launch.weather);
+    }
+  } catch {
+    /* nothing published yet */
+  }
+
+  let fetched = 0;
+  const out = [];
+  for (const launch of launches) {
+    if (known.has(launch.id)) {
+      out.push({ ...launch, weather: known.get(launch.id) });
+      continue;
+    }
+    try {
+      if (fetched > 0) await sleep(REQUEST_GAP_MS);
+      const weather = await getRecordedWeatherForLaunch(launch);
+      fetched += 1;
+      // Only a real reading is worth storing; a transient failure retries next
+      // run rather than being cached as "unavailable" forever.
+      out.push(weather.status === "error" ? { ...launch } : { ...launch, weather });
+    } catch {
+      out.push({ ...launch });
+    }
+  }
+
+  log(`weather: ${known.size} carried forward, ${fetched} looked up`);
+  return out;
+}
+
 async function main() {
   const generatedAt = new Date().toISOString();
 
@@ -199,8 +240,15 @@ async function main() {
   }
 
   await sleep(REQUEST_GAP_MS);
-  const previousFeed = await fetchAll(API_PREVIOUS, "previous", { reserve: 0 });
-  const previous = previousFeed.results.map(simplifyLaunch);
+  // Never paged. The query is already ordered newest-first and limited to the
+  // window we keep, but LL2 reports `count` as every completed launch it knows
+  // about — over a thousand — so paging it burnt most of the run budget walking
+  // backwards through history we throw away.
+  const previousFeed = await fetchAll(API_PREVIOUS, "previous", { reserve: 0, maxPages: 1 });
+  const previous = await attachRecordedWeather(
+    previousFeed.results.map(simplifyLaunch),
+    OUT_PREVIOUS
+  );
 
   // Recorded before the write so the published number covers the whole run.
   const apiUsage = {
