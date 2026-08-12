@@ -35,6 +35,10 @@ export const state = {
   // interplanetary | suborbital | unknown).
   orbit: "all",
   sortMode: "soonest",
+  // Whether the Mission insights strip is expanded. Null means "not chosen
+  // yet", which falls back to the screen-size default; once the user collapses
+  // or expands it, that choice is theirs and is remembered on this device.
+  insightsOpen: null,
   keyword: "",
   // Progressive reveal: how many of the filtered launches are currently shown.
   visibleCount: DEFAULT_VISIBLE,

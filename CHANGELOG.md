@@ -2,6 +2,42 @@
 
 Release history for U.S. Space Mission Control, newest first.
 
+## v3.6.1 — The Snapshot Actually Publishes
+
+- Fixed the reason no published data ever appeared. The workflow ran eight times
+  and succeeded eight times, wrote both files, then asked git whether anything
+  had changed using a check that only looks at tracked files. The data directory
+  was brand new and untracked, so the answer was always no and the files were
+  discarded. Every visitor was falling through to the API because there was
+  nothing to read. It now stages first and asks the index
+- The completed-launch feed is no longer paged. Launch Library reports over a
+  thousand completed launches in its count even though the query asks for
+  twenty, so paging walked backwards through history we throw away and spent
+  most of the run budget doing it, which then starved the upcoming feed
+- With that budget freed, the upcoming list is published whole. The note about
+  a few of the furthest-out launches not being listed should stop appearing
+- Weather recorded at a past launch is now fetched by the workflow and published
+  with the launch, so every visitor reads the same stored reading instead of
+  each browser looking it up. It is carried forward between runs, so a launch is
+  looked up once and never again
+- Fixed the startup title flashing solid white before the animation began. The
+  gradient arrived with a class added 420ms in; the resting colour now matches
+  the tone the glow sweeps over, so only the highlight switches on
+- The split accent edge has square ends. The rounded left corners were tapering
+  whichever band sat at the top and bottom, which made a two-band split look
+  lopsided, and the hover ring is stronger so neither colour is washed out
+- The saved-data notice is amber rather than blue. It is a caveat, not neutral
+  information
+- Fixed selects staying brightly ringed after use. Chromium treats a mouse click
+  on a select as keyboard focus, and focus stays on the control after the popup
+  closes, so the ring sat there looking like a stuck open state. The loud ring
+  now belongs to the open state; focus keeps a quieter one
+- Fixed a launch card staying highlighted after its details modal closed. Focus
+  is deliberately restored to the button inside the card, which plain
+  focus-within matched forever
+- Collapsing Mission insights is now remembered on your device, instead of
+  springing back open on the next visit
+
 ## v3.6.0 — Sync, Timing & API Accounting
 
 - Fixed the NASA-only dashboard, again, at its remaining source. The development

@@ -292,7 +292,7 @@ function startInitialLoad() {
   const cache = getLaunchCache();
   if (isUsableCache(cache)) {
     renderManifest(cache.launches, cache.truncated, "cache", cache.publishedAt || cache.savedAt, { entrance: "none" });
-    setStatus(`Showing saved launch data from ${cacheAgeLabel(cache.ageMs)}. Checking for an update…`, "info");
+    setStatus(`Showing saved launch data from ${cacheAgeLabel(cache.ageMs)}. Checking for an update…`, "warning");
     // Reading the published snapshot is free, so that always happens. Falling
     // back to the API is not, so it is withheld unless what we are showing has
     // genuinely aged: reloading with recent data must never cost a request.
@@ -541,7 +541,7 @@ async function refreshData({ background = false, manual = false, auto = false, a
       markRefreshed();
       const cached = getLaunchCache();
       if (isUsableCache(cached)) {
-        setStatus(`Showing saved launch data from ${cacheAgeLabel(cached.ageMs)}.`, "info");
+        setStatus(`Showing saved launch data from ${cacheAgeLabel(cached.ageMs)}.`, "warning");
       }
       return;
     }
@@ -826,6 +826,8 @@ async function loadPreviousInto({ force = false } = {}) {
 // its snapshot is discarded with it.
 async function loadRecordedWeather(launch) {
   const mount = () => els.previousContent?.querySelector("[data-previous-weather]");
+  // Normally already published with the launch, so nothing is fetched at all.
+  // The lookup below only runs for a launch the workflow has not covered yet.
   if (launch.weather) return;
 
   if (previousWeatherRequest) previousWeatherRequest.abort();
@@ -1218,11 +1220,16 @@ function setupInsights() {
     }
   };
 
+  // A remembered choice wins over the screen-size default, so collapsing the
+  // strip survives a reload instead of springing back open on every visit.
   const mobile = window.matchMedia && window.matchMedia("(max-width: 640px)").matches;
-  setOpen(!mobile);
+  setOpen(typeof state.insightsOpen === "boolean" ? state.insightsOpen : !mobile);
 
   els.insightsToggle.addEventListener("click", () => {
-    setOpen(els.insightsToggle.getAttribute("aria-expanded") !== "true", { animate: true });
+    const open = els.insightsToggle.getAttribute("aria-expanded") !== "true";
+    setOpen(open, { animate: true });
+    state.insightsOpen = open;
+    savePreferences();
   });
 }
 

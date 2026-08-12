@@ -49,13 +49,18 @@ jobs:
       - name: Commit the snapshot when it changed
         run: |
           set -e
-          if git diff --quiet -- data/; then
+          git config user.name "DawsonCodes"
+          git config user.email "71105828+DawsonCodes@users.noreply.github.com"
+          # Stage first, then ask. `git diff` only compares TRACKED files, so on
+          # the very first run it reported "no changes" for a brand-new
+          # untracked data/ directory and the snapshot was written, discarded
+          # and never published — on every run, for as long as the file did not
+          # exist yet. Staging makes untracked files visible to the check.
+          git add -A data/
+          if git diff --cached --quiet -- data/; then
             echo "No snapshot changes to commit."
             exit 0
           fi
-          git config user.name "DawsonCodes"
-          git config user.email "71105828+DawsonCodes@users.noreply.github.com"
-          git add data/
           git commit -m "Refresh launch data"
           # The schedule can overlap a push to main; rebase and retry rather
           # than failing the run.

@@ -214,9 +214,26 @@ select:hover {
   background-color: rgba(255, 255, 255, 0.07);
 }
 
-input:focus-visible,
+input:focus-visible {
+  outline: none;
+  border-color: var(--focus-ring);
+  box-shadow: 0 0 0 4px var(--focus-ring-glow);
+}
+
+/* Selects get a quieter focus ring than inputs. Chromium matches
+   :focus-visible on a <select> even for a plain mouse click, and focus stays on
+   the control after the native popup closes, so the bright white ring sat there
+   looking like a stuck open state long after the user had moved on. The loud
+   treatment is reserved for actually being open, below. Focus is still clearly
+   indicated, which keyboard users need. */
 select:focus-visible {
   outline: none;
+  border-color: var(--line-strong);
+  box-shadow: 0 0 0 3px rgba(226, 232, 240, 0.1);
+}
+
+/* Open: the full ring, driven by the same JS state that rotates the arrow. */
+.select-wrap.is-open select {
   border-color: var(--focus-ring);
   box-shadow: 0 0 0 4px var(--focus-ring-glow);
 }
@@ -549,7 +566,11 @@ select optgroup {
   position: absolute;
   inset: 0 auto 0 0;
   width: 3px;
-  border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+  /* Square ends. The rounded left corners used to taper the very top and
+     bottom of the stripe, which ate into whichever band sat there and made a
+     two-band split look lopsided. The card's own overflow:hidden still clips
+     it to the card's radius. */
+  border-radius: 0;
   background: var(--accent-1, transparent);
   opacity: 0.55;
   pointer-events: none;
@@ -623,7 +644,7 @@ select optgroup {
       var(--accent-1) 0 50%,
       var(--accent-2) 50% 100%
     );
-    opacity: 0.55;
+    opacity: 0.75;
     -webkit-mask:
       linear-gradient(#000 0 0) content-box,
       linear-gradient(#000 0 0);
@@ -642,8 +663,17 @@ select optgroup {
   .launch-card[data-accent-bands="3"]:hover::after { display: none; }
 }
 
-.launch-card:focus-within {
+/* Keyboard focus only. Plain :focus-within also matched after the details
+   modal closed, because focus is deliberately restored to the Details button
+   inside the card, leaving it highlighted with no way to clear it. */
+.launch-card:has(:focus-visible) {
   border-color: color-mix(in srgb, var(--card-accent, var(--accent)) 55%, transparent);
+}
+
+@supports not selector(:has(*)) {
+  .launch-card:focus-within {
+    border-color: color-mix(in srgb, var(--card-accent, var(--accent)) 55%, transparent);
+  }
 }
 
 .launch-card-media {
@@ -2414,7 +2444,12 @@ html.is-booting .boot[hidden] { display: grid; }
   font-weight: 700;
   line-height: 1.05;
   letter-spacing: -0.03em;
-  color: var(--text);
+  /* The dimmed tone the shimmer sweeps over, applied from the first frame.
+     The gradient used to arrive with a JS-added class 420ms in, so the title
+     painted solid white first and then visibly flipped to the animation. The
+     paint is identical from the start now; only the moving highlight is
+     switched on later. */
+  color: #8b94a3;
   /* Phase 1: rise + fade in. */
   animation: bootTitleIn 420ms var(--ease-out) both;
   will-change: transform, opacity;

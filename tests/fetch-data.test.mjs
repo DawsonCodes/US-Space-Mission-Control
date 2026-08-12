@@ -51,10 +51,13 @@ globalThis.fetch = async (url) => {
 
   const isPrevious = text.includes("/previous/");
   const isNasa = text.includes("mission__agency__ids");
-  const total = isPrevious ? PREVIOUS_TOTAL : isNasa ? 0 : TOTAL;
+  // LL2 reports every completed launch it knows about in the count field, over
+  // a thousand of them, regardless of the limit on the query.
+  const total = isPrevious ? 1031 : isNasa ? 0 : TOTAL;
   const m = /[?&]offset=(\\d+)/.exec(text);
   const offset = m ? Number(m[1]) : 0;
-  const size = Math.min(100, Math.max(0, total - offset));
+  const cap = isPrevious ? PREVIOUS_TOTAL : 100;
+  const size = Math.min(cap, Math.max(0, total - offset));
   const prefix = isPrevious ? "prev-" : isNasa ? "nasa-" : "prov-";
   const results = Array.from({ length: size }, (_, i) => record(prefix, offset + i));
   return { ok: true, status: 200, json: async () => ({ count: total, results }) };
@@ -183,6 +186,42 @@ await check("the run publishes exactly what it spent on the API", async () => {
   await rm(dir, { recursive: true, force: true });
 });
 
+await check("the completed-launch feed is never paged", async () => {
+  // LL2 reports over a thousand completed launches in `count` even though the
+  // query asks for twenty. Paging that walked backwards through history we
+  // throw away and burnt most of the run budget, which then starved the
+  // provider feed and truncated the list everyone actually reads.
+  const { dir, out, calls } = await runScript({ total: 237, previousTotal: 20 });
+  const previousCalls = calls.filter((c) => c.includes("/previous/"));
+  assert.equal(previousCalls.length, 1, `previous feed made ${previousCalls.length} requests`);
+  assert.ok(!previousCalls.some((c) => c.includes("offset=")), "the previous feed was paged");
+
+  const snap = await readSnapshot(dir, "previous.json");
+  assert.equal(snap.launches.length, 20, "the window we actually keep");
+  assert.equal(snap.truncated, false, "taking the head deliberately is not truncation");
+  assert.ok(!/previous.*truncated/.test(out), `previous reported as truncated: ${out}`);
+  await rm(dir, { recursive: true, force: true });
+});
+
+await check("not paging the previous feed leaves the budget for the upcoming one", async () => {
+  const { dir } = await runScript({ total: 450, previousTotal: 20 });
+  const snap = await readSnapshot(dir, "launches.json");
+  assert.equal(snap.truncated, false, "the upcoming list should now fit in budget");
+  assert.equal(snap.launches.length, 450, "every upcoming launch is published");
+  await rm(dir, { recursive: true, force: true });
+});
+
+await check("the real-world upcoming count is published whole", async () => {
+  // LL2 currently reports about 220 upcoming launches for the tracked
+  // providers. Nothing should be left behind at that size, so the dashboard
+  // stops saying a few of the furthest-out ones are missing.
+  const { dir } = await runScript({ total: 219, previousTotal: 20 });
+  const snap = await readSnapshot(dir, "launches.json");
+  assert.equal(snap.launches.length, 219);
+  assert.equal(snap.truncated, false, "a complete list must not be flagged as partial");
+  await rm(dir, { recursive: true, force: true });
+});
+
 await check("retries are counted, because they cost the same allowance", async () => {
   const { dir } = await runScript({ total: 4, failFirst: 2 });
   const snap = await readSnapshot(dir, "launches.json");
@@ -230,6 +269,41 @@ await check("changing only the request count does not trigger a commit", async (
   });
   assert.equal(rerun.code, 0);
   assert.equal(await readFile(join(first.dir, "data", "launches.json"), "utf8"), original);
+  await rm(first.dir, { recursive: true, force: true });
+});
+
+await check("recorded weather is published with the completed launches", async () => {
+  const { dir, out } = await runScript({ total: 4, previousTotal: 3 });
+  const snap = await readSnapshot(dir, "previous.json");
+  assert.ok(snap.launches.every((l) => "weather" in l || l.padLat == null),
+    "launches with coordinates should carry a stored reading");
+  assert.match(out, /weather: \d+ carried forward, \d+ looked up/);
+  await rm(dir, { recursive: true, force: true });
+});
+
+await check("a launch already carrying weather is not looked up again", async () => {
+  // The point of publishing it: one lookup per launch, ever, for everybody.
+  const first = await runScript({ total: 4, previousTotal: 3 });
+  const before = await readSnapshot(first.dir, "previous.json");
+  const withWeather = before.launches.filter((l) => l.weather).length;
+
+  const stub = join(first.dir, "stub.mjs");
+  const rerun = await new Promise((resolve) => {
+    const child = spawn(process.execPath, ["--import", `file://${stub}`, join(ROOT, "scripts/fetch-data.mjs")], {
+      cwd: first.dir,
+      env: { ...process.env, USMC_DATA_DIR: join(first.dir, "data"), USMC_REQUEST_GAP_MS: "0", USMC_RETRY_BASE_MS: "10" }
+    });
+    let out = "";
+    child.stdout.on("data", (d) => (out += d));
+    child.stderr.on("data", (d) => (out += d));
+    child.on("close", (code) => resolve({ code, out }));
+  });
+
+  assert.equal(rerun.code, 0);
+  const carried = Number(/weather: (\d+) carried forward/.exec(rerun.out)?.[1]);
+  const looked = Number(/carried forward, (\d+) looked up/.exec(rerun.out)?.[1]);
+  assert.equal(carried, withWeather, `expected ${withWeather} carried forward, got ${carried}`);
+  assert.equal(looked, 0, `looked up ${looked} again instead of reusing them`);
   await rm(first.dir, { recursive: true, force: true });
 });
 

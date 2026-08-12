@@ -84,6 +84,11 @@ export const WORKFLOW_MAX_PAGES = 8;
 // seven requests per run, so a growing schedule cannot quietly push the workflow
 // over the limit. When the budget runs out the feed is reported as truncated
 // rather than silently short.
+//
+// The completed-launch feed takes one request and is never paged, and NASA fits
+// in one or two, so five of the seven are available to the upcoming feed. At
+// 100 records a request that is up to 500 upcoming launches, comfortably more
+// than the ~220 that actually exist, so nothing is left behind in practice.
 export const WORKFLOW_REQUEST_BUDGET = 7;
 export const LL2_HOURLY_BUDGET = 15;
 export const WORKFLOW_RUNS_PER_HOUR = 2;

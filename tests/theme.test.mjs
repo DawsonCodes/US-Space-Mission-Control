@@ -48,5 +48,42 @@ check("search input is appearance-normalized so native chrome can't clip text", 
   assert.match(components, /input\[type="search"\]\s*\{[\s\S]*appearance:\s*none/);
 });
 
+// ---- focus states must not read as "still open" ---------------------------
+// Chromium matches :focus-visible on a <select> even for a plain mouse click,
+// and focus stays on the control after the native popup closes. A loud ring
+// there sat looking like a stuck open state; the loud ring now belongs to the
+// JS-driven open class instead.
+check("the loud select ring belongs to the open state, not to focus", () => {
+  const focusRule = /select:focus-visible \{[^}]*\}/s.exec(components);
+  assert.ok(focusRule, "selects still need a visible focus indicator");
+  assert.ok(
+    !/var\(--focus-ring\)/.test(focusRule[0]),
+    "the full-brightness ring is back on plain focus"
+  );
+
+  const openRule = /\.select-wrap\.is-open select \{[^}]*\}/s.exec(components);
+  assert.ok(openRule, "no open-state ring; the control would never look active");
+  assert.match(openRule[0], /var\(--focus-ring\)/);
+});
+
+check("selects keep some focus indication, for keyboard users", () => {
+  const focusRule = /select:focus-visible \{[^}]*\}/s.exec(components)[0];
+  assert.ok(
+    /box-shadow|border-color|outline/.test(focusRule),
+    "focus must remain visible even though it is quieter"
+  );
+});
+
+check("a card highlights on keyboard focus, not after a modal closes", () => {
+  // Focus is deliberately restored to the Details button inside the card, so
+  // plain :focus-within left the card lit with no way to clear it.
+  assert.match(components, /\.launch-card:has\(:focus-visible\)/, "no :has-based card focus rule");
+  const plain = /\.launch-card:focus-within \{/.test(components);
+  if (plain) {
+    // Only acceptable inside an @supports fallback for engines without :has.
+    assert.match(components, /@supports not selector\(:has\(\*\)\)[\s\S]*?\.launch-card:focus-within/);
+  }
+});
+
 if (failures > 0) { console.error(`\n${failures} theme test(s) failed.`); process.exit(1); }
 console.log("\nAll theme tests passed.");

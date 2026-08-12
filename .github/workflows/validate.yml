@@ -59,6 +59,9 @@ jobs:
       - name: Scheduled data workflow script
         run: node tests/fetch-data.test.mjs
 
+      - name: Workflow publish gate (untracked snapshot must commit)
+        run: node tests/publish-gate.test.mjs
+
       - name: Launch API rate-limit handling
         run: node tests/rate-limit.test.mjs
 
