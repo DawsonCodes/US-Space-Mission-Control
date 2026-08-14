@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-08-14T16:11:15.838Z",
+  "generatedAt": "2026-08-14T17:22:54.575Z",
   "truncated": false,
   "counts": {
     "providers": 222,
@@ -358,7 +358,7 @@
       "rocketImage": "",
       "providerImage": "",
       "imageCredit": "SpaceX",
-      "webcast": "",
+      "webcast": "https://x.com/i/broadcasts/1AKEmvvQLayKL",
       "official": "https://www.spacex.com/launches/sl-15-22",
       "wikipedia": "https://en.wikipedia.org/wiki/Vandenberg_Space_Launch_Complex_4#SLC-4E",
       "upcoming": true
