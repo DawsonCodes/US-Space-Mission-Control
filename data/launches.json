@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-08-15T06:18:06.209Z",
+  "generatedAt": "2026-08-15T16:46:57.679Z",
   "truncated": false,
   "counts": {
     "providers": 222,
@@ -23,8 +23,8 @@
     {
       "id": "55b79515-ddbf-4198-8a59-29a12ed21330",
       "name": "Falcon 9 Block 5 | USSF-366",
-      "net": "2026-08-15T21:54:02Z",
-      "lastUpdated": "2026-08-15T04:58:35Z",
+      "net": "2026-08-15T23:47:12Z",
+      "lastUpdated": "2026-08-15T16:38:31Z",
       "missionName": "USSF-366",
       "missionType": "Government/Top Secret",
       "program": "",
@@ -64,7 +64,7 @@
       "rocketImage": "",
       "providerImage": "",
       "imageCredit": "SpaceX",
-      "webcast": "https://x.com/i/broadcasts/1DxleVErQBdKL",
+      "webcast": "https://www.youtube.com/watch?v=kHEJHhUndgk",
       "official": "https://www.spacex.com/launches/ussf366",
       "wikipedia": "https://en.wikipedia.org/wiki/Vandenberg_Space_Launch_Complex_4#SLC-4E",
       "upcoming": true
@@ -73,7 +73,7 @@
       "id": "be8b4b0d-1989-48a5-a96d-e8e4d59ed8b3",
       "name": "Falcon 9 Block 5 | Globalstar 2-R Mission 1 (x 9)",
       "net": "2026-08-16T01:12:00Z",
-      "lastUpdated": "2026-08-07T17:16:56Z",
+      "lastUpdated": "2026-08-15T16:40:22Z",
       "missionName": "Globalstar 2-R Mission 1 (x 9)",
       "missionType": "Communications",
       "program": "",
@@ -82,7 +82,7 @@
       "statusId": 1,
       "statusAbbrev": "Go",
       "failReason": "Current T-0 confirmed by official or reliable sources.",
-      "probability": null,
+      "probability": 90,
       "provider": "SpaceX",
       "providerName": "SpaceX",
       "providerId": 121,
@@ -113,7 +113,7 @@
       "rocketImage": "",
       "providerImage": "",
       "imageCredit": "SpaceX",
-      "webcast": "https://x.com/i/broadcasts/1pJkOOkmyQyJj",
+      "webcast": "https://www.youtube.com/watch?v=f760SB4MWjg",
       "official": "https://www.spacex.com/launches/globalstar2-rlaunch1",
       "wikipedia": "https://en.wikipedia.org/wiki/Cape_Canaveral_Air_Force_Station_Space_Launch_Complex_40",
       "upcoming": true
