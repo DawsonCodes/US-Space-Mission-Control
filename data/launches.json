@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-08-16T02:14:08.095Z",
+  "generatedAt": "2026-08-16T03:24:14.062Z",
   "truncated": false,
   "counts": {
     "providers": 220,
@@ -3475,10 +3475,10 @@
     },
     {
       "id": "e61d353c-db55-4a57-8184-0fab187231e6",
-      "name": "Falcon 9 Block 5 | Globalstar 2-R Mission 2 (x 8)",
+      "name": "Falcon 9 Block 5 | Globalstar 2-R Mission 2 (x 9)",
       "net": "2026-12-31T00:00:00Z",
-      "lastUpdated": "2026-05-08T20:25:06Z",
-      "missionName": "Globalstar 2-R Mission 2 (x 8)",
+      "lastUpdated": "2026-08-16T02:19:39Z",
+      "missionName": "Globalstar 2-R Mission 2 (x 9)",
       "missionType": "Communications",
       "program": "",
       "details": "The Globalstar global mobile communications network offers global, digital real time voice, data and fax services via its Low Earth Orbit satellite constellation. The constellation operates in a 1410 km orbit inclined at 52 degrees.\r\n\r\nIn early 2022, Globalstar contracted with MDA for the construction of 17 new 2nd generation refresh satellites to replenish the existing constellation. Rocket Lab is sub-contracted to build the satellites' buses and the launch dispensers.",
