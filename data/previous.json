@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-08-16T03:24:14.062Z",
+  "generatedAt": "2026-08-16T04:56:32.502Z",
   "truncated": false,
   "counts": {
     "published": 20
@@ -10,15 +10,15 @@
       "id": "55b79515-ddbf-4198-8a59-29a12ed21330",
       "name": "Falcon 9 Block 5 | USSF-366",
       "net": "2026-08-16T01:50:45Z",
-      "lastUpdated": "2026-08-16T03:01:30Z",
+      "lastUpdated": "2026-08-16T04:07:37Z",
       "missionName": "USSF-366",
       "missionType": "Government/Top Secret",
       "program": "",
       "details": "USSF-366 is a classified mission for the United States Space Force. It is possibly a batch of classified LEO satellites for a US government entity based on SpaceX’s Starshield satellite bus, based on locations of rocket stage drop zones being exact fits with previous Starlink Group 15 launches.",
-      "statusName": "Launch in Flight",
-      "statusId": 6,
-      "statusAbbrev": "In Flight",
-      "failReason": "The launch vehicle has lifted off from the launchpad.",
+      "statusName": "Payload Deployed",
+      "statusId": 9,
+      "statusAbbrev": "Deployed",
+      "failReason": "Deployment of the payload(s) has been confirmed.",
       "probability": 90,
       "provider": "SpaceX",
       "providerName": "SpaceX",
