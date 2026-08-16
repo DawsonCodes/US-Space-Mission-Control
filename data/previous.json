@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-08-16T15:42:08.874Z",
+  "generatedAt": "2026-08-16T17:40:43.516Z",
   "truncated": false,
   "counts": {
     "published": 20
@@ -10,7 +10,7 @@
       "id": "55b79515-ddbf-4198-8a59-29a12ed21330",
       "name": "Falcon 9 Block 5 | USSF-366",
       "net": "2026-08-16T01:50:45Z",
-      "lastUpdated": "2026-08-16T15:27:35Z",
+      "lastUpdated": "2026-08-16T17:15:30Z",
       "missionName": "USSF-366",
       "missionType": "Government/Top Secret",
       "program": "",
@@ -41,9 +41,9 @@
       "padLat": 34.632,
       "padLon": -120.611,
       "tzId": "America/Los_Angeles",
-      "image": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_image_20230807133459.jpeg",
-      "missionImage": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_image_20230807133459.jpeg",
-      "missionThumb": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305193628.jpeg",
+      "image": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_liftof_image_20260816171423.jpg",
+      "missionImage": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_liftof_image_20260816171423.jpg",
+      "missionThumb": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_liftof_image_thumbnail_20260816171423.jpeg",
       "patchImage": "",
       "padImage": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20231223073520.jpeg",
       "programImage": "",
