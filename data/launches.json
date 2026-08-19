@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-08-19T23:12:27.204Z",
+  "generatedAt": "2026-08-19T23:43:07.958Z",
   "truncated": false,
   "counts": {
     "providers": 220,
@@ -24,7 +24,7 @@
       "id": "57280454-470e-4c5d-8de1-1bbd0ea41b49",
       "name": "Electron | The Lightning God Defends (iQPS Launch 8)",
       "net": "2026-08-20T13:00:00Z",
-      "lastUpdated": "2026-08-19T21:27:40Z",
+      "lastUpdated": "2026-08-19T23:28:01Z",
       "missionName": "The Lightning God Defends (iQPS Launch 8)",
       "missionType": "Earth Science",
       "program": "",
