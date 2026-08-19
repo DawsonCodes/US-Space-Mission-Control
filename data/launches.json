@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-08-19T04:04:19.764Z",
+  "generatedAt": "2026-08-19T17:16:27.784Z",
   "truncated": false,
   "counts": {
     "providers": 220,
@@ -24,7 +24,7 @@
       "id": "bbdc4d47-1de3-428e-9fe1-bbf45d9b1e04",
       "name": "Falcon 9 Block 5 | Starlink Group 10-39",
       "net": "2026-08-20T15:19:00Z",
-      "lastUpdated": "2026-08-13T09:04:22Z",
+      "lastUpdated": "2026-08-19T16:57:11Z",
       "missionName": "Starlink Group 10-39",
       "missionType": "Communications",
       "program": "Starlink",
@@ -33,7 +33,7 @@
       "statusId": 1,
       "statusAbbrev": "Go",
       "failReason": "Current T-0 confirmed by official or reliable sources.",
-      "probability": null,
+      "probability": 80,
       "provider": "SpaceX",
       "providerName": "SpaceX",
       "providerId": 121,
@@ -64,7 +64,7 @@
       "rocketImage": "",
       "providerImage": "",
       "imageCredit": "SpaceX",
-      "webcast": "https://x.com/i/broadcasts/1qKDzWPePyaJV",
+      "webcast": "https://www.youtube.com/watch?v=Ju2WywBXlco",
       "official": "https://www.spacex.com/launches/sl-10-39",
       "wikipedia": "https://en.wikipedia.org/wiki/Cape_Canaveral_Air_Force_Station_Space_Launch_Complex_40",
       "upcoming": true
