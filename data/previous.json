@@ -1,11 +1,83 @@
 {
   "schema": 1,
-  "generatedAt": "2026-08-16T17:40:43.516Z",
+  "generatedAt": "2026-08-19T04:04:19.764Z",
   "truncated": false,
   "counts": {
     "published": 20
   },
   "launches": [
+    {
+      "id": "f6958a77-37bb-4559-a108-40ba0ff9e34a",
+      "name": "Falcon 9 Block 5 | Starlink Group 17-50",
+      "net": "2026-08-19T04:01:07Z",
+      "lastUpdated": "2026-08-19T04:01:24Z",
+      "missionName": "Starlink Group 17-50",
+      "missionType": "Communications",
+      "program": "Starlink",
+      "details": "A batch of 24 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
+      "statusName": "Launch in Flight",
+      "statusId": 6,
+      "statusAbbrev": "In Flight",
+      "failReason": "The launch vehicle has lifted off from the launchpad.",
+      "probability": null,
+      "provider": "SpaceX",
+      "providerName": "SpaceX",
+      "providerId": 121,
+      "providerType": "Commercial",
+      "agencies": [
+        {
+          "id": 121,
+          "name": "SpaceX",
+          "type": "Commercial",
+          "abbrev": "SpX"
+        }
+      ],
+      "rocket": "Falcon 9 Block 5",
+      "rocketFamily": "Falcon",
+      "orbitName": "Low Earth Orbit",
+      "orbitAbbrev": "LEO",
+      "padName": "Space Launch Complex 4E",
+      "location": "Vandenberg SFB, CA, USA",
+      "padLat": 34.632,
+      "padLon": -120.611,
+      "tzId": "America/Los_Angeles",
+      "image": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
+      "missionImage": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
+      "missionThumb": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305192320.png",
+      "patchImage": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/mission_patch_images/space2520x252_mission_patch_20221011205756.png",
+      "padImage": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20231223073520.jpeg",
+      "programImage": "",
+      "rocketImage": "",
+      "providerImage": "",
+      "imageCredit": "SpaceX",
+      "webcast": "https://www.youtube.com/watch?v=Nsw6vYpjtaw",
+      "official": "https://www.spacex.com/launches/sl-17-50",
+      "wikipedia": "https://en.wikipedia.org/wiki/Vandenberg_Space_Launch_Complex_4#SLC-4E",
+      "upcoming": true,
+      "weather": {
+        "status": "ok",
+        "data": {
+          "time": 1787112000000,
+          "temperature": 15.3,
+          "precipitationProbability": 2,
+          "weatherCode": 3,
+          "cloudCover": 100,
+          "visibility": 12200,
+          "windSpeed": 22.7,
+          "windGusts": 30.2,
+          "units": {
+            "time": "unixtime",
+            "temperature_2m": "°C",
+            "precipitation_probability": "%",
+            "weather_code": "wmo code",
+            "cloud_cover": "%",
+            "visibility": "m",
+            "wind_speed_10m": "km/h",
+            "wind_gusts_10m": "km/h"
+          }
+        }
+      }
+    },
     {
       "id": "55b79515-ddbf-4198-8a59-29a12ed21330",
       "name": "Falcon 9 Block 5 | USSF-366",
@@ -1347,78 +1419,6 @@
           "visibility": 15300,
           "windSpeed": 9.4,
           "windGusts": 27.4,
-          "units": {
-            "time": "unixtime",
-            "temperature_2m": "°C",
-            "precipitation_probability": "%",
-            "weather_code": "wmo code",
-            "cloud_cover": "%",
-            "visibility": "m",
-            "wind_speed_10m": "km/h",
-            "wind_gusts_10m": "km/h"
-          }
-        }
-      }
-    },
-    {
-      "id": "a6db1e67-5860-47c9-a674-adc0f35b62e0",
-      "name": "Falcon 9 Block 5 | Transporter 17 (Dedicated SSO Rideshare)",
-      "net": "2026-07-07T07:12:00Z",
-      "lastUpdated": "2026-07-07T15:37:21Z",
-      "missionName": "Transporter 17 (Dedicated SSO Rideshare)",
-      "missionType": "Dedicated Rideshare",
-      "program": "",
-      "details": "Dedicated rideshare flight to a sun-synchronous orbit with dozens of small microsatellites and nanosatellites for commercial and government customers.",
-      "statusName": "Launch Successful",
-      "statusId": 3,
-      "statusAbbrev": "Success",
-      "failReason": "The launch vehicle successfully inserted its payload(s) into the target orbit(s).",
-      "probability": null,
-      "provider": "SpaceX",
-      "providerName": "SpaceX",
-      "providerId": 121,
-      "providerType": "Commercial",
-      "agencies": [
-        {
-          "id": 121,
-          "name": "SpaceX",
-          "type": "Commercial",
-          "abbrev": "SpX"
-        }
-      ],
-      "rocket": "Falcon 9 Block 5",
-      "rocketFamily": "Falcon",
-      "orbitName": "Sun-Synchronous Orbit",
-      "orbitAbbrev": "SSO",
-      "padName": "Space Launch Complex 4E",
-      "location": "Vandenberg SFB, CA, USA",
-      "padLat": 34.632,
-      "padLon": -120.611,
-      "tzId": "America/Los_Angeles",
-      "image": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_image_20230807133459.jpeg",
-      "missionImage": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_image_20230807133459.jpeg",
-      "missionThumb": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305193628.jpeg",
-      "patchImage": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/mission_patch_images/spacex2520tran_mission_patch_20230102202140.png",
-      "padImage": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20231223073520.jpeg",
-      "programImage": "",
-      "rocketImage": "",
-      "providerImage": "",
-      "imageCredit": "SpaceX",
-      "webcast": "https://www.youtube.com/watch?v=kf6ZM4lFO5Q",
-      "official": "https://www.spacex.com/launches/transporter17",
-      "wikipedia": "https://en.wikipedia.org/wiki/Vandenberg_Space_Launch_Complex_4#SLC-4E",
-      "upcoming": true,
-      "weather": {
-        "status": "ok",
-        "data": {
-          "time": 1783407600000,
-          "temperature": 13.4,
-          "precipitationProbability": 3,
-          "weatherCode": 3,
-          "cloudCover": 100,
-          "visibility": 12200,
-          "windSpeed": 25.3,
-          "windGusts": 35.6,
           "units": {
             "time": "unixtime",
             "temperature_2m": "°C",
