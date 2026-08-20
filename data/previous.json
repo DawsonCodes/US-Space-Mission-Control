@@ -1,11 +1,83 @@
 {
   "schema": 1,
-  "generatedAt": "2026-08-19T05:28:11.210Z",
+  "generatedAt": "2026-08-20T13:24:16.876Z",
   "truncated": false,
   "counts": {
     "published": 20
   },
   "launches": [
+    {
+      "id": "57280454-470e-4c5d-8de1-1bbd0ea41b49",
+      "name": "Electron | The Lightning God Defends (iQPS Launch 8)",
+      "net": "2026-08-20T13:04:45Z",
+      "lastUpdated": "2026-08-20T13:05:39Z",
+      "missionName": "The Lightning God Defends (iQPS Launch 8)",
+      "missionType": "Earth Science",
+      "program": "",
+      "details": "Synthetic aperture radar Earth observation satellite for Japanese Earth imaging company iQPS.",
+      "statusName": "Launch in Flight",
+      "statusId": 6,
+      "statusAbbrev": "In Flight",
+      "failReason": "The launch vehicle has lifted off from the launchpad.",
+      "probability": 80,
+      "provider": "Rocket Lab",
+      "providerName": "Rocket Lab",
+      "providerId": 147,
+      "providerType": "Commercial",
+      "agencies": [
+        {
+          "id": 1092,
+          "name": "Institute for Q-shu Pioneers of Space",
+          "type": "Private",
+          "abbrev": "iQPS"
+        }
+      ],
+      "rocket": "Electron",
+      "rocketFamily": "",
+      "orbitName": "Low Earth Orbit",
+      "orbitAbbrev": "LEO",
+      "padName": "Rocket Lab Launch Complex 1B",
+      "location": "Rocket Lab Launch Complex 1, Mahia Peninsula, New Zealand",
+      "padLat": -39.262833,
+      "padLon": 177.864469,
+      "tzId": "Pacific/Auckland",
+      "image": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/electron_image_20190705175640.jpeg",
+      "missionImage": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/electron_image_20190705175640.jpeg",
+      "missionThumb": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305193613.jpeg",
+      "patchImage": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/mission_patch_images/the2520lightni_mission_patch_20260806150507.png",
+      "padImage": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/electron25202_image_20231125062347.jpeg",
+      "programImage": "",
+      "rocketImage": "",
+      "providerImage": "",
+      "imageCredit": "",
+      "webcast": "https://www.youtube.com/watch?v=wLc1C15jbgY",
+      "official": "https://rocketlabcorp.com/missions/launches/the-lightning-god-defends/",
+      "wikipedia": "https://en.wikipedia.org/wiki/Rocket_Lab_Launch_Complex_1",
+      "upcoming": true,
+      "weather": {
+        "status": "ok",
+        "data": {
+          "time": 1787230800000,
+          "temperature": 9.6,
+          "precipitationProbability": 5,
+          "weatherCode": 2,
+          "cloudCover": 58,
+          "visibility": 16680,
+          "windSpeed": 8,
+          "windGusts": 19.4,
+          "units": {
+            "time": "unixtime",
+            "temperature_2m": "°C",
+            "precipitation_probability": "%",
+            "weather_code": "wmo code",
+            "cloud_cover": "%",
+            "visibility": "m",
+            "wind_speed_10m": "km/h",
+            "wind_gusts_10m": "km/h"
+          }
+        }
+      }
+    },
     {
       "id": "f6958a77-37bb-4559-a108-40ba0ff9e34a",
       "name": "Falcon 9 Block 5 | Starlink Group 17-50",
@@ -1347,78 +1419,6 @@
           "visibility": 14600,
           "windSpeed": 13.8,
           "windGusts": 20.9,
-          "units": {
-            "time": "unixtime",
-            "temperature_2m": "°C",
-            "precipitation_probability": "%",
-            "weather_code": "wmo code",
-            "cloud_cover": "%",
-            "visibility": "m",
-            "wind_speed_10m": "km/h",
-            "wind_gusts_10m": "km/h"
-          }
-        }
-      }
-    },
-    {
-      "id": "62d4cd48-ed28-418b-b58c-526781a50a39",
-      "name": "Falcon 9 Block 5 | Starlink Group 10-42",
-      "net": "2026-07-09T09:25:43Z",
-      "lastUpdated": "2026-07-11T00:54:32Z",
-      "missionName": "Starlink Group 10-42",
-      "missionType": "Communications",
-      "program": "Starlink",
-      "details": "A batch of 29 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
-      "statusName": "Launch Successful",
-      "statusId": 3,
-      "statusAbbrev": "Success",
-      "failReason": "The launch vehicle successfully inserted its payload(s) into the target orbit(s).",
-      "probability": 90,
-      "provider": "SpaceX",
-      "providerName": "SpaceX",
-      "providerId": 121,
-      "providerType": "Commercial",
-      "agencies": [
-        {
-          "id": 121,
-          "name": "SpaceX",
-          "type": "Commercial",
-          "abbrev": "SpX"
-        }
-      ],
-      "rocket": "Falcon 9 Block 5",
-      "rocketFamily": "Falcon",
-      "orbitName": "Low Earth Orbit",
-      "orbitAbbrev": "LEO",
-      "padName": "Space Launch Complex 40",
-      "location": "Cape Canaveral SFS, FL, USA",
-      "padLat": 28.56194122,
-      "padLon": -80.57735736,
-      "tzId": "America/New_York",
-      "image": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
-      "missionImage": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
-      "missionThumb": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305192320.png",
-      "patchImage": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/mission_patch_images/space2520x252_mission_patch_20221011205756.png",
-      "padImage": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/f9_liftoff_from_image_20240621050513.jpeg",
-      "programImage": "",
-      "rocketImage": "",
-      "providerImage": "",
-      "imageCredit": "SpaceX",
-      "webcast": "https://www.youtube.com/watch?v=q-zHDeW4ZJs",
-      "official": "https://www.spacex.com/launches/sl-10-42",
-      "wikipedia": "https://en.wikipedia.org/wiki/Cape_Canaveral_Air_Force_Station_Space_Launch_Complex_40",
-      "upcoming": true,
-      "weather": {
-        "status": "ok",
-        "data": {
-          "time": 1783587600000,
-          "temperature": 26,
-          "precipitationProbability": 0,
-          "weatherCode": 1,
-          "cloudCover": 34,
-          "visibility": 15300,
-          "windSpeed": 9.4,
-          "windGusts": 27.4,
           "units": {
             "time": "unixtime",
             "temperature_2m": "°C",
