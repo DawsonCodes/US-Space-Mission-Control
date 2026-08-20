@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-08-20T13:24:16.876Z",
+  "generatedAt": "2026-08-20T14:05:56.491Z",
   "truncated": false,
   "counts": {
     "published": 20
@@ -10,15 +10,15 @@
       "id": "57280454-470e-4c5d-8de1-1bbd0ea41b49",
       "name": "Electron | The Lightning God Defends (iQPS Launch 8)",
       "net": "2026-08-20T13:04:45Z",
-      "lastUpdated": "2026-08-20T13:05:39Z",
+      "lastUpdated": "2026-08-20T13:57:39Z",
       "missionName": "The Lightning God Defends (iQPS Launch 8)",
       "missionType": "Earth Science",
       "program": "",
       "details": "Synthetic aperture radar Earth observation satellite for Japanese Earth imaging company iQPS.",
-      "statusName": "Launch in Flight",
-      "statusId": 6,
-      "statusAbbrev": "In Flight",
-      "failReason": "The launch vehicle has lifted off from the launchpad.",
+      "statusName": "Payload Deployed",
+      "statusId": 9,
+      "statusAbbrev": "Deployed",
+      "failReason": "Deployment of the payload(s) has been confirmed.",
       "probability": 80,
       "provider": "Rocket Lab",
       "providerName": "Rocket Lab",
