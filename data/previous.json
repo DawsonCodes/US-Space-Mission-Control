@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-08-21T15:34:55.098Z",
+  "generatedAt": "2026-08-21T16:18:42.079Z",
   "truncated": false,
   "counts": {
     "published": 20
@@ -10,7 +10,7 @@
       "id": "bbdc4d47-1de3-428e-9fe1-bbf45d9b1e04",
       "name": "Falcon 9 Block 5 | Starlink Group 10-39",
       "net": "2026-08-21T15:14:22Z",
-      "lastUpdated": "2026-08-21T15:30:52Z",
+      "lastUpdated": "2026-08-21T15:36:15Z",
       "missionName": "Starlink Group 10-39",
       "missionType": "Communications",
       "program": "Starlink",
