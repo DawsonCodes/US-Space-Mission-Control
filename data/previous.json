@@ -1,11 +1,83 @@
 {
   "schema": 1,
-  "generatedAt": "2026-08-22T08:53:59.089Z",
+  "generatedAt": "2026-08-25T09:57:50.002Z",
   "truncated": false,
   "counts": {
     "published": 20
   },
   "launches": [
+    {
+      "id": "ad501ebd-a357-4305-90c1-c46c6feb2ecf",
+      "name": "Falcon 9 Block 5 | Starlink Group 10-49",
+      "net": "2026-08-25T09:33:38Z",
+      "lastUpdated": "2026-08-25T09:54:29Z",
+      "missionName": "Starlink Group 10-49",
+      "missionType": "Communications",
+      "program": "Starlink",
+      "details": "A batch of 29 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
+      "statusName": "Launch in Flight",
+      "statusId": 6,
+      "statusAbbrev": "In Flight",
+      "failReason": "The launch vehicle has lifted off from the launchpad.",
+      "probability": 90,
+      "provider": "SpaceX",
+      "providerName": "SpaceX",
+      "providerId": 121,
+      "providerType": "Commercial",
+      "agencies": [
+        {
+          "id": 121,
+          "name": "SpaceX",
+          "type": "Commercial",
+          "abbrev": "SpX"
+        }
+      ],
+      "rocket": "Falcon 9 Block 5",
+      "rocketFamily": "Falcon",
+      "orbitName": "Low Earth Orbit",
+      "orbitAbbrev": "LEO",
+      "padName": "Space Launch Complex 40",
+      "location": "Cape Canaveral SFS, FL, USA",
+      "padLat": 28.56194122,
+      "padLon": -80.57735736,
+      "tzId": "America/New_York",
+      "image": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
+      "missionImage": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
+      "missionThumb": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305192320.png",
+      "patchImage": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/mission_patch_images/space2520x252_mission_patch_20221011205756.png",
+      "padImage": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/f9_liftoff_from_image_20240621050513.jpeg",
+      "programImage": "",
+      "rocketImage": "",
+      "providerImage": "",
+      "imageCredit": "SpaceX",
+      "webcast": "https://www.youtube.com/watch?v=iXcAJQ5r0jI",
+      "official": "https://www.spacex.com/launches/sl-10-49",
+      "wikipedia": "https://en.wikipedia.org/wiki/Cape_Canaveral_Air_Force_Station_Space_Launch_Complex_40",
+      "upcoming": true,
+      "weather": {
+        "status": "ok",
+        "data": {
+          "time": 1787652000000,
+          "temperature": 24.1,
+          "precipitationProbability": 0,
+          "weatherCode": 0,
+          "cloudCover": 1,
+          "visibility": 13000,
+          "windSpeed": 6.7,
+          "windGusts": 8.6,
+          "units": {
+            "time": "unixtime",
+            "temperature_2m": "°C",
+            "precipitation_probability": "%",
+            "weather_code": "wmo code",
+            "cloud_cover": "%",
+            "visibility": "m",
+            "wind_speed_10m": "km/h",
+            "wind_gusts_10m": "km/h"
+          }
+        }
+      }
+    },
     {
       "id": "6208f972-18ec-490f-bbe5-6f5c6cfcd48c",
       "name": "Falcon 9 Block 5 | Starlink Group 15-20",
@@ -1347,78 +1419,6 @@
           "visibility": 15900,
           "windSpeed": 11.7,
           "windGusts": 27.7,
-          "units": {
-            "time": "unixtime",
-            "temperature_2m": "°C",
-            "precipitation_probability": "%",
-            "weather_code": "wmo code",
-            "cloud_cover": "%",
-            "visibility": "m",
-            "wind_speed_10m": "km/h",
-            "wind_gusts_10m": "km/h"
-          }
-        }
-      }
-    },
-    {
-      "id": "9999a3a3-b15d-4ee3-b70f-acf00d10d912",
-      "name": "Falcon 9 Block 5 | Starlink Group 10-45",
-      "net": "2026-07-14T09:10:12Z",
-      "lastUpdated": "2026-07-14T11:14:44Z",
-      "missionName": "Starlink Group 10-45",
-      "missionType": "Communications",
-      "program": "Starlink",
-      "details": "A batch of 29 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
-      "statusName": "Launch Successful",
-      "statusId": 3,
-      "statusAbbrev": "Success",
-      "failReason": "The launch vehicle successfully inserted its payload(s) into the target orbit(s).",
-      "probability": 90,
-      "provider": "SpaceX",
-      "providerName": "SpaceX",
-      "providerId": 121,
-      "providerType": "Commercial",
-      "agencies": [
-        {
-          "id": 121,
-          "name": "SpaceX",
-          "type": "Commercial",
-          "abbrev": "SpX"
-        }
-      ],
-      "rocket": "Falcon 9 Block 5",
-      "rocketFamily": "Falcon",
-      "orbitName": "Low Earth Orbit",
-      "orbitAbbrev": "LEO",
-      "padName": "Space Launch Complex 40",
-      "location": "Cape Canaveral SFS, FL, USA",
-      "padLat": 28.56194122,
-      "padLon": -80.57735736,
-      "tzId": "America/New_York",
-      "image": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
-      "missionImage": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
-      "missionThumb": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305192320.png",
-      "patchImage": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/mission_patch_images/space2520x252_mission_patch_20221011205756.png",
-      "padImage": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/f9_liftoff_from_image_20240621050513.jpeg",
-      "programImage": "",
-      "rocketImage": "",
-      "providerImage": "",
-      "imageCredit": "SpaceX",
-      "webcast": "https://www.youtube.com/watch?v=GTPIr_Z0uLo",
-      "official": "https://www.spacex.com/launches/sl-10-45",
-      "wikipedia": "https://en.wikipedia.org/wiki/Cape_Canaveral_Air_Force_Station_Space_Launch_Complex_40",
-      "upcoming": true,
-      "weather": {
-        "status": "ok",
-        "data": {
-          "time": 1784019600000,
-          "temperature": 23.1,
-          "precipitationProbability": 0,
-          "weatherCode": 0,
-          "cloudCover": 2,
-          "visibility": 13300,
-          "windSpeed": 7.2,
-          "windGusts": 18,
           "units": {
             "time": "unixtime",
             "temperature_2m": "°C",
