@@ -1,11 +1,83 @@
 {
   "schema": 1,
-  "generatedAt": "2026-08-25T11:22:18.401Z",
+  "generatedAt": "2026-08-26T10:03:29.704Z",
   "truncated": false,
   "counts": {
     "published": 20
   },
   "launches": [
+    {
+      "id": "95653d52-bb77-4860-a815-dd7141778d17",
+      "name": "Falcon 9 Block 5 | Starlink Group 15-22",
+      "net": "2026-08-26T09:35:11Z",
+      "lastUpdated": "2026-08-26T09:53:22Z",
+      "missionName": "Starlink Group 15-22",
+      "missionType": "Communications",
+      "program": "Starlink",
+      "details": "A batch of 27 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
+      "statusName": "Launch in Flight",
+      "statusId": 6,
+      "statusAbbrev": "In Flight",
+      "failReason": "The launch vehicle has lifted off from the launchpad.",
+      "probability": null,
+      "provider": "SpaceX",
+      "providerName": "SpaceX",
+      "providerId": 121,
+      "providerType": "Commercial",
+      "agencies": [
+        {
+          "id": 121,
+          "name": "SpaceX",
+          "type": "Commercial",
+          "abbrev": "SpX"
+        }
+      ],
+      "rocket": "Falcon 9 Block 5",
+      "rocketFamily": "Falcon",
+      "orbitName": "Low Earth Orbit",
+      "orbitAbbrev": "LEO",
+      "padName": "Space Launch Complex 4E",
+      "location": "Vandenberg SFB, CA, USA",
+      "padLat": 34.632,
+      "padLon": -120.611,
+      "tzId": "America/Los_Angeles",
+      "image": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
+      "missionImage": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
+      "missionThumb": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305192320.png",
+      "patchImage": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/mission_patch_images/space2520x252_mission_patch_20221011205756.png",
+      "padImage": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20231223073520.jpeg",
+      "programImage": "",
+      "rocketImage": "",
+      "providerImage": "",
+      "imageCredit": "SpaceX",
+      "webcast": "https://www.youtube.com/watch?v=ZUSimYVey_c",
+      "official": "https://www.spacex.com/launches/sl-15-22",
+      "wikipedia": "https://en.wikipedia.org/wiki/Vandenberg_Space_Launch_Complex_4#SLC-4E",
+      "upcoming": true,
+      "weather": {
+        "status": "ok",
+        "data": {
+          "time": 1787738400000,
+          "temperature": 14.5,
+          "precipitationProbability": 0,
+          "weatherCode": 0,
+          "cloudCover": 5,
+          "visibility": 15200,
+          "windSpeed": 8.8,
+          "windGusts": 15.8,
+          "units": {
+            "time": "unixtime",
+            "temperature_2m": "°C",
+            "precipitation_probability": "%",
+            "weather_code": "wmo code",
+            "cloud_cover": "%",
+            "visibility": "m",
+            "wind_speed_10m": "km/h",
+            "wind_gusts_10m": "km/h"
+          }
+        }
+      }
+    },
     {
       "id": "ad501ebd-a357-4305-90c1-c46c6feb2ecf",
       "name": "Falcon 9 Block 5 | Starlink Group 10-49",
@@ -1347,78 +1419,6 @@
           "visibility": 33200,
           "windSpeed": 2.9,
           "windGusts": 3.6,
-          "units": {
-            "time": "unixtime",
-            "temperature_2m": "°C",
-            "precipitation_probability": "%",
-            "weather_code": "wmo code",
-            "cloud_cover": "%",
-            "visibility": "m",
-            "wind_speed_10m": "km/h",
-            "wind_gusts_10m": "km/h"
-          }
-        }
-      }
-    },
-    {
-      "id": "d9adedc4-8fa1-4a36-84f9-43b8893a6865",
-      "name": "Falcon 9 Block 5 | SDA Tranche 1 Transport Layer E",
-      "net": "2026-07-16T20:32:36Z",
-      "lastUpdated": "2026-07-16T22:11:36Z",
-      "missionName": "SDA Tranche 1 Transport Layer E",
-      "missionType": "Government/Top Secret",
-      "program": "",
-      "details": "Tranche 1 Transport Layer E is one of six missions by the United States Space Force Space Development Agency (SDA) for the Proliferated Warfighter Space Architecture (PWSA) Tranche 1 Transport Layer constellation, which will provide assured, resilient, low-latency military data and connectivity worldwide to the full range of warfighter platforms from Low Earth Orbit satellites.\r\n\r\nThe constellation will be interconnected with Optical Inter-Satellite Links (OISLs) which have significantly increased performance over existing radio frequency crosslinks. It is expected to operate over Ka band, have stereo coverage and be dynamically networked for simpler hand-offs, greater bandwidth and fault tolerance.\r\n\r\nThis launch carries 21 satellites manufactured by York Space Systems.",
-      "statusName": "Launch Successful",
-      "statusId": 3,
-      "statusAbbrev": "Success",
-      "failReason": "The launch vehicle successfully inserted its payload(s) into the target orbit(s).",
-      "probability": 100,
-      "provider": "SpaceX",
-      "providerName": "SpaceX",
-      "providerId": 121,
-      "providerType": "Commercial",
-      "agencies": [
-        {
-          "id": 1056,
-          "name": "Space Development Agency",
-          "type": "Government",
-          "abbrev": "SDA"
-        }
-      ],
-      "rocket": "Falcon 9 Block 5",
-      "rocketFamily": "Falcon",
-      "orbitName": "Polar Orbit",
-      "orbitAbbrev": "PO",
-      "padName": "Space Launch Complex 4E",
-      "location": "Vandenberg SFB, CA, USA",
-      "padLat": 34.632,
-      "padLon": -120.611,
-      "tzId": "America/Los_Angeles",
-      "image": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_image_20230807133459.jpeg",
-      "missionImage": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_image_20230807133459.jpeg",
-      "missionThumb": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305193628.jpeg",
-      "patchImage": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/mission_patch_images/sda-t1tl-e_mission_patch_20260713155542.png",
-      "padImage": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20231223073520.jpeg",
-      "programImage": "",
-      "rocketImage": "",
-      "providerImage": "",
-      "imageCredit": "SpaceX",
-      "webcast": "https://www.youtube.com/watch?v=8FWEeOWY4Bs",
-      "official": "https://www.spacex.com/launches/sda-t1tl-e",
-      "wikipedia": "https://en.wikipedia.org/wiki/Vandenberg_Space_Launch_Complex_4#SLC-4E",
-      "upcoming": true,
-      "weather": {
-        "status": "ok",
-        "data": {
-          "time": 1784235600000,
-          "temperature": 17.6,
-          "precipitationProbability": 0,
-          "weatherCode": 0,
-          "cloudCover": 16,
-          "visibility": 15900,
-          "windSpeed": 11.7,
-          "windGusts": 27.7,
           "units": {
             "time": "unixtime",
             "temperature_2m": "°C",
