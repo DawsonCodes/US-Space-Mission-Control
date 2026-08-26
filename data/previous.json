@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-08-26T10:03:29.704Z",
+  "generatedAt": "2026-08-26T10:57:45.014Z",
   "truncated": false,
   "counts": {
     "published": 20
@@ -10,15 +10,15 @@
       "id": "95653d52-bb77-4860-a815-dd7141778d17",
       "name": "Falcon 9 Block 5 | Starlink Group 15-22",
       "net": "2026-08-26T09:35:11Z",
-      "lastUpdated": "2026-08-26T09:53:22Z",
+      "lastUpdated": "2026-08-26T10:42:22Z",
       "missionName": "Starlink Group 15-22",
       "missionType": "Communications",
       "program": "Starlink",
       "details": "A batch of 27 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
-      "statusName": "Launch in Flight",
-      "statusId": 6,
-      "statusAbbrev": "In Flight",
-      "failReason": "The launch vehicle has lifted off from the launchpad.",
+      "statusName": "Launch Successful",
+      "statusId": 3,
+      "statusAbbrev": "Success",
+      "failReason": "The launch vehicle successfully inserted its payload(s) into the target orbit(s).",
       "probability": null,
       "provider": "SpaceX",
       "providerName": "SpaceX",
