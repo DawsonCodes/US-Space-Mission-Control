@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-08-29T04:12:00.666Z",
+  "generatedAt": "2026-08-29T15:40:45.943Z",
   "truncated": false,
   "counts": {
     "providers": 220,
@@ -23,8 +23,8 @@
     {
       "id": "521f3a1c-f977-4306-9b7f-495858719adf",
       "name": "Falcon Heavy | Nancy Grace Roman Space Telescope",
-      "net": "2026-08-30T11:26:00Z",
-      "lastUpdated": "2026-08-28T14:50:34Z",
+      "net": "2026-08-30T11:25:49Z",
+      "lastUpdated": "2026-08-29T15:22:33Z",
       "missionName": "Nancy Grace Roman Space Telescope",
       "missionType": "Astrophysics",
       "program": "",
@@ -33,7 +33,7 @@
       "statusId": 1,
       "statusAbbrev": "Go",
       "failReason": "Current T-0 confirmed by official or reliable sources.",
-      "probability": 60,
+      "probability": 50,
       "provider": "SpaceX",
       "providerName": "SpaceX",
       "providerId": 121,
