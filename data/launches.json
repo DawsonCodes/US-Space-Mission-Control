@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-09-01T03:16:12.433Z",
+  "generatedAt": "2026-09-01T13:45:32.511Z",
   "truncated": false,
   "counts": {
     "providers": 219,
@@ -72,8 +72,8 @@
     {
       "id": "9f5a4cb6-63f9-47e1-9512-b468bae2a8e6",
       "name": "Electron | Owl Around The World (StriX Launch 11)",
-      "net": "2026-09-02T11:00:00Z",
-      "lastUpdated": "2026-08-31T22:44:58Z",
+      "net": "2026-09-02T11:11:00Z",
+      "lastUpdated": "2026-09-01T13:04:52Z",
       "missionName": "Owl Around The World (StriX Launch 11)",
       "missionType": "Earth Science",
       "program": "",
@@ -8999,14 +8999,14 @@
       "upcoming": true
     },
     {
-      "id": "ae0eb5dc-cd7e-4d1d-9f57-4d28a2ba3611",
-      "name": "Falcon 9 Block 5 | USSF-234",
+      "id": "5484b8bc-8149-4f4c-8e2e-2fda40646f8f",
+      "name": "Falcon 9 Block 5 | Amazon Leo (LF-12)",
       "net": "2029-12-31T00:00:00Z",
-      "lastUpdated": "2025-04-09T19:08:32Z",
-      "missionName": "USSF-234",
-      "missionType": "Government/Top Secret",
-      "program": "",
-      "details": "Classified US Space Force mission",
+      "lastUpdated": "2026-06-05T09:46:47Z",
+      "missionName": "Amazon Leo (LF-12)",
+      "missionType": "Communications",
+      "program": "Amazon Leo",
+      "details": "Amazon Leo, formerly known as Project Kuiper, is a mega constellation of satellites in Low Earth Orbit designed to offer broadband internet access managed by Kuiper Systems LLC, a subsidiary of Amazon. This constellation is planned to be composed of 3,276 satellites. The satellites are projected to be placed in 98 orbital planes in three orbital layers, one at 590 km, 610 km and 630 km altitude.",
       "statusName": "To Be Determined",
       "statusId": 2,
       "statusAbbrev": "TBD",
@@ -9018,16 +9018,16 @@
       "providerType": "Commercial",
       "agencies": [
         {
-          "id": 1041,
-          "name": "United States Space Force",
-          "type": "Government",
-          "abbrev": "USSF"
+          "id": 1058,
+          "name": "Amazon Leo",
+          "type": "Private",
+          "abbrev": "Amazon"
         }
       ],
       "rocket": "Falcon 9 Block 5",
       "rocketFamily": "Falcon",
-      "orbitName": "Unknown",
-      "orbitAbbrev": "N/A",
+      "orbitName": "Low Earth Orbit",
+      "orbitAbbrev": "LEO",
       "padName": "Unknown Pad",
       "location": "Cape Canaveral SFS, FL, USA",
       "padLat": 28.458,
@@ -9293,14 +9293,14 @@
       "upcoming": true
     },
     {
-      "id": "5484b8bc-8149-4f4c-8e2e-2fda40646f8f",
-      "name": "Falcon 9 Block 5 | Amazon Leo (LF-12)",
+      "id": "ae0eb5dc-cd7e-4d1d-9f57-4d28a2ba3611",
+      "name": "Falcon 9 Block 5 | USSF-234",
       "net": "2029-12-31T00:00:00Z",
-      "lastUpdated": "2026-06-05T09:46:47Z",
-      "missionName": "Amazon Leo (LF-12)",
-      "missionType": "Communications",
-      "program": "Amazon Leo",
-      "details": "Amazon Leo, formerly known as Project Kuiper, is a mega constellation of satellites in Low Earth Orbit designed to offer broadband internet access managed by Kuiper Systems LLC, a subsidiary of Amazon. This constellation is planned to be composed of 3,276 satellites. The satellites are projected to be placed in 98 orbital planes in three orbital layers, one at 590 km, 610 km and 630 km altitude.",
+      "lastUpdated": "2025-04-09T19:08:32Z",
+      "missionName": "USSF-234",
+      "missionType": "Government/Top Secret",
+      "program": "",
+      "details": "Classified US Space Force mission",
       "statusName": "To Be Determined",
       "statusId": 2,
       "statusAbbrev": "TBD",
@@ -9312,16 +9312,16 @@
       "providerType": "Commercial",
       "agencies": [
         {
-          "id": 1058,
-          "name": "Amazon Leo",
-          "type": "Private",
-          "abbrev": "Amazon"
+          "id": 1041,
+          "name": "United States Space Force",
+          "type": "Government",
+          "abbrev": "USSF"
         }
       ],
       "rocket": "Falcon 9 Block 5",
       "rocketFamily": "Falcon",
-      "orbitName": "Low Earth Orbit",
-      "orbitAbbrev": "LEO",
+      "orbitName": "Unknown",
+      "orbitAbbrev": "N/A",
       "padName": "Unknown Pad",
       "location": "Cape Canaveral SFS, FL, USA",
       "padLat": 28.458,
