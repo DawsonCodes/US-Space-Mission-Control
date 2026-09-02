@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-09-02T13:55:30.810Z",
+  "generatedAt": "2026-09-02T17:29:26.780Z",
   "truncated": false,
   "counts": {
     "published": 20
@@ -10,15 +10,15 @@
       "id": "9f5a4cb6-63f9-47e1-9512-b468bae2a8e6",
       "name": "Electron | Owl Around The World (StriX Launch 11)",
       "net": "2026-09-02T12:01:00Z",
-      "lastUpdated": "2026-09-02T13:00:53Z",
+      "lastUpdated": "2026-09-02T15:34:11Z",
       "missionName": "Owl Around The World (StriX Launch 11)",
       "missionType": "Earth Science",
       "program": "",
       "details": "Synthetic aperture radar satellite for Japanese Earth imaging company Synspective.",
-      "statusName": "Payload Deployed",
-      "statusId": 9,
-      "statusAbbrev": "Deployed",
-      "failReason": "Deployment of the payload(s) has been confirmed.",
+      "statusName": "Launch Successful",
+      "statusId": 3,
+      "statusAbbrev": "Success",
+      "failReason": "The launch vehicle successfully inserted its payload(s) into the target orbit(s).",
       "probability": 70,
       "provider": "Rocket Lab",
       "providerName": "Rocket Lab",
