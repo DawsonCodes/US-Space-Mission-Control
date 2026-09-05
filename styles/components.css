@@ -1219,8 +1219,16 @@ select optgroup {
 /* Mission imagery in the detail views ------------------------------------ */
 .details-media {
   position: relative;
-  margin: 0;
-  height: 260px;
+  /* A flat height was the bug. The modal content column runs up to 1072px wide,
+     so 260px made a 4.1:1 slot, and object-fit: cover threw away well over half
+     the height of a 16:9 photograph: the rocket was cut off top and bottom. The
+     cards never had this problem because their frame is already close to 16:9,
+     which is why they looked right and this did not. Matching the frame to the
+     shape of the photographs it holds is the whole fix. Width is capped so the
+     frame does not become a wall on a wide screen. */
+  margin: 0 auto;
+  width: min(100%, 880px);
+  aspect-ratio: 16 / 9;
   overflow: hidden;
   isolation: isolate;
   border-radius: var(--radius-md);
@@ -1253,6 +1261,8 @@ select optgroup {
 .details-media.is-empty {
   display: grid;
   place-items: center;
+  /* No photograph to match, so the ratio does not apply: a short dashed panel. */
+  aspect-ratio: auto;
   height: 120px;
   border-style: dashed;
   color: var(--muted);

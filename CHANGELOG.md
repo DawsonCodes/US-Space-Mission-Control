@@ -2,6 +2,24 @@
 
 Release history for U.S. Space Mission Control, newest first.
 
+## v3.8.0 — Countdown Performance and Detail Framing
+
+- Fixed the details-view countdown running slow and skipping seconds. Restarting
+  the roll animation on a digit needs the browser to observe the class as
+  absent, and the tick was forcing that one cell at a time, so every changed
+  digit flushed the whole document's layout. With the full manifest on screen
+  that was about 900 forced layouts a second, enough that the one-second timer
+  could not keep time. The same work now happens in one batch with a single
+  flush per tick, measured at 901 down to 1
+- The tick also stopped looking up each digit separately, about 900 selector
+  lookups a second down to one per countdown, and the footer clock formatter is
+  built once instead of on every tick
+- Fixed launch photos being cut off in the details view. The modal content
+  column runs up to 1072px wide, so the old fixed 260px height made a 4.1:1
+  slot holding a 16:9 photograph and over half its height was cropped away. The
+  frame now matches the shape of the photographs, which is what the launch cards
+  were already doing and why they looked right
+
 ## v3.7.3 — Readable Ages
 
 - The rolling window says how old the data is in hours and days instead of
