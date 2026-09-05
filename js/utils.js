@@ -18,8 +18,18 @@ export function escapeHtml(value) {
 export function safeUrl(value) {
   const url = String(value ?? "").trim();
   if (!url) return "";
-  if (url.startsWith("http://") || url.startsWith("https://")) return url;
-  return "";
+  if (!/^https?:\/\//i.test(url)) return "";
+  // Normalize through the URL parser instead of handing back the raw string.
+  // The scheme check alone let everything after it through verbatim, so a value
+  // like  https://x/v" onmouseover="…  closed the href or src it was written
+  // into and injected a live event handler on our own origin. The parser
+  // percent-encodes quotes, spaces and angle brackets, so the value is safe
+  // before it ever reaches a sink. The sinks escape as well.
+  try {
+    return new URL(url).href;
+  } catch {
+    return "";
+  }
 }
 
 // Returns a validated, public-facing URL suitable for an "Official page" action,

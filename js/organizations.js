@@ -138,6 +138,16 @@ function textHaystack(launch) {
     .toLowerCase();
 }
 
+// The same fields minus `details`. The description is free prose written about
+// a mission, not a statement of what it is, so a passing mention of another
+// programme in it must not outrank the mission's own name.
+function titleHaystack(launch) {
+  return [launch?.name, launch?.missionName, launch?.program, launch?.rocket]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
 function agencyHaystack(launch) {
   const agencies = Array.isArray(launch?.agencies) ? launch.agencies : [];
   return agencies
@@ -161,10 +171,18 @@ function agencyHaystack(launch) {
 export function classifyMissionType(launch) {
   const mt = String(launch?.missionType || "").toLowerCase();
   const text = textHaystack(launch);
+  const title = titleHaystack(launch);
   const agencies = agencyHaystack(launch);
   const all = `${text} ${mt} ${agencies}`;
 
-  if (text.includes("starlink")) return "starlink";
+  // LL2's own missionType is authoritative; everything below it is a heuristic
+  // over prose. Reading the prose first meant USSF-153, a Top Secret Space Force
+  // mission whose description happens to mention Starlink, was classified
+  // "starlink": badged as a Starlink flight and missing from the National
+  // security filter entirely.
+  if (mt.includes("top secret") || mt.includes("security")) return "national-security";
+
+  if (title.includes("starlink")) return "starlink";
 
   if (/\bcrs\b|\bcrs-|cargo|cygnus|resupply|dragon\s*cargo/.test(text) || mt.includes("resupply")) {
     return "cargo";
@@ -218,13 +236,32 @@ export function classifyMissionType(launch) {
 //    the flight-type badge for unknown and the explicit filters exclude it.
 const SUBORBITAL_RE = /sub[\s-]?orbital/i;
 
+// LL2 reports a missing orbit as literal text rather than as an empty field, so
+// "Unknown" and "N/A" arrived here as non-empty and counted as a named orbit.
+// That put 25 of the 224 published launches into "other" instead of "unknown",
+// left them unreachable from every orbit filter including "Unknown orbit", and
+// badged them Orbital on the strength of data LL2 explicitly did not have.
+const NO_ORBIT_RE = /^(unknown|n\/a|na|tba|tbd|none|-)$/i;
+
+function orbitText(launch) {
+  return [launch?.orbitName, launch?.orbitAbbrev]
+    .map((value) => String(value || "").trim())
+    .filter((value) => value && !NO_ORBIT_RE.test(value))
+    .join(" ");
+}
+
 export function flightType(launch) {
-  const orbit = `${launch?.orbitName || ""} ${launch?.orbitAbbrev || ""}`.trim();
+  const orbit = orbitText(launch);
   if (orbit) {
     return SUBORBITAL_RE.test(orbit) ? "suborbital" : "orbital";
   }
+  // Rocket Lab flies HASTE, a suborbital hypersonic testbed, on Electron. Only
+  // the mission name says so, and matching the rocket alone called all three
+  // published HASTE flights orbital, which is also why the Suborbital filter
+  // matched nothing at all in the whole manifest.
+  const named = `${launch?.name || ""} ${launch?.missionName || ""} ${launch?.rocket || ""} ${launch?.rocketFamily || ""}`.toLowerCase();
+  if (/new\s*shepard|\bhaste\b/.test(named)) return "suborbital";
   const rocket = `${launch?.rocket || ""} ${launch?.rocketFamily || ""}`.toLowerCase();
-  if (/new\s*shepard/.test(rocket)) return "suborbital";
   if (/new\s*glenn|falcon|starship|electron|neutron|vulcan|atlas|delta|alpha/.test(rocket)) return "orbital";
   return "unknown";
 }
@@ -253,7 +290,7 @@ export const ORBIT_LABELS = {
 };
 
 export function orbitCategory(launch) {
-  const text = `${launch?.orbitName || ""} ${launch?.orbitAbbrev || ""}`.trim().toLowerCase();
+  const text = orbitText(launch).toLowerCase();
   if (!text) return "unknown";
   if (SUBORBITAL_RE.test(text)) return "suborbital";
   if (/sun-?synchronous|\bsso\b|helio-?synchronous/.test(text)) return "sso";

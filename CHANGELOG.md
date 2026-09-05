@@ -2,6 +2,54 @@
 
 Release history for U.S. Space Mission Control, newest first.
 
+## v3.8.2 — Cleaner Utility Dialogs
+
+- Redesigned Mission status legend and About this data. Both were rendering into
+  the mission-details panel, which is 1120px wide because a launch has a
+  photograph and four columns of facts, so each sat in a third of its own panel
+  with the rest empty. They now take the width they need
+- The legend is grouped into before the launch, after the launch, and no status
+  reported, and the pills sit in a real column so the descriptions all start at
+  the same place instead of at four different ones
+- About this data leads with the three counts that matter, shown as figures
+  rather than buried in a grid of label and value pairs at body weight. The
+  hourly request budget is a meter, since it is one number against a limit, and
+  it reads its state in words as well as in colour
+- Sources, the state of this copy of the data, and the API spend are separate
+  blocks rather than one flat run of pairs
+
+## v3.8.1 — Audit Fixes
+
+Found by a sweep of the whole repository. Every one of these was live with the
+test suite green, so each fix ships with a test that fails on the old code.
+
+- Closed a way for a launch URL to inject code into the page. A Launch Library
+  URL containing a double quote closed the href or src it was written into, so
+  the rest of it became live attributes on our own origin, with access to saved
+  missions in local storage. The image case needed no click at all. URLs are now
+  normalized through the URL parser and escaped at every sink
+- The featured mission is no longer announced once a second. It was a polite
+  live region containing a countdown whose screen-reader copy is rewritten every
+  second, so the announcement queue never drained and nothing else on the page
+  could be heard
+- A browser that refuses to store data no longer gets a blank dashboard. Saving
+  preferences threw during startup, and everything after it, the render, the
+  event wiring and the data load, never ran. Storage failures are now survivable
+- The Suborbital filter matched nothing at all. Rocket Lab's HASTE flights are
+  suborbital but fly on Electron, and only the rocket was being read, so all
+  three were labelled Orbital and the filter returned an empty grid
+- 25 launches were unreachable from every orbit filter. Launch Library reports a
+  missing orbit as the words "Unknown" or "N/A" rather than as an empty field,
+  so they counted as a named orbit and were bucketed as "other"
+- A Space Force mission was badged as a Starlink flight and missing from the
+  National security filter, because the classifier read the mission description
+  before the mission type. The reported type now wins over prose
+- The Wiki link on a mission opened the launch pad's article instead of the
+  mission's. The pad link took precedence, and a pad almost always has one
+- A test fixture had decayed into asserting nothing. Its launches were pinned to
+  a date that has since passed, so a date-range check passed because they had
+  already flown rather than because the filter worked
+
 ## v3.8.0 — Countdown Performance and Detail Framing
 
 - Fixed the details-view countdown running slow and skipping seconds. Restarting

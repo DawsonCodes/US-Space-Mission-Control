@@ -75,7 +75,11 @@ body {
     align-items: stretch;
   }
 
-  .modal-panel {
+  /* The width modifiers on the utility dialogs must not survive here, or a
+     legend would sit as a narrow column inside a full-height sheet. */
+  .modal-panel,
+  .modal-panel.is-narrow,
+  .modal-panel.is-medium {
     width: 100%;
     height: 100dvh;
     max-height: 100dvh;
