@@ -133,14 +133,36 @@ check("photos fill the frame rather than letterboxing", () => {
   assert.ok(!/media-fill/.test(css), "the blurred backdrop is back");
 });
 
-check("the frames are tall enough that cropping takes less of the vehicle", () => {
+check("the card frame is tall enough that cropping takes less of the vehicle", () => {
   const cardMedia = /\.launch-card-media \{[^}]*\}/s.exec(css)[0];
   const cardHeight = Number(/height:\s*(\d+)px/.exec(cardMedia)[1]);
   assert.ok(cardHeight >= 180, `card media is only ${cardHeight}px tall`);
+});
 
-  const detailMedia = /\.details-media \{[^}]*\}/s.exec(css)[0];
-  const detailHeight = Number(/height:\s*(\d+)px/.exec(detailMedia)[1]);
-  assert.ok(detailHeight >= 240, `detail media is only ${detailHeight}px tall`);
+check("the detail frame is the shape of the photographs it holds", () => {
+  // This one was reported: fine on the cards, cut off in the details view. A
+  // flat 260px height in a modal column up to 1072px wide is a 4.1:1 slot, and
+  // object-fit: cover threw away well over half of a 16:9 photograph. The cards
+  // look right precisely because their frame is already about 16:9.
+  const rule = /\.details-media \{[^}]*\}/s.exec(css)[0];
+  const ratio = /aspect-ratio:\s*(\d+)\s*\/\s*(\d+)/.exec(rule);
+  assert.ok(ratio, "the detail frame is back on a flat height");
+  const value = Number(ratio[1]) / Number(ratio[2]);
+  assert.ok(value > 1.3 && value < 2.1, `${value.toFixed(2)}:1 is not a photograph's shape`);
+  assert.ok(!/\n\s*height:\s*\d/.test(rule), "a fixed height would override the ratio");
+});
+
+check("the card frame is the same shape, which is why it always looked right", () => {
+  // Keeps the two frames honest with each other: if the card ever drifts far
+  // from the detail frame, one of them is cropping and the other is not.
+  const cardMedia = /\.launch-card-media \{[^}]*\}/s.exec(css)[0];
+  const cardHeight = Number(/height:\s*(\d+)px/.exec(cardMedia)[1]);
+  // A card column sits around 330px on a three-up desktop grid.
+  const approxCardRatio = 330 / cardHeight;
+  assert.ok(
+    approxCardRatio > 1.3 && approxCardRatio < 2.1,
+    `card frame is about ${approxCardRatio.toFixed(2)}:1, no longer a photograph's shape`
+  );
 });
 
 check("the detail view frames its image the same way", () => {

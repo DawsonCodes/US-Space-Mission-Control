@@ -545,6 +545,10 @@ const CD_UNITS = [
   ["seconds", "Sec"]
 ];
 
+// The same keys as a set, so the tick can validate a cell's data-cd without
+// walking CD_UNITS for every cell on the page.
+const CD_KEYS = new Set(CD_UNITS.map(([key]) => key));
+
 function pad2(n) {
   return String(Math.max(0, n)).padStart(2, "0");
 }
@@ -1385,47 +1389,86 @@ export function renderWeatherInto(container, result, options = {}) {
 
 // ----- Countdowns & footer ------------------------------------------------
 
+// Restarting a CSS animation means the browser has to observe the class as
+// absent, which is what reading offsetWidth forces. Doing that inside the loop
+// interleaved a write and a layout read per cell, so on a fully expanded page
+// every one of the ~226 countdown cells flushed document layout on every tick.
+// That is roughly a third of each second spent in blocking layout, which the 1s
+// interval cannot absorb: it drifts, and the details-modal countdown skips
+// seconds. Same work, reordered into read, write, one flush, write, so a tick
+// forces layout once instead of once per cell.
+//
+// ANIM-29 — the segmented display rolls only the digits whose value actually
+// changed, so the seconds roll every tick but the days sit still.
 export function updateCountdownNodes() {
-  document.querySelectorAll("[data-countdown]").forEach((node) => {
+  const pending = [];
+
+  // Pass 1: read only. Nothing here invalidates layout.
+  for (const node of document.querySelectorAll("[data-countdown]")) {
     const next = getCountdownText(node.getAttribute("data-countdown"));
-    if (node.textContent === next) return; // no DOM write when nothing changed
-    node.textContent = next;
+    if (node.textContent === next) continue; // no DOM write when nothing changed
     // ANIM-08: the details-modal countdown breathes on a real change; the hero
     // uses the richer segmented roll below.
-    if (node.parentElement?.classList?.contains("details-countdown")) {
-      node.classList.remove("is-ticking");
-      void node.offsetWidth;
-      node.classList.add("is-ticking");
-    }
-  });
+    const replay = node.parentElement?.classList?.contains("details-countdown")
+      ? "is-ticking"
+      : null;
+    pending.push({ el: node, text: next, replay });
+  }
 
-  updateCountdownUnits();
-}
-
-// ANIM-29 — tick the segmented hero countdown, rolling only the digits whose
-// value actually changed (so the seconds roll every tick but days sit still).
-function updateCountdownUnits() {
-  document.querySelectorAll("[data-countdown-parts]").forEach((box) => {
+  for (const box of document.querySelectorAll("[data-countdown-parts]")) {
     const parts = getCountdownParts(box.getAttribute("data-countdown-parts"));
-    if (!parts) return;
-    for (const [key] of CD_UNITS) {
-      const cell = box.querySelector(`[data-cd="${key}"]`);
-      if (!cell) continue;
+    if (!parts) continue;
+    // One query per box rather than one per unit. With the whole manifest on
+    // screen the old form issued about 900 selector lookups a second.
+    for (const cell of box.querySelectorAll("[data-cd]")) {
+      const key = cell.getAttribute("data-cd");
+      if (!CD_KEYS.has(key)) continue;
       const next = key === "days" ? String(parts.days) : pad2(parts[key]);
       if (cell.textContent === next) continue;
-      cell.textContent = next;
-      cell.classList.remove("is-rolling");
-      void cell.offsetWidth;
-      cell.classList.add("is-rolling");
+      pending.push({ el: cell, text: next, replay: "is-rolling" });
     }
-  });
+  }
+
+  if (pending.length === 0) return;
+
+  // Pass 2: writes only. Clear every animation class that is about to replay.
+  let replaying = false;
+  for (const change of pending) {
+    if (!change.replay) continue;
+    change.el.classList.remove(change.replay);
+    replaying = true;
+  }
+
+  // Pass 3: the single forced layout for the whole tick, so those removals are
+  // observed before the classes go back on.
+  if (replaying) void document.body.offsetWidth;
+
+  // Pass 4: writes only. No read follows, so the browser batches this normally.
+  for (const change of pending) {
+    change.el.textContent = change.text;
+    if (change.replay) change.el.classList.add(change.replay);
+  }
+}
+
+// Built once and reused. Constructing an Intl formatter resolves the locale
+// every time, and this runs on every countdown tick.
+let clockFormat = null;
+function clockFormatter() {
+  if (!clockFormat) {
+    clockFormat = new Intl.DateTimeFormat(undefined, {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit"
+    });
+  }
+  return clockFormat;
 }
 
 export function refreshFooterMeta() {
   const pieces = [];
   pieces.push(dataSourceLabel());
   pieces.push(`Time mode: ${state.dateMode.toUpperCase()}`);
-  pieces.push(`Clock: ${new Intl.DateTimeFormat(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(new Date())}`);
+  pieces.push(`Clock: ${clockFormatter().format(new Date())}`);
   els.footerMeta.textContent = pieces.join(" • ");
 }
 

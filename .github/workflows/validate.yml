@@ -83,6 +83,9 @@ jobs:
       - name: Presentation polish (images, toast, random mission)
         run: node tests/polish.test.mjs
 
+      - name: Countdown tick (one forced layout per tick, not one per cell)
+        run: node tests/countdown-tick.test.mjs
+
       - name: Status-banner lifecycle tests
         run: node tests/status.test.mjs
 
