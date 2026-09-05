@@ -387,7 +387,7 @@ function webcastActionHtml(launch) {
   const w = webcastState(launch);
   if (!w) return "";
   const cls = w.nearLaunch ? "card-link webcast-link is-near-launch" : "card-link webcast-link";
-  return `<a class="${cls}" href="${w.url}" target="_blank" rel="noopener noreferrer" aria-label="${escapeHtml(`${w.label} for ${launch.name}`)}">${escapeHtml(w.label)}</a>`;
+  return `<a class="${cls}" href="${escapeHtml(w.url)}" target="_blank" rel="noopener noreferrer" aria-label="${escapeHtml(`${w.label} for ${launch.name}`)}">${escapeHtml(w.label)}</a>`;
 }
 
 // Inner markup for a save/saved button. The star is its own element so it can
@@ -1116,7 +1116,7 @@ function detailsMediaHtml(launch) {
   }
   return `
     <figure class="details-media">
-      <img src="${src}" alt="${escapeHtml(launchImageAlt(launch))}" loading="lazy" decoding="async" />
+      <img src="${escapeHtml(src)}" alt="${escapeHtml(launchImageAlt(launch))}" loading="lazy" decoding="async" />
       <figcaption>${escapeHtml(launchImageLabel(kind))} from Launch Library 2</figcaption>
     </figure>`;
 }
@@ -1141,7 +1141,7 @@ function padMapSectionHtml(launch) {
     <section class="pad-map">
       <h4 class="pad-map-heading">Launch pad map</h4>
       ${place ? `<p class="pad-map-place">${place}</p>` : ""}
-      <a class="card-link" href="${url}" target="_blank" rel="noopener noreferrer" aria-label="${escapeHtml(`Open map for ${padLabel}`)}">Open pad map</a>
+      <a class="card-link" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" aria-label="${escapeHtml(`Open map for ${padLabel}`)}">Open pad map</a>
       <p class="pad-map-attribution">Map data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors.</p>
     </section>
   `;
@@ -1149,7 +1149,9 @@ function padMapSectionHtml(launch) {
 
 export function buildDetailsContent(launch) {
   const locationLabel = [launch.padName, launch.location].filter(Boolean).join(" • ");
-  const officialUrl = launch.official; // already validated in api.js
+  // Validated at the sink rather than on the strength of a comment about what
+  // some other module did. Every other URL here goes through safeUrl.
+  const officialUrl = safeUrl(launch.official);
   const wikiUrl = safeUrl(launch.wikipedia);
 
   const probabilityRow =
@@ -1222,8 +1224,8 @@ export function buildDetailsContent(launch) {
       ${webcastActionHtml(launch)}
       ${calendarAction}
       ${shareAction}
-      ${officialUrl ? `<a class="card-link" href="${officialUrl}" target="_blank" rel="noopener">Official page</a>` : ""}
-      ${wikiUrl ? `<a class="card-link" href="${wikiUrl}" target="_blank" rel="noopener">Wiki</a>` : ""}
+      ${officialUrl ? `<a class="card-link" href="${escapeHtml(officialUrl)}" target="_blank" rel="noopener">Official page</a>` : ""}
+      ${wikiUrl ? `<a class="card-link" href="${escapeHtml(wikiUrl)}" target="_blank" rel="noopener">Wiki</a>` : ""}
     </div>
   `;
 }
@@ -1234,65 +1236,66 @@ export function buildAboutContent() {
   const loaded = state.launches.length;
   const filtered = state.filteredLaunches.length;
   const source = dataSourceLabel();
-  const refreshed = state.lastUpdated ? formatCompactDate(state.lastUpdated) : "—";
+  const refreshed = state.lastUpdated ? formatCompactDate(state.lastUpdated) : "Not yet";
   const coverage = state.truncated
-    ? `Partial. Showing the soonest ${loaded} launches; more are scheduled beyond them.`
+    ? `Partial. The soonest ${loaded} launches, with more scheduled beyond them.`
     : "Complete for the tracked providers.";
 
-  const row = (label, value) => `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`;
+  const fact = (label, value) =>
+    `<div><dt>${escapeHtml(label)}</dt><dd>${escapeHtml(value)}</dd></div>`;
+
+  const stat = (value, label, quiet = false) => `
+    <div class="stat-tile${quiet ? " is-quiet" : ""}">
+      <span class="stat-value">${escapeHtml(String(value))}</span>
+      <span class="stat-label">${escapeHtml(label)}</span>
+    </div>`;
 
   // What the data actually costs. The scheduled run's spend is published in the
   // snapshot; this browser's is counted locally and should read zero on the
   // normal path, which is the whole point of publishing the file.
   const spend = state.apiUsage;
   const mine = apiUsageThisSession();
-  const perHour = spend ? spend.requests * (spend.runsPerHour || 2) : null;
-
-  const usageRows = [
-    spend
-      ? row(
-          "Scheduled run cost",
-          `${spend.requests} request${spend.requests === 1 ? "" : "s"}` +
-            (spend.retries ? `, ${spend.retries} of them retries` : "") +
-            (spend.byFeed
-              ? ` (${Object.entries(spend.byFeed).map(([k, v]) => `${k} ${v}`).join(", ")})`
-              : "")
-        )
-      : "",
-    perHour !== null
-      ? row(
-          "Spend per hour",
-          `About ${perHour} of ${spend.hourlyBudget || 15} allowed, across ${spend.runsPerHour || 2} runs`
-        )
-      : "",
-    row(
-      "This browser has spent",
-      mine.requests === 0
-        ? "0 requests. Published data is a static file, not an API call."
-        : `${mine.requests} request${mine.requests === 1 ? "" : "s"} (${Object.entries(mine.byHost).map(([k, v]) => `${k} ${v}`).join(", ")})`
-    )
-  ]
-    .filter(Boolean)
-    .join("");
+  const runs = spend ? spend.runsPerHour || 2 : 2;
+  const budget = spend ? spend.hourlyBudget || 15 : 15;
+  const perHour = spend ? spend.requests * runs : null;
 
   return `
-    <h2 id="aboutTitle" class="details-title">About this data</h2>
-    <dl class="details-grid about-grid">
-      ${row("Launch data", "Launch Library 2 (The Space Devs)")}
-      ${row("Weather", "Open-Meteo")}
-      ${row("Launch-pad maps", "OpenStreetMap")}
-      ${row("Loaded missions", String(loaded))}
-      ${row("Currently shown", String(filtered))}
-      ${row("Last refresh", refreshed)}
-      ${row("Data status", source)}
-      ${row("Coverage", coverage)}
-    </dl>
+    <header class="dialog-head">
+      <h2 id="aboutTitle" class="dialog-title">About this data</h2>
+      <p class="dialog-sub">Where the numbers on this dashboard come from, and what they cost.</p>
+    </header>
 
-    <h3 class="about-subhead">API usage</h3>
-    <dl class="details-grid about-grid">
-      ${usageRows}
-    </dl>
-    <div class="about-orgs">
+    <div class="stat-row">
+      ${stat(loaded, loaded === 1 ? "Mission loaded" : "Missions loaded")}
+      ${stat(filtered, "Shown by your filters")}
+      ${stat(mine.requests, mine.requests === 1 ? "API request from this browser" : "API requests from this browser", mine.requests === 0)}
+    </div>
+
+    <div class="about-cols">
+      <section class="about-block">
+        <h3 class="about-subhead">Sources</h3>
+        <dl class="fact-list">
+          ${fact("Launch data", "Launch Library 2, by The Space Devs")}
+          ${fact("Weather", "Open-Meteo")}
+          ${fact("Launch-pad maps", "OpenStreetMap")}
+        </dl>
+      </section>
+      <section class="about-block">
+        <h3 class="about-subhead">This copy</h3>
+        <dl class="fact-list">
+          ${fact("Last refresh", refreshed)}
+          ${fact("Status", source)}
+          ${fact("Coverage", coverage)}
+        </dl>
+      </section>
+    </div>
+
+    <section class="about-block">
+      <h3 class="about-subhead">Scheduled API usage</h3>
+      ${budgetMeterHtml(spend, perHour, budget, runs, mine)}
+    </section>
+
+    <section class="about-block">
       <h3 class="about-subhead">Tracked organizations</h3>
       <div class="badge-row">
         <span class="badge org-badge org-nasa">NASA</span>
@@ -1306,12 +1309,67 @@ export function buildAboutContent() {
         NASA is an agency; the other five are launch providers. A NASA mission
         also counts under whoever flies it, so the totals overlap on purpose.
       </p>
-      <p class="about-note">
-        Schedules, statuses and webcast links change often. This is not an
-        official launch forecast.
-      </p>
-    </div>
+    </section>
+
+    <p class="about-foot">
+      Schedules, statuses and webcast links change often. This is not an
+      official launch forecast.
+    </p>
   `;
+}
+
+// A single ratio against a limit, which is a meter rather than a chart. The
+// track is a dim step of the fill's own colour so the state reads across the
+// whole bar, and the figure above it carries the same fact in words, so the
+// colour is never the only thing saying "close to the cap".
+function budgetMeterHtml(spend, perHour, budget, runs, mine) {
+  const browserLine =
+    mine.requests === 0
+      ? "Your browser reads a static file instead of calling the API, so it spends none of this."
+      : `Your browser has spent ${mine.requests} request${mine.requests === 1 ? "" : "s"}: ` +
+        `${Object.entries(mine.byHost).map(([k, v]) => `${k} ${v}`).join(", ")}.`;
+
+  if (perHour === null) {
+    return `<p class="budget-note">${escapeHtml(browserLine)}</p>`;
+  }
+
+  const ratio = budget > 0 ? perHour / budget : 0;
+  const pct = Math.max(0, Math.min(100, Math.round(ratio * 1000) / 10));
+  const level = ratio >= 0.95 ? "is-over" : ratio >= 0.75 ? "is-tight" : "is-clear";
+
+  const byFeed = spend && spend.byFeed
+    ? Object.entries(spend.byFeed)
+        .map(([feed, n]) => `${feed === "nasa" ? "NASA" : feed} ${n}`)
+        .join(", ")
+    : "";
+  const runLine =
+    `Each run spends ${spend.requests} request${spend.requests === 1 ? "" : "s"}` +
+    (byFeed ? `: ${byFeed}` : "") +
+    (spend.retries ? `, ${spend.retries} of them retries` : "") +
+    ".";
+  const WORDS = ["no", "One", "Two", "Three", "Four", "Five", "Six"];
+  const cadenceLine =
+    runs === 1
+      ? "One scheduled run an hour keeps the dashboard current."
+      : `${WORDS[runs] || runs} scheduled runs an hour keep the dashboard current.`;
+
+  return `
+    <div class="budget ${level}">
+      <p class="budget-figure">
+        <strong>${escapeHtml(String(perHour))}</strong>
+        <span>of ${escapeHtml(String(budget))} requests an hour</span>
+      </p>
+      <div
+        class="budget-track"
+        role="img"
+        aria-label="About ${escapeHtml(String(perHour))} of ${escapeHtml(String(budget))} hourly requests used"
+      >
+        <span class="budget-fill" style="width: ${pct}%"></span>
+      </div>
+      <p class="budget-note">
+        ${escapeHtml(runLine)} ${escapeHtml(cadenceLine)} ${escapeHtml(browserLine)}
+      </p>
+    </div>`;
 }
 
 // ----- Weather rendering --------------------------------------------------
@@ -1524,7 +1582,7 @@ export function buildPreviousContent(
           : "";
 
       const watch = replay
-        ? `<a class="card-link btn-small" href="${replay}" target="_blank" rel="noopener noreferrer" aria-label="${escapeHtml(`Watch ${launch.name}`)}">▶ Watch launch</a>`
+        ? `<a class="card-link btn-small" href="${escapeHtml(replay)}" target="_blank" rel="noopener noreferrer" aria-label="${escapeHtml(`Watch ${launch.name}`)}">▶ Watch launch</a>`
         : `<span class="previous-nowatch">No video available</span>`;
 
       return `
@@ -1624,9 +1682,9 @@ export function buildPreviousDetail(launch, { weather } = {}) {
     ${padMapSectionHtml(launch)}
 
     <div class="card-actions details-actions">
-      ${replay ? `<a class="card-link" href="${replay}" target="_blank" rel="noopener noreferrer">▶ Watch launch</a>` : `<span class="previous-nowatch">No video available</span>`}
-      ${officialUrl ? `<a class="card-link" href="${officialUrl}" target="_blank" rel="noopener">Official page</a>` : ""}
-      ${wikiUrl ? `<a class="card-link" href="${wikiUrl}" target="_blank" rel="noopener">Wiki</a>` : ""}
+      ${replay ? `<a class="card-link" href="${escapeHtml(replay)}" target="_blank" rel="noopener noreferrer">▶ Watch launch</a>` : `<span class="previous-nowatch">No video available</span>`}
+      ${officialUrl ? `<a class="card-link" href="${escapeHtml(officialUrl)}" target="_blank" rel="noopener">Official page</a>` : ""}
+      ${wikiUrl ? `<a class="card-link" href="${escapeHtml(wikiUrl)}" target="_blank" rel="noopener">Wiki</a>` : ""}
     </div>
   `;
 }

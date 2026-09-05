@@ -2166,26 +2166,250 @@ button.overview-tile:focus-visible {
 }
 
 /* About this data + status legend ----------------------------------------- */
-.about-grid {
+/* Utility dialogs: About this data, Mission status legend ------------------
+   Both were rendering into the mission-details panel, which is 1120px wide
+   because a launch has a photograph and four columns of facts. A legend and a
+   provenance sheet do not, so they sat in a third of their own panel with the
+   rest empty. Each one now asks for the width it actually needs. */
+.modal-panel.is-narrow {
+  width: min(720px, calc(100vw - 48px));
+}
+
+.modal-panel.is-medium {
+  width: min(920px, calc(100vw - 48px));
+}
+
+/* A dialog header: the title at utility size rather than mission-detail size,
+   with the subtitle bound to it, and room kept clear of the close control. */
+.dialog-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-right: 44px;
   margin-bottom: 4px;
 }
 
-.about-subhead {
-  margin: 14px 0 8px;
-  font-size: 0.95rem;
+.dialog-title {
+  margin: 0;
+  font-size: 1.35rem;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
 }
 
-.about-note {
-  margin: 10px 0 0;
+.dialog-sub {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+/* Headline counts. A handful of numbers is a row of stat tiles, not a grid row
+   of label/value pairs at body weight, which is what buried them before. */
+.stat-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-3);
+}
+
+.stat-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 16px;
+  border: var(--border-subtle);
+  border-radius: var(--radius-md);
+  background-color: var(--panel-soft);
+}
+
+.stat-value {
+  font-size: 1.9rem;
+  font-weight: 650;
+  line-height: 1.05;
+  /* Proportional figures: tabular widths make a short number look loose at
+     display sizes, and nothing here has to align into a column. */
+  font-variant-numeric: proportional-nums;
+}
+
+.stat-label {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+/* Zero requests from the reader's browser is the point of publishing the file,
+   so it reads as a settled fact rather than as a warning. */
+.stat-tile.is-quiet .stat-value {
+  color: var(--success);
+}
+
+/* Two tiles fit across a phone but three do not, which left the third as an
+   orphan beside a gap. It spans the row instead, laid out on one line. */
+@media (max-width: 560px) {
+  .stat-row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .stat-tile:last-child {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    align-items: baseline;
+    gap: 10px;
+  }
+}
+
+.about-cols {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
+}
+
+@media (min-width: 720px) {
+  .about-cols {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-5);
+  }
+}
+
+.about-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.about-subhead {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Label above value, with a hairline between rows so the pairs stay grouped
+   without needing a box around each one. */
+.fact-list {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.fact-list > div {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+}
+
+.fact-list > div:first-child {
+  border-top: 0;
+  padding-top: 2px;
+}
+
+.fact-list dt {
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.fact-list dd {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+/* The hourly request budget is one ratio against a limit, so it is a meter.
+   The track is a dim step of the fill's own colour so the state reads across
+   the whole bar, and the figure and caption repeat the same fact in words, so
+   colour is never the only thing reporting how close the cap is. */
+.budget {
+  --budget-hue: var(--accent);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border: var(--border-subtle);
+  border-radius: var(--radius-md);
+  background-color: var(--panel-soft);
+}
+
+.budget.is-tight {
+  --budget-hue: var(--warning);
+}
+
+.budget.is-over {
+  --budget-hue: var(--danger);
+}
+
+.budget-figure {
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.budget-figure strong {
+  font-size: 1.5rem;
+  font-weight: 650;
+  line-height: 1;
+  color: var(--budget-hue);
+}
+
+.budget-figure span {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.budget-track {
+  height: 6px;
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  background-color: color-mix(in srgb, var(--budget-hue) 16%, transparent);
+}
+
+.budget-fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background-color: var(--budget-hue);
+}
+
+.budget-note {
+  margin: 0;
   color: var(--muted);
   font-size: 0.82rem;
   line-height: 1.55;
 }
 
-.legend-intro {
-  margin: 0 0 14px;
+.about-note {
+  margin: 0;
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.about-foot {
+  margin: 0;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+/* Status legend ----------------------------------------------------------- */
+.legend-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.legend-group-title {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted);
 }
 
 .legend-list {
@@ -2194,31 +2418,54 @@ button.overview-tile:focus-visible {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 10px;
 }
 
-.legend-list li {
-  display: flex;
+/* A real column for the pills rather than a min-width on them. The old form
+   let the two longest labels push past their minimum, so the descriptions
+   started at four different x positions down the list. */
+.legend-row {
+  display: grid;
+  grid-template-columns: 152px 1fr;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
+  padding: 7px 0;
+  border-top: 1px solid var(--line);
 }
 
-.legend-list li > span:last-child {
-  color: var(--muted);
-  font-size: 0.88rem;
-  line-height: 1.4;
+.legend-row:first-child {
+  border-top: 0;
 }
 
-.legend-list .badge {
-  flex: 0 0 auto;
-  min-width: 116px;
+.legend-row .badge {
+  width: 100%;
+  min-width: 0;
   justify-content: center;
 }
 
+.legend-copy {
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
 .legend-note {
-  margin: 14px 0 0;
+  margin: 0;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
   color: var(--muted);
   font-size: 0.78rem;
+}
+
+@media (max-width: 520px) {
+  .legend-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .legend-row .badge {
+    width: auto;
+    justify-self: start;
+  }
 }
 
 /* ===== v3.3 interface & motion polish ==================================== */

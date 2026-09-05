@@ -125,7 +125,11 @@ export function simplifyLaunch(raw) {
       raw?.info_url,
       raw?.links?.article
     ]),
-    wikipedia: raw?.pad?.wiki_url || raw?.wiki_url || raw?.links?.wikipedia || "",
+    // The pad article used to win, and a pad has one whenever the pad is
+    // known, so the launch-level branches were dead and every mission's
+    // "Wiki" link went to a launch complex instead of the mission. Dozens of
+    // unrelated Vandenberg flights all pointed at the same SLC-4E page.
+    wikipedia: raw?.wiki_url || raw?.links?.wikipedia || raw?.pad?.wiki_url || "",
     upcoming: true
   };
 }

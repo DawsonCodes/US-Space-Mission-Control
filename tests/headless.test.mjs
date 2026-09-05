@@ -51,8 +51,15 @@ globalThis.history = { pushState() {}, replaceState() {} };
 // navigator is a read-only global in modern Node; clipboard is only touched on
 // a share click (never during this boot), so we leave it untouched.
 
+// Relative to now, not a fixed date. Pinned to 2026-08-01 these fixtures drifted
+// into the past, and matchesDateRange requires net >= now, so the "none within
+// 24h" assertion below started passing because every launch had already flown
+// rather than because it was more than a day out. A fixture that decays into
+// asserting nothing is worse than one that fails.
+const TEN_DAYS_OUT = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString();
+
 const mk = (id, lsp, name, extras = {}) => ({
-  id, name, net: "2026-08-01T12:00:00Z", last_updated: "2026-06-01T00:00:00Z",
+  id, name, net: TEN_DAYS_OUT, last_updated: "2026-06-01T00:00:00Z",
   status: { name: "Go for Launch" },
   launch_service_provider: lsp,
   mission: { name, type: "Communications", orbit: { name: "Low Earth Orbit", abbrev: "LEO" }, agencies: [], ...extras.mission },
@@ -132,7 +139,11 @@ check("date-range / orbit / launch-site filters narrow the manifest", () => {
   state.orbit = "all"; state.launchSite = "cape-canaveral"; applyFilters();
   assert.ok(state.filteredLaunches.length >= 1 && state.filteredLaunches.every((l) => orgs.launchSiteCategory(l) === "cape-canaveral"));
   state.launchSite = "all"; state.dateRange = "24h"; applyFilters();
-  assert.equal(state.filteredLaunches.length, 0, "none within 24h");
+  assert.equal(state.filteredLaunches.length, 0, "ten days out, so none within 24h");
+  // The matching half of the same rule. Without this the check passes whenever
+  // the filter excludes everything, for any reason at all.
+  state.dateRange = "30d"; applyFilters();
+  assert.equal(state.filteredLaunches.length, 6, "all six are inside 30 days");
   state.dateRange = "all"; applyFilters();
 });
 

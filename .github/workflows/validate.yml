@@ -86,6 +86,9 @@ jobs:
       - name: Countdown tick (one forced layout per tick, not one per cell)
         run: node tests/countdown-tick.test.mjs
 
+      - name: Audit regressions (URL escaping, aria-live, storage, classification)
+        run: node tests/audit-fixes.test.mjs
+
       - name: Status-banner lifecycle tests
         run: node tests/status.test.mjs
 

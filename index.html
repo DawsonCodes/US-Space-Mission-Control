@@ -106,7 +106,12 @@
           </div>
         </div>
 
-        <section class="next-launch-card" id="nextLaunchCard" aria-live="polite" aria-label="Featured mission spotlight">
+        <!-- Deliberately NOT an aria-live region. The countdown inside it carries a
+             screen-reader copy that is rewritten every second, so a polite region
+             here queued an announcement per second and never drained, burying the
+             results grid and the filters. Changes are announced through the
+             #status banner instead. -->
+        <section class="next-launch-card" id="nextLaunchCard" aria-label="Featured mission spotlight">
           <div class="placeholder-card" aria-hidden="true">
             <div class="placeholder-line placeholder-line-lg"></div>
             <div class="placeholder-line"></div>
@@ -383,7 +388,7 @@
       aria-modal="true"
     >
       <div class="overlay-backdrop" data-overlay-backdrop></div>
-      <div class="overlay-panel modal-panel" data-overlay-panel tabindex="-1">
+      <div class="overlay-panel modal-panel is-medium" data-overlay-panel tabindex="-1">
         <button class="icon-btn modal-close" data-overlay-close type="button" aria-label="Close about this data">✕</button>
         <div id="aboutContent" class="details-content"></div>
       </div>
@@ -431,21 +436,64 @@
       aria-labelledby="legendTitle"
     >
       <div class="overlay-backdrop" data-overlay-backdrop></div>
-      <div class="overlay-panel modal-panel" data-overlay-panel tabindex="-1">
+      <div class="overlay-panel modal-panel is-narrow" data-overlay-panel tabindex="-1">
         <button class="icon-btn modal-close" data-overlay-close type="button" aria-label="Close mission status legend">✕</button>
         <div class="details-content">
-          <h2 id="legendTitle" class="details-title">Mission status legend</h2>
-          <p class="legend-intro">The launch statuses surfaced by Launch Library 2, in plain language.</p>
-          <ul class="legend-list">
-            <li><span class="badge status-go">Go for Launch</span><span>Cleared and on track for the scheduled time.</span></li>
-            <li><span class="badge status-tbc">To Be Confirmed</span><span>Date is likely but awaiting final confirmation.</span></li>
-            <li><span class="badge status-tbd">To Be Determined</span><span>Date is tentative and may still move.</span></li>
-            <li><span class="badge status-hold">Hold</span><span>Countdown paused; launch is temporarily held.</span></li>
-            <li><span class="badge status-success">Success</span><span>The launch completed successfully.</span></li>
-            <li><span class="badge status-failure">Failure</span><span>The launch failed to reach its objective.</span></li>
-            <li><span class="badge status-failure">Partial Failure</span><span>Partially successful — some objectives were missed.</span></li>
-            <li><span class="badge status-tbd">Unknown status</span><span>No recognized status was provided.</span></li>
-          </ul>
+          <header class="dialog-head">
+            <h2 id="legendTitle" class="dialog-title">Mission status legend</h2>
+            <p class="dialog-sub">The launch statuses Launch Library 2 reports, in plain language.</p>
+          </header>
+
+          <section class="legend-group">
+            <h3 class="legend-group-title">Before the launch</h3>
+            <ul class="legend-list">
+              <li class="legend-row">
+                <span class="badge status-go">Go for Launch</span>
+                <span class="legend-copy">Cleared and on track for the scheduled time.</span>
+              </li>
+              <li class="legend-row">
+                <span class="badge status-tbc">To Be Confirmed</span>
+                <span class="legend-copy">The date is likely, but not yet final.</span>
+              </li>
+              <li class="legend-row">
+                <span class="badge status-tbd">To Be Determined</span>
+                <span class="legend-copy">The date is tentative and may still move.</span>
+              </li>
+              <li class="legend-row">
+                <span class="badge status-hold">Hold</span>
+                <span class="legend-copy">The countdown is paused and the launch is temporarily held.</span>
+              </li>
+            </ul>
+          </section>
+
+          <section class="legend-group">
+            <h3 class="legend-group-title">After the launch</h3>
+            <ul class="legend-list">
+              <li class="legend-row">
+                <span class="badge status-success">Success</span>
+                <span class="legend-copy">The launch completed successfully.</span>
+              </li>
+              <li class="legend-row">
+                <span class="badge status-failure">Failure</span>
+                <span class="legend-copy">The launch failed to reach its objective.</span>
+              </li>
+              <li class="legend-row">
+                <span class="badge status-failure">Partial Failure</span>
+                <span class="legend-copy">Some objectives were reached, others were missed.</span>
+              </li>
+            </ul>
+          </section>
+
+          <section class="legend-group">
+            <h3 class="legend-group-title">If no status is given</h3>
+            <ul class="legend-list">
+              <li class="legend-row">
+                <span class="badge status-tbd">Unknown status</span>
+                <span class="legend-copy">No recognized status came back with the launch.</span>
+              </li>
+            </ul>
+          </section>
+
           <p class="legend-note">Statuses can change as a launch approaches.</p>
         </div>
       </div>

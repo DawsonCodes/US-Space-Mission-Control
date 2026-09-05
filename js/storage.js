@@ -88,7 +88,17 @@ export function savePreferences() {
     insightsOpen: state.insightsOpen
   };
 
-  localStorage.setItem(STORAGE_KEYS.prefs, JSON.stringify(prefs));
+  // Guarded like every other write in this module. init() calls applyFilters(),
+  // which ends in savePreferences(), so an unguarded throw here took out every
+  // line after it: renderAll, the event wiring and the data load. A visitor with
+  // site data blocked, or a full origin quota, got a permanently blank dashboard
+  // with no error. Preferences failing to persist is a degraded session; a dead
+  // dashboard is not.
+  try {
+    localStorage.setItem(STORAGE_KEYS.prefs, JSON.stringify(prefs));
+  } catch {
+    /* storage unavailable: this session simply does not remember its settings */
+  }
 }
 
 export function loadFavorites() {
@@ -102,7 +112,11 @@ export function loadFavorites() {
 }
 
 export function saveFavorites() {
-  localStorage.setItem(STORAGE_KEYS.favorites, JSON.stringify(state.favorites));
+  try {
+    localStorage.setItem(STORAGE_KEYS.favorites, JSON.stringify(state.favorites));
+  } catch {
+    /* same rule: saving a mission may fail, but it must not break the page */
+  }
 }
 
 export function isFavorite(id) {
