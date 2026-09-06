@@ -248,11 +248,15 @@ check("the refresh-window strip is not an aria-live region", () => {
 });
 
 check("the starfield stops moving under prefers-reduced-motion", () => {
+  // Parallax was the one thing not gated, so the whole sky still slid under the
+  // pointer for a reader who had asked for no motion.
   const src = readFileSync("js/starfield.js", "utf8");
-  const handler = /pointerX = \(event[\s\S]{0,200}/.exec(src);
-  assert.ok(handler, "pointer handler not found");
-  const before = src.slice(Math.max(0, src.indexOf(handler[0]) - 300), src.indexOf(handler[0]));
-  assert.ok(/reducedMotion/.test(before), "parallax still runs for readers who asked for no motion");
+  const handler = /addEventListener\("pointermove"[\s\S]*?\n  \}\);/.exec(src);
+  assert.ok(handler, "pointermove handler not found");
+  const guardAt = handler[0].indexOf("if (reducedMotion) return;");
+  const writeAt = handler[0].indexOf("pointerX =");
+  assert.ok(guardAt > -1, "the handler does not check reduced motion at all");
+  assert.ok(guardAt < writeAt, "the guard runs after the parallax is already written");
 });
 
 check("the Debug button reports that it is loading", () => {

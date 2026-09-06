@@ -22,19 +22,50 @@ check("body still has a layered space gradient (not a flat color)", () => {
   assert.match(base, /body\s*\{[\s\S]*background:[\s\S]*linear-gradient\(180deg,\s*var\(--bg-0\)/);
 });
 
-check("starfield glow is neutral gray (no blue/purple wash)", () => {
-  assert.ok(!starfield.includes("rgba(115, 182, 255, 0.12)"), "old blue glow removed");
-  assert.ok(!starfield.includes("rgba(157, 125, 255, 0.08)"), "old purple glow removed");
-  assert.match(starfield, /rgba\(150, 160, 180/, "neutral gray glow present");
+check("the page glow behind the sky stays a neutral wash", () => {
+  // The point is that the background never tints the whole page blue or purple.
+  // Asserting one exact rgba string pinned the old implementation instead, and
+  // broke the moment the module was rewritten while the intent held.
+  const glow = /function paintGlow\(\)[\s\S]*?\n  \}/.exec(starfield);
+  assert.ok(glow, "paintGlow present");
+  const stops = [...glow[0].matchAll(/rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)/g)];
+  assert.ok(stops.length >= 2, "the glow should be a gradient");
+  for (const [, r, g, b, a] of stops) {
+    const [red, green, blue, alpha] = [+r, +g, +b, +a];
+    if (alpha === 0) continue;
+    assert.ok(alpha <= 0.08, `glow stop alpha ${alpha} is a wash, not a hint`);
+    // Near-neutral: no channel may run far ahead of the others.
+    assert.ok(
+      Math.max(red, green, blue) - Math.min(red, green, blue) <= 46,
+      `rgb(${red}, ${green}, ${blue}) is a colour cast, not a neutral glow`
+    );
+  }
 });
 
-check("shooting stars still exist but are gated off under reduced motion", () => {
-  assert.match(starfield, /spawnShootingStar/);
-  assert.match(starfield, /!reducedMotion\s*&&\s*shootingStars\.length\s*<\s*1/, "rare + reduced-motion-gated");
+check("meteors, comets and asteroids all exist and none run under reduced motion", () => {
+  for (const name of ["spawnMeteor", "spawnComet", "spawnAsteroid"]) {
+    assert.match(starfield, new RegExp(`function ${name}\\(`), `${name} missing`);
+  }
+  // Everything transient is behind the same early return, and the loop itself
+  // never starts, so a reduced-motion reader gets one static painting.
+  assert.match(
+    starfield,
+    /if \(reducedMotion\) return;\s*\n\s*paintAsteroids/,
+    "transient objects are not gated behind reduced motion"
+  );
+  assert.match(starfield, /function start\(\)[\s\S]*?if \(running \|\| reducedMotion\) return;/, "the loop still starts");
 });
 
-check("star twinkle is frozen under reduced motion", () => {
-  assert.match(starfield, /reducedMotion\s*\?\s*0\s*:\s*star\.twinkleSpeed/);
+check("star twinkle and drift are frozen under reduced motion", () => {
+  assert.match(starfield, /if \(!reducedMotion\) star\.phase \+=/, "twinkle is not gated");
+  assert.match(starfield, /if \(!reducedMotion\) a\.rotation \+=/, "asteroid tumble is not gated");
+});
+
+check("the sky advances on real elapsed time, not a fixed step per frame", () => {
+  // The old loop added a hard-coded 0.016 every frame, so a 120Hz display ran
+  // the whole background at double speed.
+  assert.ok(!/\+= 0\.016/.test(starfield), "a fixed per-frame step is back");
+  assert.match(starfield, /now - lastTime/, "the loop does not measure elapsed time");
 });
 
 check("search/input clipping fix: explicit line-height + fixed height on inputs", () => {

@@ -2,6 +2,29 @@
 
 Release history for U.S. Space Mission Control, newest first.
 
+## v3.8.4 — New Mark, New Sky
+
+- Redrew the browser-tab icon. The old one was a rocket drawn at emoji scale:
+  four stars at 1.2 units, a porthole and a flame, none of which survive the
+  16px a tab actually renders, so it arrived as a grey smudge. The new mark is
+  an ascending launch trajectory with the vehicle at its leading end over a
+  planet limb, which is one bold shape that still reads at tab size and says
+  launch tracking rather than generic space app
+- Added an icon for iOS home screens, which ignore an SVG and otherwise fall
+  back to a screenshot of the page
+- Rebuilt the animated background. Meteors are more frequent and up to three
+  can be in flight at once, arriving from either side instead of along one
+  diagonal. Asteroids tumble slowly past, lit on one side. A comet crosses every
+  minute or so with a glowing head and two tails, an ion tail pointing away from
+  the light and a broader dust tail swept off it
+- The starfield itself has three depth layers that move by different amounts, so
+  it has depth rather than being one flat field of dots, and the brightest stars
+  carry diffraction spikes
+- The sky now advances on real elapsed time. It used to add a fixed step every
+  frame, so on a 120Hz display the whole background ran at double speed
+- It also stops completely for a hidden tab, and under reduced motion it paints
+  once and never starts an animation frame at all
+
 ## v3.8.3 — Audit Fixes, Second Pass
 
 The rest of the repository sweep. Same rule as before: each fix ships with a
