@@ -82,6 +82,10 @@ export function simplifyLaunch(raw) {
     statusName: nameOf(raw?.status) || (raw?.upcoming ? "Upcoming" : "Completed"),
     statusId: raw?.status?.id ?? null,
     statusAbbrev: raw?.status?.abbrev || "",
+    // LL2 says how much of the NET it actually means: Minute, Hour, Day,
+    // Month, Quarter, Year. Without it a month placeholder is
+    // indistinguishable from a launch genuinely scheduled for midnight.
+    netPrecision: raw?.net_precision?.name || raw?.net_precision?.abbrev || "",
     // Why a launch failed. LL2 exposes this as `failreason` on the launch, but
     // older/other shapes nest it; take the first non-empty candidate.
     failReason:

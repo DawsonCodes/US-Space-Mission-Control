@@ -2,6 +2,39 @@
 
 Release history for U.S. Space Mission Control, newest first.
 
+## v3.8.3 — Audit Fixes, Second Pass
+
+The rest of the repository sweep. Same rule as before: each fix ships with a
+test that fails on the previous code.
+
+- Add to calendar no longer writes a made-up appointment. Launch Library gives
+  most launches a placeholder date meaning "sometime this month", and the export
+  turned that into a two-hour commitment at a month-end midnight in your real
+  calendar. Those now export as an all-day marker that says the date is not
+  confirmed. A launch with a real time still exports as a real event
+- Next 24 hours and Next 7 days no longer list those placeholders as though they
+  were imminent
+- A launch that has already flown no longer shows today's weather under "Local
+  weather outlook". Only the future was bounded, so the forecast was fetched for
+  a date in the past and presented as that mission's outlook
+- The refresh strip is no longer announced to screen readers about twice a
+  minute, and the star background stops following the pointer for readers who
+  ask for reduced motion
+- The countdown no longer freezes at all zeros when a launch time passes while
+  the page is open; it says Live / passed, which is what the screen-reader copy
+  beside it already said
+- The footer clock follows the time mode printed next to it instead of always
+  showing local time under a heading that said UTC
+- Highest launch probability is hidden unless a launch actually has that data.
+  None currently do, so choosing it silently reordered nothing
+- The Debug data button says it is loading. It was passed a busy flag that the
+  function receiving it ignored, so it looked dead for the whole request
+- Removed a documented refresh spinner whose control was deleted, and corrected
+  the README, the config notes, the workflow header and the contributor guide,
+  all of which still described an automatic fallback to the launch API that no
+  longer exists. The dead code behind that claim is gone too, along with the
+  tests that were certifying it
+
 ## v3.8.2 — Cleaner Utility Dialogs
 
 - Redesigned Mission status legend and About this data. Both were rendering into

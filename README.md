@@ -81,7 +81,9 @@ Reliability
   There is no refresh button; the hero shows where the window stands
 - Renders saved data instantly, so the dashboard is never empty while it checks
   for an update
-- Falls back to calling the API directly if the published data ever goes stale
+- Serves the published data whatever its age, and says how old it is. The file
+  is only rewritten when a launch actually moves, so an old timestamp on it
+  means nothing has changed rather than that anything is broken
 - A one-feed failure never replaces the complete list with a partial one, in the
   browser or in the published file
 - Debug data at the foot of the page loads real missions from the development

@@ -55,8 +55,8 @@ Or, if you prefer Node's one-liner:
 npx serve .
 ```
 
-Then manually exercise the features you touched: loading live data, refresh,
-the organization tabs/overview tiles, demo mode (under **More**), search,
+Then manually exercise the features you touched: loading published data, the
+organization tabs and overview tiles, Debug data at the foot of the page, search,
 mission-type and flight-type filters, sorting, favorites, the local/UTC toggle,
 and the countdowns. If you touched classification or the API merge, also run the
 logic tests with Node:

@@ -258,6 +258,15 @@ export async function getWeatherForLaunch(launch, { signal } = {}) {
     return { status: "beyond-horizon" };
   }
 
+  // Only the future was bounded, so once a NET passed this went on asking the
+  // forecast endpoint and presented whatever came back, today's conditions, as
+  // that mission's "Local weather outlook". Conditions at a launch that has
+  // already flown are a different question, answered by
+  // getRecordedWeatherForLaunch against the archive.
+  if (launchMs < Date.now()) {
+    return { status: "already-flown" };
+  }
+
   const key = cacheKey(lat, lon, launchMs);
   const cached = readCache(key);
   if (cached) return { status: "ok", data: cached, cached: true };

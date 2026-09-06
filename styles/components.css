@@ -3107,22 +3107,6 @@ html.is-booting .boot[hidden] { display: grid; }
   animation: removeCollapse var(--motion-normal) var(--ease-standard) forwards;
 }
 
-/* ANIM-23 — Refresh spin. The refresh control rotates a leading dot while a
-   live request is in flight, so the app never looks idle mid-load. */
-@keyframes refreshSpin {
-  to { transform: rotate(360deg); }
-}
-
-.btn.is-refreshing::before {
-  content: "";
-  width: 12px;
-  height: 12px;
-  margin-right: 2px;
-  border-radius: var(--radius-pill);
-  border: 2px solid rgba(255, 255, 255, 0.25);
-  border-top-color: var(--text);
-  animation: refreshSpin 700ms linear infinite;
-}
 
 /* Reduced motion: strip the decorative layers entirely (the global rule already
    zeroes durations; this removes the elements/effects that would still show). */
@@ -3133,7 +3117,6 @@ html.is-booting .boot[hidden] { display: grid; }
   .overview-tile.is-org::after {
     display: none !important;
   }
-  .btn.is-refreshing::before { animation: none !important; }
   .saved-card.is-removing { animation: none !important; opacity: 0.4 !important; }
 }
 

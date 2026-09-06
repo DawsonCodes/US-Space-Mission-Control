@@ -8,8 +8,10 @@ name: Refresh launch data
 # churn on every run.
 #
 # Note: GitHub disables scheduled workflows on a repository with no activity for
-# 60 days. If the snapshot ever goes stale the dashboard falls back to calling
-# the API directly, so the site keeps working either way.
+# 60 days. The mitigation is that this workflow commits to the repository on most
+# runs, and that commit is itself the activity that keeps the schedule alive.
+# There is no automatic fallback if it does stop: the dashboard keeps serving the
+# last published file and reports how old it is.
 
 on:
   schedule:

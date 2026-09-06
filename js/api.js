@@ -18,7 +18,6 @@ import {
   SNAPSHOT_LAUNCHES,
   SNAPSHOT_PREVIOUS,
   SNAPSHOT_SCHEMA,
-  SNAPSHOT_MAX_AGE_MS,
   FEED_MAX_PAGES,
   NETWORK_TIMEOUT_MS,
   DEBUG_TIMEOUT_MS,
@@ -57,14 +56,6 @@ function validateSnapshot(json) {
   };
 }
 
-export function snapshotAgeMs(snapshot, now = Date.now()) {
-  if (!snapshot) return Infinity;
-  return Math.max(0, now - snapshot.generatedAt);
-}
-
-export function isSnapshotUsable(snapshot, now = Date.now()) {
-  return Boolean(snapshot) && snapshotAgeMs(snapshot, now) <= SNAPSHOT_MAX_AGE_MS;
-}
 
 export async function fetchSnapshot(url, { signal } = {}) {
   const controller = new AbortController();

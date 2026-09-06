@@ -91,7 +91,11 @@
           <div class="hero-actions">
             <!-- Updating is automatic on a rolling 30-minute window, so there is
                  no refresh button; this reports where that window stands. -->
-            <div class="refresh-window" id="refreshWindow" aria-live="polite">
+            <!-- Not a live region. A 30-second interval rewrites this text for as long
+                 as the tab is open, so a polite region here announced itself about
+                 twice a minute forever. It is a passive readout; the #status banner
+                 is what actually announces. -->
+            <div class="refresh-window" id="refreshWindow">
               <span class="refresh-window-dot" aria-hidden="true"></span>
               <span class="refresh-window-text" id="refreshWindowText">Loading launch data…</span>
             </div>

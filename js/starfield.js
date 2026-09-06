@@ -123,6 +123,10 @@ export function setupStarfield() {
   }
 
   window.addEventListener("pointermove", (event) => {
+    // Twinkle and shooting stars were gated on reduced motion but the parallax
+    // was not, so for a reader who asked for no motion the entire background
+    // still slid around under the pointer.
+    if (reducedMotion) return;
     pointerX = (event.clientX / width - 0.5) * 2;
     pointerY = (event.clientY / height - 0.5) * 2;
   });

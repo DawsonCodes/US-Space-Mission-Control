@@ -39,7 +39,6 @@ the source with the same id, and listed here.
 | **ANIM-20** | Modal open | `.modal-panel`, backdrop | Details / About / Legend / Colors | 280ms scale + fade | Instant |
 | **ANIM-21** | Drawer slide | `.drawer-panel` | Saved drawer opened | 280ms | Instant |
 | **ANIM-22** | Skeleton shimmer | `.placeholder-*` | Uncached load | 1.6s loop | Static blocks |
-| **ANIM-23** | Refresh spinner | `.btn.is-refreshing::before` | Live request in flight | 700ms linear loop | Spinner hidden |
 | **ANIM-24** | Starfield + shooting stars | `js/starfield.js` | Always (background) | Per-frame drift; streaks ~rare | Twinkle frozen, no streaks |
 | **ANIM-25** | Typewriter search hint | `js/search-hint.js` | Search empty + unfocused | 65ms/char, 530ms caret | Static placeholder |
 | **ANIM-26** | Select arrow rotate | `.select-wrap.is-open::after` | Dropdown open | 200ms | Instant |
