@@ -10,6 +10,7 @@
 // limit before the page had even finished opening.
 
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 
 const mem = new Map();
 globalThis.localStorage = {
@@ -20,7 +21,7 @@ globalThis.localStorage = {
 globalThis.sessionStorage = { getItem: () => null, setItem() {}, removeItem() {} };
 
 const { loadLaunches } = await import("../js/api.js");
-const { API_FALLBACK_MIN_AGE_MS, AUTO_REFRESH_MS, SNAPSHOT_MAX_AGE_MS } =
+const { API_FALLBACK_MIN_AGE_MS, AUTO_REFRESH_MS } =
   await import("../js/config.js");
 
 let apiCalls = 0;
@@ -116,11 +117,17 @@ await check("the fallback threshold caps spending at roughly one request an hour
   assert.ok(API_FALLBACK_MIN_AGE_MS <= 60 * 60 * 1000 * 2);
 });
 
-await check("published data is trusted for longer than it takes to publish", async () => {
-  assert.ok(
-    SNAPSHOT_MAX_AGE_MS > AUTO_REFRESH_MS,
-    "a single late workflow run must not push everyone onto the API"
-  );
+await check("published data is not judged by its age at all", async () => {
+  // This used to assert a staleness bound. There is no bound: the workflow
+  // leaves the file byte-identical when nothing has moved, so its timestamp is
+  // "when a launch last changed" and is routinely hours old on a healthy site.
+  // What matters is that no shipped code path gates on it.
+  // Named with the camelCase helpers only: the project's own audit reads a
+  // SCREAMING_SNAKE token in a regex literal as a use of that identifier.
+  const api = readFileSync("js/api.js", "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  assert.ok(!/isSnapshotUsable|snapshotAgeMs/.test(api), "an age gate is back in the snapshot path");
+  const config = readFileSync("js/config.js", "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  assert.ok(!/export const SNAPSHOT_MAX/.test(config), "the staleness constant is back");
 });
 
 if (failures > 0) { console.error(`\n${failures} API-budget test(s) failed.`); process.exit(1); }

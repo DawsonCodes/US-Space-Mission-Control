@@ -1398,6 +1398,9 @@ export function buildWeatherHtml(result, { compact = false, recorded = false } =
   if (result.status === "beyond-archive") {
     return wrap(`<p class="weather-msg">No recorded weather is available this far back.</p>`);
   }
+  if (result.status === "already-flown") {
+    return wrap(`<p class="weather-note">This launch has already flown. Conditions recorded at the pad are shown in Previous launches.</p>`);
+  }
   if (result.status === "unavailable-coords") {
     return wrap(`<p class="weather-msg">Local weather unavailable for this pad.</p>`);
   }
@@ -1478,6 +1481,17 @@ export function updateCountdownNodes() {
     if (!parts) continue;
     // One query per box rather than one per unit. With the whole manifest on
     // screen the old form issued about 900 selector lookups a second.
+    // A NET that passes while the page is open used to write zeros into every
+    // digit and stop, so the display read 00:00:00:00 next to a screen-reader
+    // copy that correctly said "Live / passed". Swap the whole box for the flat
+    // label instead, which is what a fresh render would have produced.
+    if (parts.passed) {
+      if (box.dataset && box.dataset.passed !== "1") {
+        if (box.dataset) box.dataset.passed = "1";
+        pending.push({ el: box, text: "Live / passed", replay: null, flatten: true });
+      }
+      continue;
+    }
     for (const cell of box.querySelectorAll("[data-cd]")) {
       const key = cell.getAttribute("data-cd");
       if (!CD_KEYS.has(key)) continue;
@@ -1504,33 +1518,52 @@ export function updateCountdownNodes() {
   // Pass 4: writes only. No read follows, so the browser batches this normally.
   for (const change of pending) {
     change.el.textContent = change.text;
+    if (change.flatten) change.el.classList.add("countdown-flat");
     if (change.replay) change.el.classList.add(change.replay);
   }
 }
 
 // Built once and reused. Constructing an Intl formatter resolves the locale
 // every time, and this runs on every countdown tick.
-let clockFormat = null;
-function clockFormatter() {
-  if (!clockFormat) {
-    clockFormat = new Intl.DateTimeFormat(undefined, {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit"
-    });
+// Keyed by time mode, because the footer prints the mode right next to the
+// clock and was showing "Time mode: UTC" beside a local-time reading.
+const clockFormats = new Map();
+function clockFormatter(mode) {
+  if (!clockFormats.has(mode)) {
+    const options = { hour: "2-digit", minute: "2-digit", second: "2-digit" };
+    if (mode === "utc") options.timeZone = "UTC";
+    clockFormats.set(mode, new Intl.DateTimeFormat(undefined, options));
   }
-  return clockFormat;
+  return clockFormats.get(mode);
 }
 
 export function refreshFooterMeta() {
   const pieces = [];
   pieces.push(dataSourceLabel());
   pieces.push(`Time mode: ${state.dateMode.toUpperCase()}`);
-  pieces.push(`Clock: ${clockFormatter().format(new Date())}`);
+  pieces.push(`Clock: ${clockFormatter(state.dateMode).format(new Date())}`);
   els.footerMeta.textContent = pieces.join(" • ");
 }
 
+// Launch Library publishes probability for very few launches and currently for
+// none of the 224 upcoming ones, so "Highest launch probability" silently
+// reordered nothing and gave the reader no clue the data was absent. Offer it
+// only when something can actually be sorted by it.
+export function syncSortOptions() {
+  const select = els.sortMode;
+  const option = select?.querySelector?.('option[value="probability"]');
+  if (!option) return;
+  const usable = state.launches.some((l) => typeof l.probability === "number" && l.probability >= 0);
+  option.hidden = !usable;
+  option.disabled = !usable;
+  if (!usable && state.sortMode === "probability") {
+    state.sortMode = "soonest";
+    if (select) select.value = "soonest";
+  }
+}
+
 export function renderAll({ resultsEntrance = "none" } = {}) {
+  syncSortOptions();
   renderHeroMeta();
   renderHero();
   renderOverview();

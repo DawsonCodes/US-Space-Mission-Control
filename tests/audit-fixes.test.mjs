@@ -179,5 +179,116 @@ check("a real Starlink flight is still classified Starlink", () => {
   );
 });
 
+// ---------- placeholder NETs ------------------------------------------------
+const { isApproximateNet } = await import("../js/utils.js");
+const { buildICS } = await import("../js/calendar.js");
+const { matchesDateRange } = await import("../js/filters.js");
+const { getWeatherForLaunch } = await import("../js/weather.js");
+
+check("a Launch Library placeholder NET is recognized as approximate", () => {
+  // 221 of the 224 published launches sit at a month boundary at midnight UTC
+  // with a tentative status. That is "sometime this month", not a launch time.
+  const approx = published.filter(isApproximateNet);
+  assert.ok(approx.length > 100, `only ${approx.length} of ${published.length} recognized`);
+  assert.equal(isApproximateNet({ net: "2026-09-06T10:59:00Z", statusName: "Go for Launch" }), false);
+  assert.equal(isApproximateNet({ net: "2026-09-30T00:00:00Z", statusName: "To Be Determined" }), true);
+});
+
+check("Launch Library's own precision wins over the shape guess", () => {
+  assert.equal(isApproximateNet({ net: "2026-09-30T00:00:00Z", statusName: "To Be Determined", netPrecision: "Day" }), false);
+  assert.equal(isApproximateNet({ net: "2026-09-06T10:59:00Z", statusName: "Go for Launch", netPrecision: "Month" }), true);
+});
+
+check("a placeholder exports as an all-day marker, not a two-hour appointment", () => {
+  // It was writing a fabricated commitment into a real calendar, at a midnight
+  // that the data never claimed, on a day local time shifted it off anyway.
+  const ics = buildICS({
+    id: "x", name: "Starship | Flight 14", net: "2026-09-30T00:00:00Z",
+    statusName: "To Be Determined", padName: "Pad", location: "Starbase, TX, USA"
+  });
+  assert.match(ics, /DTSTART;VALUE=DATE:20260930/, "still a timed event");
+  assert.match(ics, /DTEND;VALUE=DATE:20261001/);
+  assert.ok(/has not confirmed a date or time/.test(ics), "the entry does not say it is a placeholder");
+});
+
+check("a real launch time still exports as a timed event", () => {
+  const ics = buildICS({
+    id: "y", name: "Falcon 9 | Starlink", net: "2026-09-10T15:37:00Z",
+    statusName: "Go for Launch", padName: "Pad", location: "Cape Canaveral, FL, USA"
+  });
+  assert.match(ics, /DTSTART:20260910T153700Z/);
+  assert.ok(!/VALUE=DATE/.test(ics), "a confirmed launch became an all-day marker");
+});
+
+check("near-term filters do not admit placeholders as imminent", () => {
+  const soon = new Date(Date.now() + 6 * 60 * 60 * 1000);
+  const placeholder = {
+    net: new Date(Date.UTC(soon.getUTCFullYear(), soon.getUTCMonth(), soon.getUTCDate())).toISOString(),
+    statusName: "To Be Determined"
+  };
+  assert.equal(matchesDateRange(placeholder, "24h"), false, "a placeholder was listed as within 24 hours");
+  assert.equal(matchesDateRange(placeholder, "7d"), false);
+  const real = { net: new Date(Date.now() + 6 * 60 * 60 * 1000).toISOString(), statusName: "Go for Launch" };
+  assert.equal(matchesDateRange(real, "24h"), true, "a genuinely scheduled launch was excluded");
+});
+
+// ---------- a launch that has flown has no forecast -------------------------
+check("a past launch is not given today's weather as its outlook", async () => {
+  const result = await getWeatherForLaunch({
+    padLat: 28.5, padLon: -80.5, net: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
+  });
+  assert.equal(result.status, "already-flown", `got ${result.status}`);
+});
+
+// ---------- the rest of the sweep -------------------------------------------
+check("the refresh-window strip is not an aria-live region", () => {
+  const tag = /<div class="refresh-window"[^>]*>/.exec(html);
+  assert.ok(tag, "#refreshWindow not found");
+  assert.ok(!/aria-live/.test(tag[0]), "it announces itself every 30 seconds again");
+});
+
+check("the starfield stops moving under prefers-reduced-motion", () => {
+  const src = readFileSync("js/starfield.js", "utf8");
+  const handler = /pointerX = \(event[\s\S]{0,200}/.exec(src);
+  assert.ok(handler, "pointer handler not found");
+  const before = src.slice(Math.max(0, src.indexOf(handler[0]) - 300), src.indexOf(handler[0]));
+  assert.ok(/reducedMotion/.test(before), "parallax still runs for readers who asked for no motion");
+});
+
+check("the Debug button reports that it is loading", () => {
+  const src = readFileSync("js/main.js", "utf8");
+  const fn = /function syncDebugToggle\([\s\S]*?\n}/.exec(src)[0];
+  assert.match(fn, /busy/, "syncDebugToggle still ignores the flag its caller passes");
+  assert.match(fn, /is-busy/, "the documented ANIM-31 class is never applied");
+});
+
+check("the footer clock follows the time mode printed beside it", () => {
+  const src = readFileSync("js/render.js", "utf8");
+  const fn = /function clockFormatter\([\s\S]*?\n}/.exec(src)[0];
+  assert.match(fn, /timeZone/, "the clock is always local, even when the mode says UTC");
+  assert.match(fn, /mode/, "the formatter is not keyed by mode");
+});
+
+check("a dead sort option is not offered", () => {
+  const src = readFileSync("js/render.js", "utf8");
+  assert.match(src, /syncSortOptions/, "the probability sort is offered whether or not it can sort");
+});
+
+check("nothing documents an API fallback that no longer exists", () => {
+  // README, config.js and the workflow header all promised the dashboard would
+  // call Launch Library when the published file went stale. The age gate was
+  // removed, so that safety net was fiction.
+  for (const [file, text] of [
+    ["README.md", readFileSync("README.md", "utf8")],
+    ["js/config.js", readFileSync("js/config.js", "utf8")],
+    [".github/workflows/refresh-data.yml", readFileSync(".github/workflows/refresh-data.yml", "utf8")]
+  ]) {
+    assert.ok(
+      !/falls back to calling|fallback to calling/i.test(text),
+      `${file} still promises a stale-snapshot API fallback`
+    );
+  }
+});
+
 if (failures > 0) { console.error(`\n${failures} audit-fix check(s) failed.`); process.exit(1); }
 console.log("\nAudit-fix checks passed.");

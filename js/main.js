@@ -669,12 +669,21 @@ function toggleDebugData() {
   syncDebugToggle();
 }
 
-function syncDebugToggle() {
+// The busy flag was passed by useDebugData but this function took no arguments,
+// so the button kept its idle label and aria-pressed="false" for the whole
+// mirror round trip: it read as broken and invited a second press.
+function syncDebugToggle({ busy = false } = {}) {
   const btn = els.btnUseDemo;
   if (!btn) return;
-  btn.classList.toggle("is-active", state.usingDemo);
-  btn.setAttribute("aria-pressed", String(state.usingDemo));
-  btn.textContent = state.usingDemo ? "Debug data on" : "Debug data";
+  const on = state.usingDemo || busy;
+  btn.classList.toggle("is-active", on);
+  btn.classList.toggle("is-busy", busy);
+  btn.setAttribute("aria-pressed", String(on));
+  btn.textContent = busy
+    ? "Loading debug data…"
+    : state.usingDemo
+      ? "Debug data on"
+      : "Debug data";
 }
 
 // Debug data now comes from The Space Devs' development mirror, which they run

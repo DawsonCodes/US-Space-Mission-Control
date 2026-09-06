@@ -2,6 +2,7 @@
 // list of launches currently shown in the results grid.
 
 import { state } from "./state.js";
+import { isApproximateNet } from "./utils.js";
 import {
   classifyMissionType,
   matchesOrg,
@@ -22,10 +23,13 @@ export function matchesDateRange(launch, range) {
   if (!Number.isFinite(t)) return false;
   const now = Date.now();
   switch (range) {
+    // A placeholder NET means "sometime this month" and carries no claim about
+    // a day, let alone an hour. Admitting one to a near-term filter presents it
+    // as imminent next to launches that really are.
     case "24h":
-      return t >= now && t <= now + 24 * HOUR_MS;
+      return !isApproximateNet(launch) && t >= now && t <= now + 24 * HOUR_MS;
     case "7d":
-      return t >= now && t <= now + 7 * DAY_MS;
+      return !isApproximateNet(launch) && t >= now && t <= now + 7 * DAY_MS;
     case "30d":
       return t >= now && t <= now + 30 * DAY_MS;
     case "year":

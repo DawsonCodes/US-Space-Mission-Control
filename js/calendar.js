@@ -2,6 +2,8 @@
 // backend, no account. The details modal builds a Blob from buildICS() and
 // triggers a browser download (see main.js). All timestamps are UTC.
 
+import { isApproximateNet } from "./utils.js";
+
 // Escape a value for an ICS text field per RFC 5545 (backslash, comma,
 // semicolon, and newlines).
 export function escapeICSText(value) {
@@ -68,6 +70,12 @@ export function buildICS(launch, { now = new Date(), durationMs = 2 * 60 * 60 * 
 
   const startMs = new Date(launch.net).getTime();
   const dtEnd = formatICSDate(new Date(startMs + durationMs));
+  // Most published launches carry a placeholder NET rather than a real time.
+  // Writing a two-hour appointment at a month-end midnight put a fabricated
+  // commitment in someone's real calendar, on a day the data never claimed.
+  // Those export as an all-day marker on the placeholder date, and say so.
+  const approximate = isApproximateNet(launch);
+  const dayStamp = (ms) => formatICSDate(new Date(ms))?.slice(0, 8) || "";
   const dtStamp = formatICSDate(now) || formatICSDate(new Date());
   const uid = `${String(launch?.id || "launch")}@us-space-mission-control`;
 
@@ -84,6 +92,11 @@ export function buildICS(launch, { now = new Date(), durationMs = 2 * 60 * 60 * 
   if (launch?.webcast) descLines.push(`Webcast: ${launch.webcast}`);
   const map = osmUrl(launch);
   if (map) descLines.push(`Launch pad map: ${map}`);
+  if (approximate) {
+    descLines.push(
+      "Launch Library has not confirmed a date or time for this launch. This entry marks the placeholder date only."
+    );
+  }
   descLines.push("Schedules, statuses, and webcast links can change.");
   const description = descLines.join("\n");
 
@@ -98,8 +111,12 @@ export function buildICS(launch, { now = new Date(), durationMs = 2 * 60 * 60 * 
     "BEGIN:VEVENT",
     `UID:${escapeICSText(uid)}`,
     `DTSTAMP:${dtStamp}`,
-    `DTSTART:${dtStart}`,
-    `DTEND:${dtEnd}`,
+    ...(approximate
+      ? [
+          `DTSTART;VALUE=DATE:${dayStamp(startMs)}`,
+          `DTEND;VALUE=DATE:${dayStamp(startMs + 24 * 60 * 60 * 1000)}`
+        ]
+      : [`DTSTART:${dtStart}`, `DTEND:${dtEnd}`]),
     `SUMMARY:${escapeICSText(launch?.name || "Launch")}`,
     location ? `LOCATION:${escapeICSText(location)}` : null,
     `DESCRIPTION:${escapeICSText(description)}`,

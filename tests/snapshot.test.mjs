@@ -11,15 +11,12 @@ globalThis.localStorage = {
 };
 globalThis.sessionStorage = { getItem: () => null, setItem() {}, removeItem() {} };
 
-const { loadLaunches, fetchSnapshot, isSnapshotUsable, snapshotAgeMs } =
-  await import("../js/api.js");
-const {
-  SNAPSHOT_SCHEMA,
-  SNAPSHOT_LAUNCHES,
-  SNAPSHOT_PREVIOUS,
-  SNAPSHOT_MAX_AGE_MS,
-  AUTO_REFRESH_MS
-} = await import("../js/config.js");
+const { loadLaunches, fetchSnapshot } = await import("../js/api.js");
+const { SNAPSHOT_SCHEMA, SNAPSHOT_LAUNCHES, SNAPSHOT_PREVIOUS, AUTO_REFRESH_MS } =
+  await import("../js/config.js");
+
+// The published file has no staleness rule, so these are just "old" durations.
+const THREE_HOURS = 1000 * 60 * 60 * 3;
 
 let failures = 0;
 const check = async (label, fn) => {
@@ -104,27 +101,12 @@ await check("a missing snapshot rejects instead of resolving empty", async () =>
   await assert.rejects(() => fetchSnapshot(SNAPSHOT_LAUNCHES));
 });
 
-// ---------- age rule -------------------------------------------------------
-await check("age is measured from the published timestamp", () => {
-  const now = Date.UTC(2026, 5, 1, 12, 0, 0);
-  const snap = { generatedAt: now - 90 * 60 * 1000 };
-  assert.equal(snapshotAgeMs(snap, now), 90 * 60 * 1000);
-});
-
-await check("a recent snapshot is usable, an abandoned one is not", () => {
-  const now = Date.now();
-  assert.equal(isSnapshotUsable({ generatedAt: now - 1000 }, now), true);
-  assert.equal(isSnapshotUsable({ generatedAt: now - SNAPSHOT_MAX_AGE_MS + 1000 }, now), true);
-  assert.equal(isSnapshotUsable({ generatedAt: now - SNAPSHOT_MAX_AGE_MS - 1000 }, now), false);
-  assert.equal(isSnapshotUsable(null, now), false);
-});
-
-await check("the staleness bound covers several missed runs, not just one", () => {
-  assert.ok(
-    SNAPSHOT_MAX_AGE_MS >= AUTO_REFRESH_MS * 3,
-    "one late workflow run should not push everyone onto the API"
-  );
-});
+// ---------- there is deliberately no age rule -------------------------------
+// isSnapshotUsable and snapshotAgeMs used to live here. They were called by no
+// shipped code path, and this section asserted them as though the dashboard
+// still gated on snapshot age, directly above the checks that prove it does not.
+// A green test certifying a rule the product does not have is worse than no
+// test, so both the helpers and their assertions are gone.
 
 // ---------- fallback order -------------------------------------------------
 await check("a usable snapshot is served and the API is never called", async () => {
@@ -148,7 +130,7 @@ await check("an old published file is used, not swapped for a truncated API list
   // hours old while the workflow itself ran twenty minutes ago. Judging
   // usability by that age threw away a complete list and sent every visitor to
   // the API for a shorter one.
-  reset(snapshot({ generatedAt: new Date(Date.now() - SNAPSHOT_MAX_AGE_MS - 60_000).toISOString() }));
+  reset(snapshot({ generatedAt: new Date(Date.now() - THREE_HOURS - 60_000).toISOString() }));
   const result = await loadLaunches();
   assert.equal(result.source, "snapshot");
   assert.equal(result.launches.length, 2);

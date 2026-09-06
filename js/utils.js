@@ -56,6 +56,27 @@ export function isPublicMissionUrl(value) {
   return url;
 }
 
+// Launch Library publishes a placeholder NET for a launch with no confirmed
+// time: a month, quarter or year boundary at exactly midnight UTC, with the
+// status left at To Be Determined or To Be Confirmed. 221 of the 224 launches
+// currently published are like this, so treating one as a real timestamp
+// invents a precision the data never had, and shifting it into local time moves
+// it onto the wrong calendar day as well.
+//
+// LL2's own net_precision is the authority when the snapshot carries it. The
+// shape check below is the fallback for files published before that field was
+// captured, and for the demo data.
+const VAGUE_NET_PRECISION_RE = /month|quarter|year|half|decade/i;
+const TENTATIVE_STATUS_RE = /^to be (determined|confirmed)$/i;
+
+export function isApproximateNet(launch) {
+  const precision = String(launch?.netPrecision || "").trim();
+  if (precision) return VAGUE_NET_PRECISION_RE.test(precision);
+
+  if (!/T00:00:00(?:\.000)?Z$/.test(String(launch?.net || ""))) return false;
+  return TENTATIVE_STATUS_RE.test(String(launch?.statusName || "").trim());
+}
+
 // Validate an IANA timezone id by attempting to use it. Returns the id when
 // usable, otherwise "". Caches results so repeated formatting stays cheap.
 const tzCache = new Map();

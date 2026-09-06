@@ -67,10 +67,13 @@ export const SCHEDULE_MINUTES = [0, 30];
 // look at a file that has not been rewritten yet.
 export const SCHEDULE_GRACE_MS = 1000 * 90;
 
-// A snapshot older than this means the workflow has stopped running, so the
-// dashboard falls back to calling LL2 directly rather than quietly serving
-// stale data. Three hours is six missed runs.
-export const SNAPSHOT_MAX_AGE_MS = 1000 * 60 * 60 * 3;
+// There is deliberately no staleness rule for the published file. The workflow
+// leaves it byte-identical when no launch has moved, so its timestamp is "when
+// something last changed" and is routinely hours old on a perfectly healthy
+// site. Judging the file by that age threw a complete list away and sent every
+// visitor to the API for a shorter one. The file is served whatever its age and
+// the age is reported to the reader instead. If the workflow itself stops there
+// is no automatic fallback; see the note in refresh-data.yml.
 
 // When there is no published snapshot at all, the API is the only source, and
 // it has a per-browser budget. Reloading is free either way; the API is only
