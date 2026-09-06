@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-09-05T22:25:56.182Z",
+  "generatedAt": "2026-09-06T00:03:12.157Z",
   "truncated": false,
   "counts": {
     "providers": 219,
@@ -23,8 +23,8 @@
     {
       "id": "153ef8ef-b12b-43f4-a4bf-05b225c0cd37",
       "name": "Falcon 9 Block 5 | Starlink Group 15-24",
-      "net": "2026-09-06T11:13:47Z",
-      "lastUpdated": "2026-09-05T21:12:02Z",
+      "net": "2026-09-06T14:26:28Z",
+      "lastUpdated": "2026-09-05T23:52:23Z",
       "missionName": "Starlink Group 15-24",
       "missionType": "Communications",
       "program": "Starlink",
@@ -64,7 +64,7 @@
       "rocketImage": "",
       "providerImage": "",
       "imageCredit": "SpaceX",
-      "webcast": "https://x.com/i/broadcasts/1NxaroyrEngKj",
+      "webcast": "https://www.youtube.com/watch?v=pykl4k7D0GQ",
       "official": "https://www.spacex.com/launches/sl-15-24",
       "wikipedia": "https://en.wikipedia.org/wiki/Vandenberg_Space_Launch_Complex_4#SLC-4E",
       "upcoming": true
