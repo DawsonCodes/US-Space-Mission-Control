@@ -1,11 +1,83 @@
 {
   "schema": 1,
-  "generatedAt": "2026-09-02T17:29:26.780Z",
+  "generatedAt": "2026-09-06T15:57:08.365Z",
   "truncated": false,
   "counts": {
     "published": 20
   },
   "launches": [
+    {
+      "id": "153ef8ef-b12b-43f4-a4bf-05b225c0cd37",
+      "name": "Falcon 9 Block 5 | Starlink Group 15-24",
+      "net": "2026-09-06T14:26:54Z",
+      "lastUpdated": "2026-09-06T15:33:08Z",
+      "missionName": "Starlink Group 15-24",
+      "missionType": "Communications",
+      "program": "Starlink",
+      "details": "A batch of 27 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
+      "statusName": "Launch Successful",
+      "statusId": 3,
+      "statusAbbrev": "Success",
+      "failReason": "The launch vehicle successfully inserted its payload(s) into the target orbit(s).",
+      "probability": null,
+      "provider": "SpaceX",
+      "providerName": "SpaceX",
+      "providerId": 121,
+      "providerType": "Commercial",
+      "agencies": [
+        {
+          "id": 121,
+          "name": "SpaceX",
+          "type": "Commercial",
+          "abbrev": "SpX"
+        }
+      ],
+      "rocket": "Falcon 9 Block 5",
+      "rocketFamily": "Falcon",
+      "orbitName": "Low Earth Orbit",
+      "orbitAbbrev": "LEO",
+      "padName": "Space Launch Complex 4E",
+      "location": "Vandenberg SFB, CA, USA",
+      "padLat": 34.632,
+      "padLon": -120.611,
+      "tzId": "America/Los_Angeles",
+      "image": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
+      "missionImage": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
+      "missionThumb": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305192320.png",
+      "patchImage": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/mission_patch_images/space2520x252_mission_patch_20221011205756.png",
+      "padImage": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20231223073520.jpeg",
+      "programImage": "",
+      "rocketImage": "",
+      "providerImage": "",
+      "imageCredit": "SpaceX",
+      "webcast": "https://www.youtube.com/watch?v=hqxM5Ui1t2E",
+      "official": "https://www.spacex.com/launches/sl-15-24",
+      "wikipedia": "https://en.wikipedia.org/wiki/Vandenberg_Space_Launch_Complex_4#SLC-4E",
+      "upcoming": true,
+      "weather": {
+        "status": "ok",
+        "data": {
+          "time": 1788703200000,
+          "temperature": 13.4,
+          "precipitationProbability": 0,
+          "weatherCode": 2,
+          "cloudCover": 68,
+          "visibility": 12200,
+          "windSpeed": 6.6,
+          "windGusts": 9,
+          "units": {
+            "time": "unixtime",
+            "temperature_2m": "°C",
+            "precipitation_probability": "%",
+            "weather_code": "wmo code",
+            "cloud_cover": "%",
+            "visibility": "m",
+            "wind_speed_10m": "km/h",
+            "wind_gusts_10m": "km/h"
+          }
+        }
+      }
+    },
     {
       "id": "9f5a4cb6-63f9-47e1-9512-b468bae2a8e6",
       "name": "Electron | Owl Around The World (StriX Launch 11)",
@@ -1347,78 +1419,6 @@
           "visibility": 14200,
           "windSpeed": 17.1,
           "windGusts": 39.2,
-          "units": {
-            "time": "unixtime",
-            "temperature_2m": "°C",
-            "precipitation_probability": "%",
-            "weather_code": "wmo code",
-            "cloud_cover": "%",
-            "visibility": "m",
-            "wind_speed_10m": "km/h",
-            "wind_gusts_10m": "km/h"
-          }
-        }
-      }
-    },
-    {
-      "id": "5b2f05d7-9052-49fb-9bd7-2a05d4910576",
-      "name": "Falcon 9 Block 5 | Starlink Group 17-51",
-      "net": "2026-07-25T15:51:55Z",
-      "lastUpdated": "2026-07-25T16:59:03Z",
-      "missionName": "Starlink Group 17-51",
-      "missionType": "Communications",
-      "program": "Starlink",
-      "details": "A batch of 24 satellites for the Starlink mega-constellation - SpaceX's project for space-based Internet communication system.",
-      "statusName": "Launch Successful",
-      "statusId": 3,
-      "statusAbbrev": "Success",
-      "failReason": "The launch vehicle successfully inserted its payload(s) into the target orbit(s).",
-      "probability": null,
-      "provider": "SpaceX",
-      "providerName": "SpaceX",
-      "providerId": 121,
-      "providerType": "Commercial",
-      "agencies": [
-        {
-          "id": 121,
-          "name": "SpaceX",
-          "type": "Commercial",
-          "abbrev": "SpX"
-        }
-      ],
-      "rocket": "Falcon 9 Block 5",
-      "rocketFamily": "Falcon",
-      "orbitName": "Low Earth Orbit",
-      "orbitAbbrev": "LEO",
-      "padName": "Space Launch Complex 4E",
-      "location": "Vandenberg SFB, CA, USA",
-      "padLat": 34.632,
-      "padLon": -120.611,
-      "tzId": "America/Los_Angeles",
-      "image": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
-      "missionImage": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20221009234147.png",
-      "missionThumb": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305192320.png",
-      "patchImage": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/mission_patch_images/space2520x252_mission_patch_20221011205756.png",
-      "padImage": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20231223073520.jpeg",
-      "programImage": "",
-      "rocketImage": "",
-      "providerImage": "",
-      "imageCredit": "SpaceX",
-      "webcast": "https://www.youtube.com/watch?v=Lvt-g-X6JPs",
-      "official": "https://www.spacex.com/launches/sl-17-51",
-      "wikipedia": "https://en.wikipedia.org/wiki/Vandenberg_Space_Launch_Complex_4#SLC-4E",
-      "upcoming": true,
-      "weather": {
-        "status": "ok",
-        "data": {
-          "time": 1784995200000,
-          "temperature": 17.1,
-          "precipitationProbability": 0,
-          "weatherCode": 0,
-          "cloudCover": 9,
-          "visibility": 16100,
-          "windSpeed": 10.1,
-          "windGusts": 17.6,
           "units": {
             "time": "unixtime",
             "temperature_2m": "°C",
