@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-09-12T00:24:18.847Z",
+  "generatedAt": "2026-09-12T08:55:24.237Z",
   "truncated": false,
   "counts": {
     "providers": 218,
@@ -124,7 +124,7 @@
       "id": "7d1afb26-6f9c-429b-9ccf-29012fd1e519",
       "name": "Starship | Flight 14",
       "net": "2026-09-18T12:15:00Z",
-      "lastUpdated": "2026-09-11T20:47:20Z",
+      "lastUpdated": "2026-09-12T08:04:25Z",
       "missionName": "Flight 14",
       "missionType": "Test Flight",
       "program": "SpaceX Starship",
@@ -167,7 +167,7 @@
       "id": "d1471f9d-e9d0-4146-8e97-90863e48bfc8",
       "name": "Falcon 9 Block 5 | Starlink Group 15-27",
       "net": "2026-09-20T01:47:00Z",
-      "lastUpdated": "2026-09-08T13:59:37Z",
+      "lastUpdated": "2026-09-12T08:04:28Z",
       "missionName": "Starlink Group 15-27",
       "missionType": "Communications",
       "program": "Starlink",
