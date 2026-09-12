@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-09-12T08:55:24.237Z",
+  "generatedAt": "2026-09-12T21:49:21.181Z",
   "truncated": false,
   "counts": {
     "providers": 218,
@@ -24,7 +24,7 @@
       "id": "ad358a4d-c541-409b-9366-9c2f2da4aeb9",
       "name": "Falcon 9 Block 5 | O3b mPower 11-13",
       "net": "2026-09-13T18:49:00Z",
-      "lastUpdated": "2026-09-09T15:20:58Z",
+      "lastUpdated": "2026-09-12T20:28:54Z",
       "missionName": "O3b mPower 11-13",
       "missionType": "Communications",
       "program": "",
@@ -34,7 +34,7 @@
       "statusAbbrev": "Go",
       "netPrecision": "Minute",
       "failReason": "Current T-0 confirmed by official or reliable sources.",
-      "probability": null,
+      "probability": 60,
       "provider": "SpaceX",
       "providerName": "SpaceX",
       "providerId": 121,
@@ -65,7 +65,7 @@
       "rocketImage": "",
       "providerImage": "",
       "imageCredit": "SpaceX",
-      "webcast": "https://x.com/i/broadcasts/1RKjpbVdykQJw",
+      "webcast": "https://www.youtube.com/watch?v=2n8k4DZUln8",
       "official": "https://www.spacex.com/launches/mpower-f",
       "wikipedia": "https://en.wikipedia.org/wiki/Cape_Canaveral_Air_Force_Station_Space_Launch_Complex_40",
       "upcoming": true
