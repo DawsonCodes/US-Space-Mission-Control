@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-09-18T18:34:17.532Z",
+  "generatedAt": "2026-09-18T21:20:15.460Z",
   "truncated": false,
   "counts": {
     "providers": 222,
@@ -24,7 +24,7 @@
       "id": "f4c720ce-0cfd-43e6-b8dd-00273073bc01",
       "name": "Electron | Owl By The Dozen (StriX Launch 12)",
       "net": "2026-09-19T03:15:00Z",
-      "lastUpdated": "2026-09-18T04:11:16Z",
+      "lastUpdated": "2026-09-18T20:19:45Z",
       "missionName": "Owl By The Dozen (StriX Launch 12)",
       "missionType": "Earth Science",
       "program": "",
@@ -65,7 +65,7 @@
       "rocketImage": "",
       "providerImage": "",
       "imageCredit": "",
-      "webcast": "",
+      "webcast": "https://www.youtube.com/watch?v=AnN8Pj8WvSo",
       "official": "https://rocketlabcorp.com/missions/launches/owl-by-the-dozen/",
       "wikipedia": "https://en.wikipedia.org/wiki/Rocket_Lab_Launch_Complex_1",
       "upcoming": true
