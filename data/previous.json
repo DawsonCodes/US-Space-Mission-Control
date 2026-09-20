@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-09-20T07:49:08.853Z",
+  "generatedAt": "2026-09-20T23:39:44.249Z",
   "truncated": false,
   "counts": {
     "published": 20
@@ -83,7 +83,7 @@
       "id": "f4c720ce-0cfd-43e6-b8dd-00273073bc01",
       "name": "Electron | Owl By The Dozen (StriX Launch 12)",
       "net": "2026-09-19T03:22:00Z",
-      "lastUpdated": "2026-09-19T11:49:49Z",
+      "lastUpdated": "2026-09-20T23:35:11Z",
       "missionName": "Owl By The Dozen (StriX Launch 12)",
       "missionType": "Earth Science",
       "program": "",
