@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-09-25T21:12:19.532Z",
+  "generatedAt": "2026-09-25T23:59:13.449Z",
   "truncated": false,
   "counts": {
     "providers": 221,
@@ -23,8 +23,8 @@
     {
       "id": "9e24bef7-c44b-4fdc-ba52-68545ce9457e",
       "name": "Electron | Owlright, Owlright, Owlright (StriX Launch 13)",
-      "net": "2026-09-26T00:26:00Z",
-      "lastUpdated": "2026-09-25T18:29:26Z",
+      "net": "2026-09-26T00:39:00Z",
+      "lastUpdated": "2026-09-25T23:21:00Z",
       "missionName": "Owlright, Owlright, Owlright (StriX Launch 13)",
       "missionType": "Earth Science",
       "program": "",
@@ -73,8 +73,8 @@
     {
       "id": "7330d83b-c478-426c-8859-f9e3a335876d",
       "name": "Falcon 9 Block 5 | USSF-385",
-      "net": "2026-09-26T12:56:13Z",
-      "lastUpdated": "2026-09-25T14:09:02Z",
+      "net": "2026-09-26T14:00:54Z",
+      "lastUpdated": "2026-09-25T22:04:19Z",
       "missionName": "USSF-385",
       "missionType": "Government/Top Secret",
       "program": "",
