@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-09-25T02:14:09.728Z",
+  "generatedAt": "2026-09-25T17:59:53.554Z",
   "truncated": false,
   "counts": {
     "providers": 221,
@@ -73,8 +73,8 @@
     {
       "id": "7330d83b-c478-426c-8859-f9e3a335876d",
       "name": "Falcon 9 Block 5 | USSF-385",
-      "net": "2026-09-26T11:56:00Z",
-      "lastUpdated": "2026-09-17T21:05:26Z",
+      "net": "2026-09-26T12:56:13Z",
+      "lastUpdated": "2026-09-25T14:09:02Z",
       "missionName": "USSF-385",
       "missionType": "Government/Top Secret",
       "program": "",
@@ -82,7 +82,7 @@
       "statusName": "Go for Launch",
       "statusId": 1,
       "statusAbbrev": "Go",
-      "netPrecision": "Minute",
+      "netPrecision": "Second",
       "failReason": "Current T-0 confirmed by official or reliable sources.",
       "probability": null,
       "provider": "SpaceX",
