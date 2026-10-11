@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-10T19:01:37.258Z",
+  "generatedAt": "2026-10-11T07:24:17.966Z",
   "truncated": false,
   "counts": {
     "published": 20
@@ -317,7 +317,7 @@
       "lastUpdated": "2026-09-29T15:33:32Z",
       "missionName": "Starlink Group 31-1 (Starship Flight 14)",
       "missionType": "Communications",
-      "program": "Starlink",
+      "program": "SpaceX Starship",
       "details": "14th test flight of the two-stage Starship launch vehicle. 3rd flight of Starship V3 and the first Starship flight to deploy satellites (a group of Starlink satellites known as Starlink Group 31-1) into stable Low Earth Orbit.\r\n\r\nThe ship is expected to fly at an altitude approximately 275 km above Earth and complete approximately 6 orbits around the planet for nearly 10 hours, with splashdown targeted in the Pacific Ocean west of Chile.\r\n\r\nThe booster’s primary test objective on Flight 14 will be executing a successful launch, ascent, stage separation, boostback burn, and landing burn at an offshore landing point in the Gulf.\r\n\r\nStarship will deliver 26 Starlink V3 satellites to orbit for the first time, which aim to greatly expand the network's capacity and user speeds. Each Starlink V3 satellite will add 1 Tbps of capacity to the constellation.",
       "statusName": "Launch Successful",
       "statusId": 3,
