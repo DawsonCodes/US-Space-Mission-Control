@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-11T19:02:47.448Z",
+  "generatedAt": "2026-10-12T02:30:53.541Z",
   "truncated": false,
   "counts": {
     "published": 20
@@ -229,7 +229,7 @@
       "id": "18441371-8b2e-457c-afb5-1ec1b11ab630",
       "name": "Falcon 9 Block 5 | Crew-13",
       "net": "2026-10-01T15:10:06Z",
-      "lastUpdated": "2026-10-01T23:09:46Z",
+      "lastUpdated": "2026-10-12T01:36:46Z",
       "missionName": "Crew-13",
       "missionType": "Human Exploration",
       "program": "Commercial Crew Program",
