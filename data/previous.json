@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-16T05:14:20.030Z",
+  "generatedAt": "2026-10-16T14:30:09.366Z",
   "truncated": false,
   "counts": {
     "published": 20
@@ -375,7 +375,7 @@
       "id": "67213393-7983-4c06-8b44-b8c785a5ed79",
       "name": "Falcon 9 Block 5 | Transporter 18 (Dedicated SSO Rideshare)",
       "net": "2026-10-01T18:32:00Z",
-      "lastUpdated": "2026-10-01T23:19:46Z",
+      "lastUpdated": "2026-10-16T12:02:28Z",
       "missionName": "Transporter 18 (Dedicated SSO Rideshare)",
       "missionType": "Dedicated Rideshare",
       "program": "",
