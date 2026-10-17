@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-17T08:53:57.667Z",
+  "generatedAt": "2026-10-17T16:00:00.778Z",
   "truncated": false,
   "counts": {
     "providers": 305,
@@ -24,11 +24,11 @@
       "id": "3b430f81-0ff1-4d85-8a1a-cef0de326198",
       "name": "Falcon 9 Block 5 | Bandwagon 5 (Dedicated Mid-Inclination Rideshare)",
       "net": "2026-10-19T10:30:00Z",
-      "lastUpdated": "2026-10-17T04:23:02Z",
+      "lastUpdated": "2026-10-17T15:58:16Z",
       "missionName": "Bandwagon 5 (Dedicated Mid-Inclination Rideshare)",
       "missionType": "Dedicated Rideshare",
       "program": "",
-      "details": "Dedicated rideshare flight to a mid-inclination orbit with dozens of small microsatellites and nanosatellites for commercial and government customers.",
+      "details": "Dedicated rideshare flight to a mid-inclination orbit with dozens of small microsatellites and nanosatellites for commercial and government customers.\r\n\r\nThis launch also carries the second demonstration mission for SpaceX’s Project Starfall, which aims to mass-produce reentry capsules designed to autonomously transport valuable customer experiments and other payloads safely back from space to Earth, including for in-orbit manufacturing. \r\n\r\nStarfall is a cylindrical shaped capsule approximately 0.75 meters tall with a diameter of 3.1 meters, weighing approximately 2100 kilograms, and capable of carrying 1000 kilograms of payload. It is designed to be carried on Starship flights.",
       "statusName": "Go for Launch",
       "statusId": 1,
       "statusAbbrev": "Go",
