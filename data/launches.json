@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-19T02:09:58.376Z",
+  "generatedAt": "2026-10-19T07:56:55.467Z",
   "truncated": false,
   "counts": {
     "providers": 305,
@@ -23,8 +23,8 @@
     {
       "id": "3b430f81-0ff1-4d85-8a1a-cef0de326198",
       "name": "Falcon 9 Block 5 | Bandwagon 5 (Dedicated Mid-Inclination Rideshare)",
-      "net": "2026-10-19T10:30:00Z",
-      "lastUpdated": "2026-10-18T14:28:36Z",
+      "net": "2026-10-20T10:30:00Z",
+      "lastUpdated": "2026-10-19T07:34:10Z",
       "missionName": "Bandwagon 5 (Dedicated Mid-Inclination Rideshare)",
       "missionType": "Dedicated Rideshare",
       "program": "",
