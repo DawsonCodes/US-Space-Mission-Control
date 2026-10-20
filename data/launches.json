@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-20T05:02:47.020Z",
+  "generatedAt": "2026-10-20T10:12:46.802Z",
   "truncated": false,
   "counts": {
     "providers": 307,
@@ -23,8 +23,8 @@
     {
       "id": "3b430f81-0ff1-4d85-8a1a-cef0de326198",
       "name": "Falcon 9 Block 5 | Bandwagon 5 (Dedicated Mid-Inclination Rideshare)",
-      "net": "2026-10-20T10:30:00Z",
-      "lastUpdated": "2026-10-19T23:34:44Z",
+      "net": "2026-10-20T11:04:00Z",
+      "lastUpdated": "2026-10-20T10:06:30Z",
       "missionName": "Bandwagon 5 (Dedicated Mid-Inclination Rideshare)",
       "missionType": "Dedicated Rideshare",
       "program": "",
@@ -74,7 +74,7 @@
       "id": "f6af629d-39b5-4f86-bc0c-f8776444a858",
       "name": "Falcon 9 Block 5 | Starlink Group 15-15",
       "net": "2026-10-20T23:10:02Z",
-      "lastUpdated": "2026-10-20T04:38:09Z",
+      "lastUpdated": "2026-10-20T07:33:01Z",
       "missionName": "Starlink Group 15-15",
       "missionType": "Communications",
       "program": "Starlink",
