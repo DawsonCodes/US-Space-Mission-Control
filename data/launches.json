@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-23T07:45:29.577Z",
+  "generatedAt": "2026-10-23T12:55:25.227Z",
   "truncated": false,
   "counts": {
     "providers": 306,
@@ -23,8 +23,8 @@
     {
       "id": "f6af629d-39b5-4f86-bc0c-f8776444a858",
       "name": "Falcon 9 Block 5 | Starlink Group 15-15",
-      "net": "2026-10-23T21:30:00Z",
-      "lastUpdated": "2026-10-23T07:27:42Z",
+      "net": "2026-10-23T22:28:53Z",
+      "lastUpdated": "2026-10-23T12:38:39Z",
       "missionName": "Starlink Group 15-15",
       "missionType": "Communications",
       "program": "Starlink",
@@ -32,7 +32,7 @@
       "statusName": "Go for Launch",
       "statusId": 1,
       "statusAbbrev": "Go",
-      "netPrecision": "Minute",
+      "netPrecision": "Second",
       "failReason": "Current T-0 confirmed by official or reliable sources.",
       "probability": null,
       "provider": "SpaceX",
@@ -223,8 +223,8 @@
     {
       "id": "426bd2a5-02dd-4fbd-9f4d-2b8439c3a1ff",
       "name": "Electron | The Sea God Surveys (iQPS Launch 9)",
-      "net": "2026-11-04T00:00:00Z",
-      "lastUpdated": "2026-10-12T23:38:34Z",
+      "net": "2026-11-03T00:00:00Z",
+      "lastUpdated": "2026-10-23T08:05:23Z",
       "missionName": "The Sea God Surveys (iQPS Launch 9)",
       "missionType": "Earth Science",
       "program": "",
