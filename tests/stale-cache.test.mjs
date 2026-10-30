@@ -6,6 +6,11 @@
 // merely stale cache is served without touching the network, which is covered
 // by visitor-requests.test.mjs.
 
+// Upcoming-launch fixtures are dated relative to now. Pinned to calendar dates
+// they drifted into the past, and once the app started dropping launches long
+// past their NET, a "cached" or "published" list made of them came up empty.
+const AHEAD = (days) => new Date(Date.now() + days * 86400000).toISOString();
+
 function makeEl() {
   const classes = new Set();
   const style = { setProperty() {}, removeProperty() {} };
@@ -43,8 +48,8 @@ const { MANIFEST_CACHE_SCHEMA, STORAGE_KEYS } = await import("../js/config.js");
 
 // Seed a STALE cache (40 minutes old).
 const cached = [
-  { id: "c-1", name: "Cached One", net: "2026-09-01T00:00:00Z", providerName: "SpaceX", providerId: 121, agencies: [], padLat: null, padLon: null },
-  { id: "c-2", name: "Cached Two", net: "2026-09-02T00:00:00Z", providerName: "SpaceX", providerId: 121, agencies: [], padLat: null, padLon: null }
+  { id: "c-1", name: "Cached One", net: AHEAD(30), providerName: "SpaceX", providerId: 121, agencies: [], padLat: null, padLon: null },
+  { id: "c-2", name: "Cached Two", net: AHEAD(31), providerName: "SpaceX", providerId: 121, agencies: [], padLat: null, padLon: null }
 ];
 store.set(STORAGE_KEYS.manifest, JSON.stringify({
   schema: MANIFEST_CACHE_SCHEMA,

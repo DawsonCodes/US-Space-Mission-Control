@@ -2,6 +2,34 @@
 
 Release history for U.S. Space Mission Control, newest first.
 
+## v3.8.5 — Startup Fixes and a Checkup
+
+- The background is back to the original. The rebuilt sky from v3.8.4 is gone
+  and the earlier starfield is restored exactly as it was. The new tab icon
+  stays
+- The loading spinner on the startup screen spins again. It borrowed its
+  animation from the old Refresh button, and when that button was removed in
+  v3.8.3 its keyframes went with it, leaving the spinner pointing at an
+  animation that no longer existed. It now has its own, and a test fails if any
+  style names an animation that is not defined
+- Status messages no longer appear on top of the startup animation. The startup
+  screen is see-through so the stars show, which meant the message showed too,
+  sitting there with its countdown frozen. A message raised during startup is
+  now kept back and slides in as the dashboard appears, with its full time
+- A launch more than six hours past its scheduled time is dropped from the list.
+  Launch Library never publishes a launch that has already flown, so one left
+  over can only come from a file that has not been refreshed. When updates
+  stalled for a week, the Featured Mission was a Starlink flight from seven days
+  earlier reading "Live / passed"
+- The scheduled update now runs at 17 and 47 minutes past the hour instead of on
+  the hour and half hour, the busiest minutes for scheduled runs. On the old
+  times about three quarters of the runs never happened and the rest started
+  around fourteen minutes late. The page's "next check" countdown follows the
+  new times, and now works them out in UTC, so it is right in every time zone
+- Test data no longer goes out of date. Several suites used launch dates that
+  had already passed; they are now set relative to today, and the whole suite
+  passes on every date from now to a year out
+
 ## v3.8.4 — New Mark, New Sky
 
 - Redrew the browser-tab icon. The old one was a rocket drawn at emoji scale:

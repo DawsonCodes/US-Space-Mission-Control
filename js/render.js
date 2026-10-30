@@ -119,10 +119,18 @@ let statusInterval = null;
 
 // The startup overlay covers the dashboard for at least three seconds, so a
 // banner set during it was already a third spent before anyone could read it,
-// and a short boot could burn most of it. While held, a banner shows without
-// counting down; releasing starts the full duration from that moment.
+// and a short boot could burn most of it. While held, a banner is written but
+// kept off screen and its countdown does not start; releasing reveals it and
+// starts the full duration from that moment.
+//
+// Keeping it off screen matters as much as the countdown. The startup overlay
+// is see-through so the stars show, which means anything fixed on the page
+// shows through it too, and the toast lives outside the .shell that
+// .is-booting hides. It was sitting on the startup screen with a frozen
+// countdown, and its slide-in had already finished behind the overlay.
 let statusHeld = false;
 let heldTone = null;
+let heldReveal = false;
 
 export function holdStatusCountdown() {
   statusHeld = true;
@@ -131,8 +139,11 @@ export function holdStatusCountdown() {
 export function releaseStatusCountdown() {
   if (!statusHeld) return;
   statusHeld = false;
-  // Whatever ended up on screen now gets its whole duration.
-  if (heldTone && statusHasCountdown(heldTone) && els.status && !els.status.hidden) {
+  const el = els.status;
+  // Reveal now, so the entrance plays as the dashboard appears.
+  if (heldReveal && el && el.innerHTML) el.hidden = false;
+  heldReveal = false;
+  if (heldTone && statusHasCountdown(heldTone) && el && !el.hidden) {
     runStatusCountdown();
   }
   heldTone = null;
@@ -176,6 +187,17 @@ export function dismissStatus() {
   clearStatusInterval();
   statusTimer.stop();
   const el = els.status;
+  // A message raised and then withdrawn during startup must not appear when the
+  // dashboard is revealed. It is hidden, so the check below would skip it.
+  if (heldReveal) {
+    heldReveal = false;
+    heldTone = null;
+    if (el) {
+      el.innerHTML = "";
+      delete el.dataset.tone;
+    }
+    return;
+  }
   if (!el || el.hidden) return;
 
   const collapse = () => {
@@ -199,7 +221,9 @@ export function setStatus(message, tone = "info") {
   clearStatusInterval();
   statusTimer.stop();
   el.classList.remove("is-leaving");
-  el.hidden = false;
+  // Off screen while the startup overlay is up; releaseStatusCountdown reveals it.
+  el.hidden = statusHeld;
+  heldReveal = statusHeld;
   el.dataset.tone = tone;
 
   const withCountdown = statusHasCountdown(tone);
@@ -218,13 +242,13 @@ export function setStatus(message, tone = "info") {
     `<button type="button" class="status-close" data-status-close aria-label="Dismiss message">&times;</button>` +
     progress;
 
-  if (!withCountdown) return;
   if (statusHeld) {
     // The freshly written markup already reads the full duration and the bar
     // defaults to 100%, so leaving it alone is exactly "not started yet".
     heldTone = tone;
     return;
   }
+  if (!withCountdown) return;
   runStatusCountdown();
 }
 

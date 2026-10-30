@@ -6,6 +6,11 @@
 // That a visitor never calls Launch Library at all is covered by
 // visitor-requests.test.mjs.
 
+// Upcoming-launch fixtures are dated relative to now. Pinned to calendar dates
+// they drifted into the past, and once the app started dropping launches long
+// past their NET, a "cached" or "published" list made of them came up empty.
+const AHEAD = (days) => new Date(Date.now() + days * 86400000).toISOString();
+
 function makeEl(id = "") {
   const classes = new Set();
   const attrs = {};
@@ -57,8 +62,8 @@ const { MANIFEST_CACHE_SCHEMA, STORAGE_KEYS } = await import("../js/config.js");
 // coordinates (so no weather fetch noise). Stale is what triggers the
 // background refresh this harness is here to observe.
 const cachedLaunches = [
-  { id: "cache-1", name: "Cached One", net: "2026-09-01T00:00:00Z", providerName: "SpaceX", providerId: 121, agencies: [], padLat: null, padLon: null },
-  { id: "cache-2", name: "Cached Two", net: "2026-09-02T00:00:00Z", providerName: "SpaceX", providerId: 121, agencies: [], padLat: null, padLon: null }
+  { id: "cache-1", name: "Cached One", net: AHEAD(30), providerName: "SpaceX", providerId: 121, agencies: [], padLat: null, padLon: null },
+  { id: "cache-2", name: "Cached Two", net: AHEAD(31), providerName: "SpaceX", providerId: 121, agencies: [], padLat: null, padLon: null }
 ];
 mem.set(STORAGE_KEYS.manifest, JSON.stringify({
   schema: MANIFEST_CACHE_SCHEMA,
@@ -68,7 +73,7 @@ mem.set(STORAGE_KEYS.manifest, JSON.stringify({
 
 // The published snapshot holds three different launches.
 const liveRaw = (id, name) => ({
-  id, name, net: "2026-10-01T00:00:00Z", status: { name: "Go for Launch" },
+  id, name, net: AHEAD(60), status: { name: "Go for Launch" },
   launch_service_provider: { id: 121, name: "SpaceX" },
   mission: { name, type: "Communications", orbit: { name: "LEO", abbrev: "LEO" }, agencies: [] },
   rocket: { configuration: { full_name: "Falcon 9", families: [{ name: "Falcon" }] } },

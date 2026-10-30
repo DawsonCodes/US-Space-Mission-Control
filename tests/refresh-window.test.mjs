@@ -8,6 +8,11 @@
 // the boot overlay spent several seconds of its ten-second life before anyone
 // could see it.
 
+// Upcoming-launch fixtures are dated relative to now. Pinned to calendar dates
+// they drifted into the past, and once the app started dropping launches long
+// past their NET, a "cached" or "published" list made of them came up empty.
+const AHEAD = (days) => new Date(Date.now() + days * 86400000).toISOString();
+
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
@@ -64,7 +69,7 @@ globalThis.window = {
 };
 globalThis.history = { pushState() {}, replaceState() {} };
 
-const { AUTO_REFRESH_MS, SNAPSHOT_SCHEMA } = await import("../js/config.js");
+const { AUTO_REFRESH_MS, SNAPSHOT_SCHEMA, SCHEDULE_MINUTES } = await import("../js/config.js");
 
 // Published 12 minutes ago. Everyone reading this snapshot should agree that
 // the next update is about 18 minutes out, whenever they happen to open it.
@@ -84,7 +89,7 @@ globalThis.fetch = async (url) => {
         generatedAt,
         truncated: false,
         launches: [
-          { id: "a", name: "Mission A", net: "2026-12-01T00:00:00Z", providerId: 121, providerName: "SpaceX", agencies: [], padLat: null, padLon: null }
+          { id: "a", name: "Mission A", net: AHEAD(120), providerId: 121, providerName: "SpaceX", agencies: [], padLat: null, padLon: null }
         ]
       })
     };
@@ -121,13 +126,53 @@ check("every clock position lands on the next scheduled boundary", () => {
     const [h, m] = hhmm.split(":").map(Number);
     return msUntilNextScheduledCheck(Date.UTC(2026, 7, 12, h, m, 0)) / 60000;
   };
-  // Boundaries are :00 and :30, plus a grace of a minute and a half.
-  assert.ok(Math.abs(at("07:04") - 27.5) < 1.5, `07:04 -> ${at("07:04")}`);
-  assert.ok(Math.abs(at("07:29") - 2.5) < 1.5, `07:29 -> ${at("07:29")}`);
-  assert.ok(Math.abs(at("07:45") - 16.5) < 1.5, `07:45 -> ${at("07:45")}`);
+  // Boundaries are :17 and :47 UTC, plus a three-minute grace.
+  assert.equal(at("07:04"), 16, `07:04 -> ${at("07:04")}`);
+  assert.equal(at("07:46"), 4, `07:46 -> ${at("07:46")}`);
+  assert.equal(at("07:52"), 28, `07:52 -> ${at("07:52")}`);
   // Rolling into the next hour must not produce a negative or day-long wait.
   const rollover = at("07:59");
   assert.ok(rollover > 0 && rollover <= 30, `07:59 -> ${rollover}`);
+});
+
+check("the page's schedule matches the workflow's cron", () => {
+  // They drifted once already in spirit: the cron moved off the busy minutes
+  // and nothing would have told the page. Read the cron from the workflow file.
+  const yml = readFileSync(".github/workflows/refresh-data.yml", "utf8");
+  const cron = /^\s*-\s*cron:\s*"([^"]+)"/m.exec(yml)?.[1];
+  assert.ok(cron, "no cron found in refresh-data.yml");
+  const [minuteField, hourField] = cron.split(/\s+/);
+  assert.equal(hourField, "*", "the page assumes the workflow runs every hour");
+  const cronMinutes = minuteField.split(",").map(Number).sort((a, b) => a - b);
+  assert.deepEqual(cronMinutes, [...SCHEDULE_MINUTES].sort((a, b) => a - b),
+    `cron runs at ${cronMinutes} but the page checks at ${SCHEDULE_MINUTES}`);
+});
+
+check("the workflow avoids the busiest minutes of the hour", () => {
+  // On "0,30" three quarters of the scheduled runs never happened.
+  for (const minute of SCHEDULE_MINUTES) {
+    assert.ok(minute % 15 !== 0, `:${String(minute).padStart(2, "0")} is a peak minute for scheduled runs`);
+  }
+});
+
+check("the boundaries do not depend on the reader's time zone", () => {
+  // cron is UTC. Local minutes only coincide with UTC minutes in whole-hour
+  // zones, so the old setMinutes put the boundaries at the wrong minute in
+  // Kathmandu (+5:45) and Adelaide (+9:30). Same instant, same answer, anywhere.
+  const instant = Date.UTC(2026, 9, 30, 7, 4, 0);
+  const original = process.env.TZ;
+  const answers = {};
+  try {
+    for (const tz of ["UTC", "Asia/Kathmandu", "Australia/Adelaide", "America/St_Johns", "America/New_York"]) {
+      process.env.TZ = tz;
+      answers[tz] = msUntilNextScheduledCheck(instant) / 60000;
+    }
+  } finally {
+    if (original === undefined) delete process.env.TZ;
+    else process.env.TZ = original;
+  }
+  const distinct = new Set(Object.values(answers));
+  assert.equal(distinct.size, 1, `the wait depends on the time zone: ${JSON.stringify(answers)}`);
 });
 
 check("the wait is never longer than the cycle, nor a busy loop", () => {

@@ -89,8 +89,14 @@ jobs:
       - name: Audit regressions (URL escaping, aria-live, storage, classification)
         run: node tests/audit-fixes.test.mjs
 
-      - name: Branding (tab icon legibility, animated sky)
+      - name: Branding (tab icon legibility)
         run: node tests/branding.test.mjs
+
+      - name: Startup screen (spinner keyframes, no toast over the animation)
+        run: node tests/startup.test.mjs
+
+      - name: Stale launches (nothing long flown is featured or listed)
+        run: node tests/stale-launches.test.mjs
 
       - name: Status-banner lifecycle tests
         run: node tests/status.test.mjs

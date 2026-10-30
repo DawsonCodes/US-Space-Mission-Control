@@ -1,6 +1,11 @@
 // Integration: two rapid manual refreshes must not run as duplicate in-flight
 // loads — the earlier request is aborted and only the latest survives.
 
+// Upcoming-launch fixtures are dated relative to now. Pinned to calendar dates
+// they drifted into the past, and once the app started dropping launches long
+// past their NET, a "cached" or "published" list made of them came up empty.
+const AHEAD = (days) => new Date(Date.now() + days * 86400000).toISOString();
+
 function makeEl(id = "") {
   const classes = new Set();
   const style = { setProperty() {}, removeProperty() {} };
@@ -56,11 +61,11 @@ const { simplifyLaunch: simplify } = await import("../js/normalize.js");
 store.set(STORAGE_KEYS.manifest, JSON.stringify({
   schema: MANIFEST_CACHE_SCHEMA,
   savedAt: Date.now() - 2 * 60 * 1000,
-  payload: { launches: [{ id: "c-1", name: "Cached", net: "2026-09-01T00:00:00Z", providerId: 121, agencies: [], padLat: null, padLon: null }], truncated: false }
+  payload: { launches: [{ id: "c-1", name: "Cached", net: AHEAD(30), providerId: 121, agencies: [], padLat: null, padLon: null }], truncated: false }
 }));
 
 const raw = (id) => ({
-  id, name: id, net: "2026-10-01T00:00:00Z", status: { name: "Go for Launch" },
+  id, name: id, net: AHEAD(60), status: { name: "Go for Launch" },
   launch_service_provider: { id: 121, name: "SpaceX" },
   mission: { name: id, type: "Communications", orbit: { name: "LEO", abbrev: "LEO" }, agencies: [] },
   rocket: { configuration: { full_name: "Falcon 9", families: [{ name: "Falcon" }] } },
