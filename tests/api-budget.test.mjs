@@ -9,6 +9,11 @@
 // requests. That was not true before, which is why a reload could hit the rate
 // limit before the page had even finished opening.
 
+// Upcoming-launch fixtures are dated relative to now. Pinned to calendar dates
+// they drifted into the past, and once the app started dropping launches long
+// past their NET, a "cached" or "published" list made of them came up empty.
+const AHEAD = (days) => new Date(Date.now() + days * 86400000).toISOString();
+
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
@@ -28,7 +33,7 @@ let apiCalls = 0;
 let snapshotBody = null;
 
 const rawLaunch = (id) => ({
-  id, name: id, net: "2026-12-01T00:00:00Z", status: { name: "Go for Launch" },
+  id, name: id, net: AHEAD(120), status: { name: "Go for Launch" },
   launch_service_provider: { id: 121, name: "SpaceX" },
   mission: { name: "m", agencies: [] },
   rocket: { configuration: { full_name: "Falcon 9", families: [] } },
@@ -57,7 +62,7 @@ const snapshot = () => ({
   schema: 1,
   generatedAt: new Date().toISOString(),
   truncated: false,
-  launches: [{ id: "snap-1", name: "Published", net: "2026-12-01T00:00:00Z" }]
+  launches: [{ id: "snap-1", name: "Published", net: AHEAD(120) }]
 });
 
 // ---------- the normal case ------------------------------------------------

@@ -8,6 +8,11 @@
 // the boot overlay spent several seconds of its ten-second life before anyone
 // could see it.
 
+// Upcoming-launch fixtures are dated relative to now. Pinned to calendar dates
+// they drifted into the past, and once the app started dropping launches long
+// past their NET, a "cached" or "published" list made of them came up empty.
+const AHEAD = (days) => new Date(Date.now() + days * 86400000).toISOString();
+
 import assert from "node:assert/strict";
 
 const docListeners = {};
@@ -78,7 +83,7 @@ mem.set(STORAGE_KEYS.manifest, JSON.stringify({
   savedAt: Date.now() - 8 * 60 * 1000,
   payload: {
     launches: [
-      { id: "c1", name: "Saved One", net: "2026-12-01T00:00:00Z", providerId: 121, providerName: "SpaceX", agencies: [], padLat: null, padLon: null }
+      { id: "c1", name: "Saved One", net: AHEAD(120), providerId: 121, providerName: "SpaceX", agencies: [], padLat: null, padLon: null }
     ],
     truncated: false,
     generatedAt: Date.now() - PUBLISHED_MINUTES_AGO * 60 * 1000

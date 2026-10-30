@@ -56,16 +56,17 @@ export const SNAPSHOT_SCHEMA = 1;
 // the same origin, not an API call.
 export const AUTO_REFRESH_MS = 1000 * 60 * 30;
 
-// The workflow's cron is "0,30 * * * *", so checks are aligned to those wall
-// clock boundaries rather than to whenever a tab happened to open. Anchoring to
-// page load meant a tab opened at :05 next checked at :35, five minutes after
-// the :30 publish, and sat reading "due now" in between.
-export const SCHEDULE_MINUTES = [0, 30];
+// The workflow's cron is "17,47 * * * *", in UTC, so checks are aligned to
+// those wall-clock boundaries rather than to whenever a tab happened to open.
+// Anchoring to page load meant a tab opened at :05 next checked at :35, long
+// after a publish, and sat reading "due now" in between. These must match the
+// cron in .github/workflows/refresh-data.yml; a test enforces it.
+export const SCHEDULE_MINUTES = [17, 47];
 
-// GitHub's scheduled runs are frequently a few minutes late, and the run itself
-// takes about a minute. Checking a little after the boundary avoids a wasted
-// look at a file that has not been rewritten yet.
-export const SCHEDULE_GRACE_MS = 1000 * 90;
+// A run takes about a minute and the Pages deploy that follows about another,
+// so a file published at :17 is readable from roughly :19. Checking three
+// minutes after the boundary avoids a wasted look at a file not yet replaced.
+export const SCHEDULE_GRACE_MS = 1000 * 60 * 3;
 
 // There is deliberately no staleness rule for the published file. The workflow
 // leaves it byte-identical when no launch has moved, so its timestamp is "when
@@ -213,6 +214,15 @@ export const WEATHER_TTL_MS = 1000 * 60 * 15;
 
 // Open-Meteo only forecasts ~16 days out; beyond that we show a friendly note.
 export const WEATHER_FORECAST_DAYS = 16;
+
+// How long after its NET a launch stays in the upcoming list. Launch Library's
+// upcoming feed never contains a launch that has already flown, so one that is
+// hours past its time can only mean the published file has not been refreshed.
+// When the scheduled workflow stalled for a week, the featured mission was a
+// Starlink flight from seven days earlier, still reading "Live / passed". Six
+// hours keeps a launch on screen through a hold, a scrub-and-recycle, or a
+// late refresh, and drops it after that.
+export const FLOWN_AFTER_NET_MS = 1000 * 60 * 60 * 6;
 
 // Progressive-reveal: how many cards are visible initially and per "Load more".
 export const DEFAULT_VISIBLE = 10;

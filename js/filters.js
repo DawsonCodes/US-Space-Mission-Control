@@ -3,6 +3,7 @@
 
 import { state } from "./state.js";
 import { isApproximateNet } from "./utils.js";
+import { FLOWN_AFTER_NET_MS } from "./config.js";
 import {
   classifyMissionType,
   matchesOrg,
@@ -17,6 +18,21 @@ const DAY_MS = HOUR_MS * 24;
 
 // Date-range filter against the launch NET. Missing/invalid dates only ever
 // match "All upcoming" — a stricter range logically excludes an unknown date.
+// Drops launches whose NET is long enough past that they can only be left over
+// from a stale file. A launch with no parseable NET is kept: missing data is not
+// evidence that it has flown.
+export function withoutFlown(launches, now = Date.now()) {
+  if (!Array.isArray(launches)) return [];
+  return launches.filter((launch) => {
+    const net = launch?.net;
+    // Checked before parsing: new Date(null) is not invalid, it is 1 January
+    // 1970, which would count as having flown half a century ago.
+    if (net === null || net === undefined || net === "") return true;
+    const t = new Date(net).getTime();
+    return !Number.isFinite(t) || t >= now - FLOWN_AFTER_NET_MS;
+  });
+}
+
 export function matchesDateRange(launch, range) {
   if (range === "all") return true;
   const t = new Date(launch?.net).getTime();

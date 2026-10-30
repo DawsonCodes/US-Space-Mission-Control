@@ -6,6 +6,11 @@
 // origin as the page, so no visitor can exhaust anything. This pins that: boot
 // the app and assert that nothing in the request log points at thespacedevs.
 
+// Upcoming-launch fixtures are dated relative to now. Pinned to calendar dates
+// they drifted into the past, and once the app started dropping launches long
+// past their NET, a "cached" or "published" list made of them came up empty.
+const AHEAD = (days) => new Date(Date.now() + days * 86400000).toISOString();
+
 function makeEl(id = "") {
   const classes = new Set();
   const attrs = {};
@@ -55,8 +60,8 @@ const { MANIFEST_CACHE_SCHEMA, STORAGE_KEYS, AUTO_REFRESH_MS } = await import(".
 
 // A cache well inside the freshness window.
 const cachedLaunches = [
-  { id: "cache-1", name: "Cached One", net: "2026-09-01T00:00:00Z", providerName: "SpaceX", providerId: 121, agencies: [], padLat: null, padLon: null },
-  { id: "cache-2", name: "Cached Two", net: "2026-09-02T00:00:00Z", providerName: "SpaceX", providerId: 121, agencies: [], padLat: null, padLon: null }
+  { id: "cache-1", name: "Cached One", net: AHEAD(30), providerName: "SpaceX", providerId: 121, agencies: [], padLat: null, padLon: null },
+  { id: "cache-2", name: "Cached Two", net: AHEAD(31), providerName: "SpaceX", providerId: 121, agencies: [], padLat: null, padLon: null }
 ];
 mem.set(STORAGE_KEYS.manifest, JSON.stringify({
   schema: MANIFEST_CACHE_SCHEMA,
@@ -66,7 +71,7 @@ mem.set(STORAGE_KEYS.manifest, JSON.stringify({
 
 const { simplifyLaunch } = await import("../js/normalize.js");
 const published = [
-  { id: "snap-1", name: "Published One", net: "2026-11-01T00:00:00Z", status: { name: "Go for Launch" },
+  { id: "snap-1", name: "Published One", net: AHEAD(90), status: { name: "Go for Launch" },
     launch_service_provider: { id: 121, name: "SpaceX" }, mission: { name: "m", agencies: [] },
     rocket: { configuration: { full_name: "Falcon 9", families: [] } },
     pad: { name: "Pad", latitude: "", longitude: "", location: { name: "Cape Canaveral" } } }

@@ -24,7 +24,7 @@ import {
   clearLaunchCache,
   cacheAgeLabel
 } from "./storage.js";
-import { applyFilters } from "./filters.js";
+import { applyFilters, withoutFlown } from "./filters.js";
 import {
   loadLaunches as loadLaunchData,
   fetchPreviousLaunches,
@@ -265,7 +265,8 @@ function isSameManifest(next, current) {
 // time so "last refresh" stays honest). On a background replacement we preserve
 // pagination so the user's revealed cards don't collapse (no layout jump).
 function renderManifest(launches, truncated, source, dataTime, { preservePagination = false, entrance = "none" } = {}) {
-  state.launches = Array.isArray(launches) ? launches : [];
+  // Also applied here so the saved-copy and debug paths get the same rule.
+  state.launches = withoutFlown(launches);
   state.truncated = Boolean(truncated);
   state.usingDemo = source === "demo";
   state.dataSource = source;
@@ -403,7 +404,10 @@ export function msUntilNextScheduledCheck(now = Date.now()) {
   // slot of an hour rolls over correctly.
   for (const minute of [...SCHEDULE_MINUTES, 60 + SCHEDULE_MINUTES[0]]) {
     const at = new Date(d);
-    at.setMinutes(minute, 0, 0);
+    // UTC, because cron is. Local minutes only coincide in whole-hour zones;
+    // in Kathmandu (+5:45) or Adelaide (+9:30) the boundaries landed at the
+    // wrong minute of the hour.
+    at.setUTCMinutes(minute, 0, 0);
     const delta = at.getTime() + SCHEDULE_GRACE_MS - now;
     if (delta > 0 && delta < best) best = delta;
   }
@@ -512,7 +516,11 @@ async function refreshData({ background = false, manual = false, auto = false, a
     if (state.activeRequest !== controller) return; // superseded by a newer refresh
     markRefreshed();
 
-    const { launches, truncated, partial, failedFeeds = [], source, generatedAt, apiUsage } = result;
+    const { truncated, partial, failedFeeds = [], source, generatedAt, apiUsage } = result;
+    // Filtered here, once, so every comparison below sees the same list that
+    // renderManifest will show. Filtering only the on-screen side would make
+    // the unchanged-check fail forever and re-render the page every tick.
+    const launches = withoutFlown(result.launches);
     state.apiUsage = apiUsage || null;
 
     // A one-feed result is not a smaller version of the list, it is a different

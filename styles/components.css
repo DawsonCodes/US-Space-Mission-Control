@@ -2882,7 +2882,16 @@ html.is-booting .boot[hidden] { display: grid; }
   border-radius: var(--radius-pill);
   border: 2px solid rgba(255, 255, 255, 0.18);
   border-top-color: var(--text);
-  animation: refreshSpin 720ms linear infinite;
+  animation: bootSpin 720ms linear infinite;
+}
+
+/* The startup spinner's own keyframes. It used to borrow refreshSpin from the
+   Refresh button, and when that button and its keyframes were removed the
+   spinner was left naming an animation that no longer existed, so it sat still.
+   Owning the keyframes here means cleaning up some other control can never
+   stop it again. */
+@keyframes bootSpin {
+  to { transform: rotate(360deg); }
 }
 
 /* "Loaded" beat: the spinner swaps for a check before the title flies home. */

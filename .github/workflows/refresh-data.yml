@@ -15,7 +15,12 @@ name: Refresh launch data
 
 on:
   schedule:
-    - cron: "0,30 * * * *"
+    # Off the hour and the half hour on purpose. Those are the busiest minutes
+    # for scheduled runs across GitHub, and on "0,30" about three quarters of
+    # this workflow's slots never ran at all while the rest started a median of
+    # fourteen minutes late. js/config.js SCHEDULE_MINUTES mirrors these minutes
+    # and tests/refresh-window.test.mjs fails if the two disagree.
+    - cron: "17,47 * * * *"
   workflow_dispatch:
   # Also run on a push to main, so a fresh checkout has a snapshot immediately
   # rather than sending everyone to the API until the next half hour. Changes to

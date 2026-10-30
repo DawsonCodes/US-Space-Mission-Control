@@ -10,6 +10,11 @@
 // automatic fallback: when one of its feeds comes back short it produces a
 // NASA-only list, which is exactly what must never appear unasked.
 
+// Upcoming-launch fixtures are dated relative to now. Pinned to calendar dates
+// they drifted into the past, and once the app started dropping launches long
+// past their NET, a "cached" or "published" list made of them came up empty.
+const AHEAD = (days) => new Date(Date.now() + days * 86400000).toISOString();
+
 import assert from "node:assert/strict";
 
 const mem = new Map();
@@ -32,7 +37,7 @@ const {
 } = await import("../js/config.js");
 
 const rawLaunch = (id) => ({
-  id, name: id, net: "2026-12-01T00:00:00Z", status: { name: "Go for Launch" },
+  id, name: id, net: AHEAD(120), status: { name: "Go for Launch" },
   launch_service_provider: { id: 121, name: "SpaceX" },
   mission: { name: "m", agencies: [] },
   rocket: { configuration: { full_name: "Falcon 9", families: [] } },

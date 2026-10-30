@@ -1,4 +1,4 @@
-// The browser-tab mark and the animated sky.
+// The browser-tab mark.
 //
 // The favicon was a rocket drawn at emoji scale: four 1.2px stars, a porthole
 // and a flame, none of which survive the 16px a browser tab actually renders.
@@ -10,7 +10,6 @@ import { readFileSync, statSync } from "node:fs";
 
 const svg = readFileSync("favicon.svg", "utf8");
 const html = readFileSync("index.html", "utf8");
-const sky = readFileSync("js/starfield.js", "utf8");
 
 let failures = 0;
 const check = (label, fn) => {
@@ -65,41 +64,6 @@ check("the iOS icon exists at the size iOS asks for", () => {
   assert.equal(width, 180, `width ${width}`);
   assert.equal(height, 180, `height ${height}`);
   assert.ok(statSync("assets/apple-touch-icon.png").size < 80_000, "the icon is heavier than the page");
-});
-
-// ---------- the sky ---------------------------------------------------------
-check("the sky has stars, meteors, comets and asteroids", () => {
-  for (const name of ["spawnMeteor", "spawnComet", "spawnAsteroid", "buildStars"]) {
-    assert.ok(new RegExp(`function ${name}\\(`).test(sky), `${name} missing`);
-  }
-});
-
-check("meteors arrive often, comets stay rare", () => {
-  const gaps = /const DEFAULTS = \{[\s\S]*?\n\};/.exec(sky)[0];
-  const read = (key) => {
-    const m = new RegExp(`${key}: \\[([\\d.]+), ([\\d.]+)\\]`).exec(gaps);
-    return m ? [Number(m[1]), Number(m[2])] : null;
-  };
-  const meteor = read("meteorGap");
-  const comet = read("cometGap");
-  assert.ok(meteor && comet, "spawn gaps not found");
-  // The old field allowed one streak at a time roughly every three seconds.
-  assert.ok(meteor[1] <= 6, `up to ${meteor[1]}s between meteors is not "more frequent"`);
-  assert.ok(comet[0] >= 20, `a comet every ${comet[0]}s stops being an event`);
-  assert.ok(comet[0] < comet[1], "comet gap range is inverted");
-});
-
-check("the sky stops entirely for a hidden tab", () => {
-  assert.match(sky, /visibilitychange/, "a background tab keeps animating");
-  assert.match(sky, /function stop\(\)[\s\S]*?cancelAnimationFrame/, "the loop is never cancelled");
-});
-
-check("depth comes from layers, not from one flat field of dots", () => {
-  const layers = /const LAYERS = \[[\s\S]*?\n\];/.exec(sky);
-  assert.ok(layers, "LAYERS missing");
-  const parallax = [...layers[0].matchAll(/parallax: ([\d.]+)/g)].map((m) => Number(m[1]));
-  assert.ok(parallax.length >= 3, "fewer than three depth layers");
-  assert.ok(Math.max(...parallax) >= Math.min(...parallax) * 3, "the layers barely differ");
 });
 
 if (failures > 0) { console.error(`\n${failures} branding check(s) failed.`); process.exit(1); }
