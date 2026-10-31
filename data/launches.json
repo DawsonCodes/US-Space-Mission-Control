@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-31T08:30:31.704Z",
+  "generatedAt": "2026-10-31T14:49:39.556Z",
   "truncated": false,
   "counts": {
     "providers": 305,
@@ -8,13 +8,13 @@
     "published": 306
   },
   "apiUsage": {
-    "requests": 7,
+    "requests": 6,
     "byFeed": {
-      "providers": 5,
+      "providers": 4,
       "nasa": 1,
       "previous": 1
     },
-    "retries": 1,
+    "retries": 0,
     "hourlyBudget": 15,
     "runsPerHour": 2,
     "runBudget": 7
@@ -23,17 +23,17 @@
     {
       "id": "426bd2a5-02dd-4fbd-9f4d-2b8439c3a1ff",
       "name": "Electron | The Sea God Surveys (iQPS Launch 9)",
-      "net": "2026-11-02T16:00:00Z",
-      "lastUpdated": "2026-10-30T07:19:07Z",
+      "net": "2026-11-02T16:41:00Z",
+      "lastUpdated": "2026-10-31T13:53:23Z",
       "missionName": "The Sea God Surveys (iQPS Launch 9)",
       "missionType": "Earth Science",
       "program": "",
       "details": "Synthetic aperture radar Earth observation satellite for Japanese Earth imaging company iQPS.",
-      "statusName": "To Be Confirmed",
-      "statusId": 8,
-      "statusAbbrev": "TBC",
-      "netPrecision": "Hour",
-      "failReason": "Awaiting official confirmation - current date is known with some certainty.",
+      "statusName": "Go for Launch",
+      "statusId": 1,
+      "statusAbbrev": "Go",
+      "netPrecision": "Minute",
+      "failReason": "Current T-0 confirmed by official or reliable sources.",
       "probability": null,
       "provider": "Rocket Lab",
       "providerName": "Rocket Lab",
