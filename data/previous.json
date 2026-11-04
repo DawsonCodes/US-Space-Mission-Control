@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-11-03T06:57:44.566Z",
+  "generatedAt": "2026-11-04T08:07:21.682Z",
   "truncated": false,
   "counts": {
     "published": 20
@@ -521,7 +521,7 @@
       "id": "bf2c3027-a314-403e-a416-2bfd5d165ad1",
       "name": "Falcon 9 Block 5 | Dragon CRS-2 SpX-35",
       "net": "2026-10-13T10:33:44Z",
-      "lastUpdated": "2026-11-03T02:16:16Z",
+      "lastUpdated": "2026-11-04T02:12:34Z",
       "missionName": "Dragon CRS-2 SpX-35",
       "missionType": "Resupply",
       "program": "Commercial Resupply Services",
@@ -886,7 +886,7 @@
       "id": "18441371-8b2e-457c-afb5-1ec1b11ab630",
       "name": "Falcon 9 Block 5 | Crew-13",
       "net": "2026-10-01T15:10:06Z",
-      "lastUpdated": "2026-11-03T02:16:24Z",
+      "lastUpdated": "2026-11-04T02:12:42Z",
       "missionName": "Crew-13",
       "missionType": "Human Exploration",
       "program": "Commercial Crew Program",
