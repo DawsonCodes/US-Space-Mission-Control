@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-11-06T03:42:24.580Z",
+  "generatedAt": "2026-11-06T18:31:55.789Z",
   "truncated": false,
   "counts": {
     "providers": 305,
@@ -23,8 +23,8 @@
     {
       "id": "54d471e8-695c-4fa7-a3cf-dbd8b389e8ae",
       "name": "Falcon 9 Block 5 | USSF-432",
-      "net": "2026-11-07T00:46:00Z",
-      "lastUpdated": "2026-11-04T00:46:25Z",
+      "net": "2026-11-07T00:48:42Z",
+      "lastUpdated": "2026-11-06T14:59:36Z",
       "missionName": "USSF-432",
       "missionType": "Government/Top Secret",
       "program": "",
@@ -32,7 +32,7 @@
       "statusName": "Go for Launch",
       "statusId": 1,
       "statusAbbrev": "Go",
-      "netPrecision": "Minute",
+      "netPrecision": "Second",
       "failReason": "Current T-0 confirmed by official or reliable sources.",
       "probability": null,
       "provider": "SpaceX",
@@ -224,7 +224,7 @@
       "id": "ef9850ad-1096-425b-9d27-f7bbd186e61a",
       "name": "Vulcan VC6L | Amazon Leo (LV-01)",
       "net": "2026-11-13T17:54:00Z",
-      "lastUpdated": "2026-11-03T17:22:50Z",
+      "lastUpdated": "2026-11-06T14:36:43Z",
       "missionName": "Amazon Leo (LV-01)",
       "missionType": "Communications",
       "program": "Amazon Leo",
@@ -265,8 +265,8 @@
       "rocketImage": "",
       "providerImage": "",
       "imageCredit": "United Launch Alliance",
-      "webcast": "",
-      "official": "",
+      "webcast": "https://www.youtube.com/watch?v=qM5A1ZO9oh8",
+      "official": "https://www.ulalaunch.com/missions/next-launch/vulcan-leo-1",
       "wikipedia": "https://en.wikipedia.org/wiki/Cape_Canaveral_Air_Force_Station_Space_Launch_Complex_41",
       "upcoming": true
     },
