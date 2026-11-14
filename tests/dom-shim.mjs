@@ -49,6 +49,19 @@ if (!globalThis.window) {
   };
 }
 
+// No network. Evaluating js/main.js boots the whole app, and in Node the
+// relative fetch of data/launches.json fails, so the app falls back to calling
+// Launch Library for real, as a browser would with no published file. On a
+// GitHub runner that host is reachable, so the audit's run time depended on the
+// API's speed and rate limits on a shared runner IP: a slow answer plus the
+// app's 15-second request timeout pushed it past the 20-second limit and the
+// check failed with "js/main.js: failed to evaluate". This audit is about
+// reference errors at module scope, not about the network, so every request
+// fails immediately here.
+globalThis.fetch = async (url) => {
+  throw new TypeError(`network disabled in the module-evaluation audit: ${String(url).slice(0, 80)}`);
+};
+
 const store = new Map();
 const memoryStorage = {
   getItem: (k) => (store.has(k) ? store.get(k) : null),
