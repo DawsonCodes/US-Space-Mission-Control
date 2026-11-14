@@ -2,6 +2,14 @@
 
 Release history for U.S. Space Mission Control, newest first.
 
+## v3.8.6 — Data Refreshes Signed by the Bot
+
+- The scheduled data refreshes are now committed by GitHub's Actions bot
+  instead of under the maintainer's name. They run several times a day and made
+  up 95 of the 96 commits on main, so nearly all of the maintainer's
+  contribution graph was automated updates. Code changes are unaffected, and a
+  test fails if the refresh identity changes back
+
 ## v3.8.5 — Startup Fixes and a Checkup
 
 - The background is back to the original. The rebuilt sky from v3.8.4 is gone

@@ -56,8 +56,11 @@ jobs:
       - name: Commit the snapshot when it changed
         run: |
           set -e
-          git config user.name "DawsonCodes"
-          git config user.email "71105828+DawsonCodes@users.noreply.github.com"
+          # Data refreshes are signed by GitHub's Actions bot, not by a person.
+          # They run several times a day, and under a personal identity they
+          # made up nearly all of that person's contribution graph.
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           # Stage first, then ask. `git diff` only compares TRACKED files, so on
           # the very first run it reported "no changes" for a brand-new
           # untracked data/ directory and the snapshot was written, discarded
