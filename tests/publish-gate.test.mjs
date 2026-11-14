@@ -125,5 +125,18 @@ await check("the workflow stages before it asks, and asks the index", async () =
   assert.ok(addAt > -1 && addAt < checkAt, "staging must come before the check");
 });
 
+await check("data refreshes are committed by the Actions bot, not a person", async () => {
+  // Under a personal identity the automated refreshes made up nearly all of
+  // that person's contribution graph: 95 of 96 commits on main.
+  const yml = await readFile(join(ROOT, ".github/workflows/refresh-data.yml"), "utf8");
+  const name = /git config user\.name "([^"]+)"/.exec(yml)?.[1];
+  const email = /git config user\.email "([^"]+)"/.exec(yml)?.[1];
+  assert.equal(name, "github-actions[bot]", `data commits are signed as "${name}"`);
+  // This exact address is what GitHub links to the bot account; any other
+  // address leaves the commits unattributed or attributed to someone else.
+  assert.equal(email, "41898282+github-actions[bot]@users.noreply.github.com", `data commits use "${email}"`);
+  assert.ok(!/claude|anthropic/i.test(`${name} ${email}`), "an assistant identity is signing data commits");
+});
+
 if (failures > 0) { console.error(`\n${failures} publish-gate test(s) failed.`); process.exit(1); }
 console.log("\nPublish-gate checks passed.");
