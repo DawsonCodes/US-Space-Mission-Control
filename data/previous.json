@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-11-14T09:30:09.784Z",
+  "generatedAt": "2026-11-14T16:09:55.435Z",
   "truncated": false,
   "counts": {
     "published": 20
@@ -54,13 +54,36 @@
       "webcast": "https://www.youtube.com/watch?v=kyR8kZ2XlhQ",
       "official": "https://rocketlabcorp.com/missions/launches/iqps-the-mountain-god-rises/",
       "wikipedia": "https://en.wikipedia.org/wiki/Rocket_Lab_Launch_Complex_1",
-      "upcoming": true
+      "upcoming": true,
+      "weather": {
+        "status": "ok",
+        "data": {
+          "time": 1794632400000,
+          "temperature": 19.4,
+          "precipitationProbability": 0,
+          "weatherCode": 1,
+          "cloudCover": 47,
+          "visibility": 33180,
+          "windSpeed": 23.6,
+          "windGusts": 52.9,
+          "units": {
+            "time": "unixtime",
+            "temperature_2m": "°C",
+            "precipitation_probability": "%",
+            "weather_code": "wmo code",
+            "cloud_cover": "%",
+            "visibility": "m",
+            "wind_speed_10m": "km/h",
+            "wind_gusts_10m": "km/h"
+          }
+        }
+      }
     },
     {
       "id": "0f867f0c-5422-4d44-93b8-d7faaae7019b",
       "name": "Starship | Starlink Group 31-2 (Starship Flight 15)",
       "net": "2026-11-13T22:47:36Z",
-      "lastUpdated": "2026-11-14T02:11:54Z",
+      "lastUpdated": "2026-11-14T10:48:08Z",
       "missionName": "Starlink Group 31-2 (Starship Flight 15)",
       "missionType": "Communications",
       "program": "SpaceX Starship",
