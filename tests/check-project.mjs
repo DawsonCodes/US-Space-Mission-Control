@@ -126,6 +126,11 @@ if (undefinedConsts === 0) ok("every config constant used is imported or declare
 // helper is the same failure and slips straight past it, so every module is
 // imported for real: a ReferenceError at module scope fails here rather than
 // in the browser. Modules that touch the DOM get a minimal shim first.
+// The shim must keep the audit offline; see the note on fetch in dom-shim.mjs.
+const shimSource = readFileSync(join(root, "tests/dom-shim.mjs"), "utf8");
+if (/globalThis\.fetch\s*=/.test(shimSource)) ok("the module-evaluation audit runs offline");
+else fail("tests/dom-shim.mjs no longer replaces fetch, so the audit calls the live API from CI");
+
 let evalFailures = 0;
 for (const file of files) {
   const rel = file.slice(root.length + 1);

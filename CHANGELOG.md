@@ -2,6 +2,16 @@
 
 Release history for U.S. Space Mission Control, newest first.
 
+## v3.8.7 — Offline Project Audit
+
+- Fixed a test check that could fail at random. The project audit loads the app
+  to make sure every module evaluates, and loading the app made two real
+  requests to Launch Library from GitHub's shared runners. How long the check
+  took depended on how fast the API answered, and a slow answer plus the app's
+  15-second request timeout pushed it past the audit's 20-second limit. The
+  audit now runs offline, so it takes a fraction of a second and no longer
+  touches the live API
+
 ## v3.8.6 — Data Refreshes Signed by the Bot
 
 - The scheduled data refreshes are now committed by GitHub's Actions bot
