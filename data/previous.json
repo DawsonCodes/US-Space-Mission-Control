@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-11-15T07:55:16.670Z",
+  "generatedAt": "2026-11-15T15:42:26.915Z",
   "truncated": false,
   "counts": {
     "published": 20
@@ -229,7 +229,7 @@
       "id": "54d471e8-695c-4fa7-a3cf-dbd8b389e8ae",
       "name": "Falcon 9 Block 5 | USSF-432",
       "net": "2026-11-07T00:48:42Z",
-      "lastUpdated": "2026-11-07T04:29:55Z",
+      "lastUpdated": "2026-11-15T14:42:17Z",
       "missionName": "USSF-432",
       "missionType": "Government/Top Secret",
       "program": "",
