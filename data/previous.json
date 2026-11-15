@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-11-15T01:06:10.101Z",
+  "generatedAt": "2026-11-15T07:55:16.670Z",
   "truncated": false,
   "counts": {
     "published": 20
@@ -83,7 +83,7 @@
       "id": "0f867f0c-5422-4d44-93b8-d7faaae7019b",
       "name": "Starship | Starlink Group 31-2 (Starship Flight 15)",
       "net": "2026-11-13T22:47:36Z",
-      "lastUpdated": "2026-11-14T21:31:56Z",
+      "lastUpdated": "2026-11-15T01:57:37Z",
       "missionName": "Starlink Group 31-2 (Starship Flight 15)",
       "missionType": "Communications",
       "program": "SpaceX Starship",
@@ -813,7 +813,7 @@
       "id": "bf2c3027-a314-403e-a416-2bfd5d165ad1",
       "name": "Falcon 9 Block 5 | Dragon CRS-2 SpX-35",
       "net": "2026-10-13T10:33:44Z",
-      "lastUpdated": "2026-11-14T02:11:41Z",
+      "lastUpdated": "2026-11-15T01:57:24Z",
       "missionName": "Dragon CRS-2 SpX-35",
       "missionType": "Resupply",
       "program": "Commercial Resupply Services",
@@ -1178,7 +1178,7 @@
       "id": "18441371-8b2e-457c-afb5-1ec1b11ab630",
       "name": "Falcon 9 Block 5 | Crew-13",
       "net": "2026-10-01T15:10:06Z",
-      "lastUpdated": "2026-11-14T02:11:49Z",
+      "lastUpdated": "2026-11-15T01:57:33Z",
       "missionName": "Crew-13",
       "missionType": "Human Exploration",
       "program": "Commercial Crew Program",
