@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-11-16T00:25:34.465Z",
+  "generatedAt": "2026-11-16T07:21:40.112Z",
   "truncated": false,
   "counts": {
     "published": 20
@@ -54,7 +54,30 @@
       "webcast": "https://www.youtube.com/watch?v=qM5A1ZO9oh8",
       "official": "https://www.ulalaunch.com/missions/next-launch/vulcan-leo-1",
       "wikipedia": "https://en.wikipedia.org/wiki/Cape_Canaveral_Air_Force_Station_Space_Launch_Complex_41",
-      "upcoming": true
+      "upcoming": true,
+      "weather": {
+        "status": "ok",
+        "data": {
+          "time": 1794765600000,
+          "temperature": 22.8,
+          "precipitationProbability": 0,
+          "weatherCode": 1,
+          "cloudCover": 31,
+          "visibility": 35600,
+          "windSpeed": 18,
+          "windGusts": 20.5,
+          "units": {
+            "time": "unixtime",
+            "temperature_2m": "°C",
+            "precipitation_probability": "%",
+            "weather_code": "wmo code",
+            "cloud_cover": "%",
+            "visibility": "m",
+            "wind_speed_10m": "km/h",
+            "wind_gusts_10m": "km/h"
+          }
+        }
+      }
     },
     {
       "id": "db3500ac-965b-4ad8-b417-cb8d8d005586",
@@ -863,7 +886,7 @@
       "id": "bf2c3027-a314-403e-a416-2bfd5d165ad1",
       "name": "Falcon 9 Block 5 | Dragon CRS-2 SpX-35",
       "net": "2026-10-13T10:33:44Z",
-      "lastUpdated": "2026-11-15T01:57:24Z",
+      "lastUpdated": "2026-11-16T01:23:19Z",
       "missionName": "Dragon CRS-2 SpX-35",
       "missionType": "Resupply",
       "program": "Commercial Resupply Services",
@@ -1228,7 +1251,7 @@
       "id": "18441371-8b2e-457c-afb5-1ec1b11ab630",
       "name": "Falcon 9 Block 5 | Crew-13",
       "net": "2026-10-01T15:10:06Z",
-      "lastUpdated": "2026-11-15T01:57:33Z",
+      "lastUpdated": "2026-11-16T01:23:26Z",
       "missionName": "Crew-13",
       "missionType": "Human Exploration",
       "program": "Commercial Crew Program",
