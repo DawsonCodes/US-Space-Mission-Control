@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-11-18T01:22:09.574Z",
+  "generatedAt": "2026-11-18T18:12:55.989Z",
   "truncated": false,
   "counts": {
     "providers": 302,
@@ -8,13 +8,13 @@
     "published": 307
   },
   "apiUsage": {
-    "requests": 6,
+    "requests": 7,
     "byFeed": {
-      "providers": 4,
+      "providers": 5,
       "nasa": 1,
       "previous": 1
     },
-    "retries": 0,
+    "retries": 1,
     "hourlyBudget": 15,
     "runsPerHour": 2,
     "runBudget": 7
@@ -24,7 +24,7 @@
       "id": "76617033-4dc0-4448-b50c-e5b0d5a18539",
       "name": "Falcon 9 Block 5 | USSF-317",
       "net": "2026-11-20T02:46:00Z",
-      "lastUpdated": "2026-11-17T16:09:07Z",
+      "lastUpdated": "2026-11-18T16:09:27Z",
       "missionName": "USSF-317",
       "missionType": "Government/Top Secret",
       "program": "",
