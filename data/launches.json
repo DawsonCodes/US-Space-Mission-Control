@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-11-22T15:43:13.520Z",
+  "generatedAt": "2026-11-23T02:00:13.132Z",
   "truncated": false,
   "counts": {
     "providers": 302,
@@ -8,13 +8,13 @@
     "published": 308
   },
   "apiUsage": {
-    "requests": 6,
+    "requests": 7,
     "byFeed": {
-      "providers": 4,
+      "providers": 5,
       "nasa": 1,
       "previous": 1
     },
-    "retries": 0,
+    "retries": 1,
     "hourlyBudget": 15,
     "runsPerHour": 2,
     "runBudget": 7
@@ -24,7 +24,7 @@
       "id": "460d9db7-eaf6-4cd9-b095-cff433534c09",
       "name": "Falcon 9 Block 5 | USSF-266",
       "net": "2026-11-24T15:55:00Z",
-      "lastUpdated": "2026-11-21T20:29:25Z",
+      "lastUpdated": "2026-11-23T00:27:48Z",
       "missionName": "USSF-266",
       "missionType": "Government/Top Secret",
       "program": "",
@@ -65,7 +65,7 @@
       "rocketImage": "",
       "providerImage": "",
       "imageCredit": "SpaceX",
-      "webcast": "https://x.com/i/broadcasts/2JQXBjLyYOQrpX",
+      "webcast": "https://www.youtube.com/watch?v=oELkxR9uY8Q",
       "official": "https://www.spacex.com/launches/ussf266",
       "wikipedia": "https://en.wikipedia.org/wiki/Vandenberg_Space_Launch_Complex_4#SLC-4E",
       "upcoming": true
