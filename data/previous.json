@@ -1,11 +1,84 @@
 {
   "schema": 1,
-  "generatedAt": "2026-11-23T22:44:08.079Z",
+  "generatedAt": "2026-11-24T18:23:28.752Z",
   "truncated": false,
   "counts": {
     "published": 20
   },
   "launches": [
+    {
+      "id": "460d9db7-eaf6-4cd9-b095-cff433534c09",
+      "name": "Falcon 9 Block 5 | USSF-266",
+      "net": "2026-11-24T16:08:59Z",
+      "lastUpdated": "2026-11-24T18:12:23Z",
+      "missionName": "USSF-266",
+      "missionType": "Government/Top Secret",
+      "program": "",
+      "details": "A classified mission for the United States Space Force. It is possibly a batch of classified LEO satellites based on SpaceX’s Starshield satellite bus, based on locations of ascent rocket stage drop zones being fits with previous SDA Transport Layer launches.",
+      "statusName": "Launch Successful",
+      "statusId": 3,
+      "statusAbbrev": "Success",
+      "netPrecision": "Second",
+      "failReason": "The launch vehicle successfully inserted its payload(s) into the target orbit(s).",
+      "probability": null,
+      "provider": "SpaceX",
+      "providerName": "SpaceX",
+      "providerId": 121,
+      "providerType": "Commercial",
+      "agencies": [
+        {
+          "id": 1041,
+          "name": "United States Space Force",
+          "type": "Government",
+          "abbrev": "USSF"
+        }
+      ],
+      "rocket": "Falcon 9 Block 5",
+      "rocketFamily": "Falcon",
+      "orbitName": "Polar Orbit",
+      "orbitAbbrev": "PO",
+      "padName": "Space Launch Complex 4E",
+      "location": "Vandenberg SFB, CA, USA",
+      "padLat": 34.632,
+      "padLon": -120.611,
+      "tzId": "America/Los_Angeles",
+      "image": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_liftof_image_20260816171423.jpg",
+      "missionImage": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_liftof_image_20260816171423.jpg",
+      "missionThumb": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon_9_liftof_image_thumbnail_20260816171423.jpeg",
+      "patchImage": "",
+      "padImage": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20231223073520.jpeg",
+      "programImage": "",
+      "rocketImage": "",
+      "providerImage": "",
+      "imageCredit": "SpaceX",
+      "webcast": "https://www.youtube.com/watch?v=Fb7P2xSoF28",
+      "official": "https://www.spacex.com/launches/ussf266",
+      "wikipedia": "https://en.wikipedia.org/wiki/Vandenberg_Space_Launch_Complex_4#SLC-4E",
+      "upcoming": true,
+      "weather": {
+        "status": "ok",
+        "data": {
+          "time": 1795536000000,
+          "temperature": 11.3,
+          "precipitationProbability": 0,
+          "weatherCode": 1,
+          "cloudCover": 34,
+          "visibility": 22700,
+          "windSpeed": 10.8,
+          "windGusts": 12.2,
+          "units": {
+            "time": "unixtime",
+            "temperature_2m": "°C",
+            "precipitation_probability": "%",
+            "weather_code": "wmo code",
+            "cloud_cover": "%",
+            "visibility": "m",
+            "wind_speed_10m": "km/h",
+            "wind_gusts_10m": "km/h"
+          }
+        }
+      }
+    },
     {
       "id": "951a341f-236b-42fe-a667-4ab2fcf36eac",
       "name": "Falcon 9 Block 5 | NROL-136",
@@ -1380,91 +1453,6 @@
           "visibility": 3200,
           "windSpeed": 10.8,
           "windGusts": 11.2,
-          "units": {
-            "time": "unixtime",
-            "temperature_2m": "°C",
-            "precipitation_probability": "%",
-            "weather_code": "wmo code",
-            "cloud_cover": "%",
-            "visibility": "m",
-            "wind_speed_10m": "km/h",
-            "wind_gusts_10m": "km/h"
-          }
-        }
-      }
-    },
-    {
-      "id": "18441371-8b2e-457c-afb5-1ec1b11ab630",
-      "name": "Falcon 9 Block 5 | Crew-13",
-      "net": "2026-10-01T15:10:06Z",
-      "lastUpdated": "2026-11-23T15:52:30Z",
-      "missionName": "Crew-13",
-      "missionType": "Human Exploration",
-      "program": "Commercial Crew Program",
-      "details": "SpaceX Crew-13 is the thirteenth crewed operational flight of a Crew Dragon spacecraft to the International Space Station as part of NASA's Commercial Crew Program.",
-      "statusName": "Launch Successful",
-      "statusId": 3,
-      "statusAbbrev": "Success",
-      "netPrecision": "Second",
-      "failReason": "The launch vehicle successfully inserted its payload(s) into the target orbit(s).",
-      "probability": 60,
-      "provider": "SpaceX",
-      "providerName": "SpaceX",
-      "providerId": 121,
-      "providerType": "Commercial",
-      "agencies": [
-        {
-          "id": 16,
-          "name": "Canadian Space Agency",
-          "type": "Government",
-          "abbrev": "CSA"
-        },
-        {
-          "id": 44,
-          "name": "National Aeronautics and Space Administration",
-          "type": "Government",
-          "abbrev": "NASA"
-        },
-        {
-          "id": 63,
-          "name": "Russian Federal Space Agency (ROSCOSMOS)",
-          "type": "Government",
-          "abbrev": "RFSA"
-        }
-      ],
-      "rocket": "Falcon 9 Block 5",
-      "rocketFamily": "Falcon",
-      "orbitName": "Low Earth Orbit",
-      "orbitAbbrev": "LEO",
-      "padName": "Space Launch Complex 40",
-      "location": "Cape Canaveral SFS, FL, USA",
-      "padLat": 28.56194122,
-      "padLon": -80.57735736,
-      "tzId": "America/New_York",
-      "image": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20220301072106.jpeg",
-      "missionImage": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/falcon2520925_image_20220301072106.jpeg",
-      "missionThumb": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/255bauto255d__image_thumbnail_20240305192609.jpeg",
-      "patchImage": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/mission_patch_images/crew-132520pat_mission_patch_20261001222243.png",
-      "padImage": "https://thespacedevs-prod.nyc3.digitaloceanspaces.com/media/images/f9_liftoff_from_image_20240621050513.jpeg",
-      "programImage": "",
-      "rocketImage": "",
-      "providerImage": "",
-      "imageCredit": "SpaceX",
-      "webcast": "https://www.youtube.com/watch?v=7ZiUbT1-djA",
-      "official": "https://www.spacex.com/launches/crew13",
-      "wikipedia": "https://en.wikipedia.org/wiki/Cape_Canaveral_Air_Force_Station_Space_Launch_Complex_40",
-      "upcoming": true,
-      "weather": {
-        "status": "ok",
-        "data": {
-          "time": 1790866800000,
-          "temperature": 25.9,
-          "precipitationProbability": 24,
-          "weatherCode": 3,
-          "cloudCover": 100,
-          "visibility": 19800,
-          "windSpeed": 18.6,
-          "windGusts": 25.2,
           "units": {
             "time": "unixtime",
             "temperature_2m": "°C",
