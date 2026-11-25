@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-11-24T18:23:28.752Z",
+  "generatedAt": "2026-11-25T02:49:08.671Z",
   "truncated": false,
   "counts": {
     "published": 20
@@ -10,7 +10,7 @@
       "id": "460d9db7-eaf6-4cd9-b095-cff433534c09",
       "name": "Falcon 9 Block 5 | USSF-266",
       "net": "2026-11-24T16:08:59Z",
-      "lastUpdated": "2026-11-24T18:12:23Z",
+      "lastUpdated": "2026-11-25T02:45:38Z",
       "missionName": "USSF-266",
       "missionType": "Government/Top Secret",
       "program": "",
